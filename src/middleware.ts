@@ -4,6 +4,18 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE_NAME, verifySession } from "@/server/auth/session";
 
 /**
+ * architecture.md:55 — "Every admin response carries `Cache-Control:
+ * private, no-store`." Set centrally, here, rather than per-route: a route
+ * that forgets its own `export const dynamic = 'force-dynamic'` (or gets
+ * statically prerendered by accident, as `/` was) must still never leak a
+ * cacheable response, because nothing else in the request pipeline would
+ * catch that silently. Applied to every response this middleware produces,
+ * redirect or pass-through — this function is the one place shared by every
+ * matched route.
+ */
+const NO_STORE = "private, no-store";
+
+/**
  * Edge runtime, always. Verifies the `admin_session` JWT with `jose` and
  * redirects to `/login` on failure — nothing more. It never sees a
  * password: argon2 (via hash-wasm) cannot run on Edge, so the password
@@ -22,19 +34,26 @@ export async function middleware(request: NextRequest) {
 
   if (!session) {
     const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    const redirect = NextResponse.redirect(loginUrl);
+    redirect.headers.set("Cache-Control", NO_STORE);
+    return redirect;
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  response.headers.set("Cache-Control", NO_STORE);
+  return response;
 }
 
 /**
- * Guards everything except the login surface: `/login` (the page) and
- * `/api/auth/login` (the route that issues the cookie) — excluding either
- * one turns this into a redirect loop. Static assets are excluded too;
- * they carry no session-worthy content and Edge is on the hot path for
- * every request that matches.
+ * Guards everything except: the login surface (`/login`, `/api/auth/login`
+ * — excluding either one turns this into a redirect loop), static assets
+ * (no session-worthy content, and Edge is on the hot path for every
+ * request that matches), and `POST /api/jobs/expire`. That last one takes
+ * Bearer-or-session auth (architecture.md:302) and does its own check
+ * inside the route handler — if the matcher covered it, a scheduler
+ * calling with only a bearer token would collect this middleware's 307 to
+ * `/login` instead of ever reaching the handler, and nothing would expire.
  */
 export const config = {
-  matcher: ["/((?!login|api/auth/login|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!login|api/auth/login|api/jobs/expire|_next/static|_next/image|favicon.ico).*)"],
 };
