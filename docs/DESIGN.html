@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design System — Arena Player Admin</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 1 — PRIMITIVES
+   Raw values. Nothing in this file may reference a hex outside this block.
+   Source of truth: docs/DESIGN.md frontmatter. If these disagree, that file wins.
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --navy-900:#011A43; --navy-700:#0A2E6B; --navy-400:#4A5A78;
+  --blue-700:#1D4ED8; --blue-600:#2563EB; --blue-50:#EFF6FF;
+  --white:#FFFFFF;    --grey-200:#E5E7EB; --grey-50:#F9FAFB;
+  --amber-100:#FEF3C7; --amber-700:#B45309; --amber-800:#92400E;
+  --green-100:#DCFCE7; --green-700:#15803D; --green-800:#166534;
+  --red-100:#FEE2E2;   --red-600:#DC2626;   --red-800:#991B1B;
+
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
+  --sp-6:24px; --sp-8:32px; --sp-12:48px; --sp-16:64px;
+  --r-control:10px; --r-panel:14px; --r-full:9999px;
+
+  --font-body: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+
+  --dur-fast:160ms;
+  --ease: cubic-bezier(.22,1,.36,1);
+
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 2 — SEMANTIC
+   What a colour MEANS. Components address only this layer.
+   ═══════════════════════════════════════════════════════════════════ */
+  --bg:              var(--white);
+  --bg-subtle:       var(--grey-50);
+  --bg-wash:         var(--blue-50);
+  --fg:              var(--navy-900);
+  --fg-muted:        var(--navy-400);
+  --fg-inverse:      var(--white);
+  --border:          var(--grey-200);
+  --interactive:     var(--navy-900);
+  --interactive-hover: var(--navy-700);
+  --focus:           var(--blue-600);
+  --link:            var(--blue-700);
+
+  --pending-surface: var(--amber-100);
+  --pending-line:    var(--amber-700);
+  --pending-ink:     var(--amber-800);
+  --confirmed-surface: var(--green-100);
+  --confirmed-line:  var(--green-700);
+  --confirmed-ink:   var(--green-800);
+  --rejected-surface: var(--red-100);
+  --rejected-line:   var(--red-600);
+  --rejected-ink:    var(--red-800);
+  --expired-surface: var(--grey-50);
+  --expired-line:    var(--navy-400);
+  --expired-ink:     var(--navy-400);
+
+  --danger-line:     var(--red-600);
+  --danger-ink:      var(--red-800);
+  --disabled-bg:     var(--grey-200);
+  --disabled-ink:    var(--navy-400);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PAGE CHROME — this document only, not part of the system
+   ═══════════════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg-subtle);color:var(--fg);
+     font:400 16px/1.5 var(--font-body);-webkit-text-size-adjust:100%}
+.wrap{max-width:1100px;margin:0 auto;padding:var(--sp-8) var(--sp-4) var(--sp-16)}
+h1{font:700 24px/1.25 var(--font-body);margin:0 0 var(--sp-2)}
+h2{font:600 18px/1.3 var(--font-body);margin:var(--sp-12) 0 var(--sp-2);
+   padding-top:var(--sp-6);border-top:1px solid var(--border)}
+h3{font:600 16px/1.3 var(--font-body);margin:var(--sp-8) 0 var(--sp-3)}
+p{margin:0 0 var(--sp-3);max-width:68ch}
+.lede{color:var(--fg-muted)}
+small,.sm{font-size:14px}
+.xs{font-size:12px}
+code,.mono{font-family:var(--font-mono);font-size:14px}
+a{color:var(--link)}
+.num{font-variant-numeric:tabular-nums}
+.sec-n{display:inline-block;min-width:2.4em;color:var(--fg-muted);
+       font-family:var(--font-mono);font-size:14px}
+.panel{background:var(--bg);border:1px solid var(--border);
+       border-radius:var(--r-panel);padding:var(--sp-4);margin:var(--sp-4) 0}
+.note{background:var(--bg-wash);border-left:3px solid var(--focus);
+      padding:var(--sp-3) var(--sp-4);margin:var(--sp-4) 0;font-size:14px}
+.note strong{color:var(--fg)}
+.warn{background:var(--pending-surface);border-left:3px solid var(--pending-line);
+      color:var(--pending-ink);padding:var(--sp-3) var(--sp-4);margin:var(--sp-4) 0;font-size:14px}
+.grid{display:grid;gap:var(--sp-3)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:var(--sp-2) var(--sp-3);border-bottom:1px solid var(--border);
+      vertical-align:top}
+th{font-weight:600;color:var(--fg-muted);font-size:12px;text-transform:uppercase;
+   letter-spacing:.04em}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 3 — COMPONENTS
+   Every declaration below reads a Layer 2 token. A raw hex here is a defect.
+   ═══════════════════════════════════════════════════════════════════ */
+.ds-status{display:inline-flex;align-items:center;gap:var(--sp-2);
+  padding:var(--sp-1) var(--sp-2);border-radius:var(--r-control);
+  border:1px solid;font-size:12px;font-weight:600;white-space:nowrap}
+.ds-status--pending  {background:var(--pending-surface);  border-color:var(--pending-line);  color:var(--pending-ink)}
+.ds-status--confirmed{background:var(--confirmed-surface);border-color:var(--confirmed-line);color:var(--confirmed-ink)}
+.ds-status--rejected {background:var(--rejected-surface); border-color:var(--rejected-line); color:var(--rejected-ink)}
+.ds-status--expired  {background:var(--expired-surface);  border-color:var(--expired-line);  color:var(--expired-ink)}
+
+.ds-btn{display:inline-flex;align-items:center;justify-content:center;
+  height:40px;padding:0 var(--sp-4);border-radius:var(--r-control);
+  border:1px solid transparent;font:600 14px/1 var(--font-body);cursor:pointer;
+  transition:background-color var(--dur-fast) var(--ease),
+             border-color var(--dur-fast) var(--ease)}
+.ds-btn--primary{background:var(--interactive);color:var(--fg-inverse)}
+.ds-btn--primary:hover{background:var(--interactive-hover)}
+.ds-btn--danger{background:var(--bg);border-color:var(--danger-line);color:var(--danger-ink)}
+.ds-btn--danger:hover{background:var(--rejected-surface)}
+.ds-btn--quiet{background:var(--bg);border-color:var(--border);color:var(--fg)}
+.ds-btn--quiet:hover{background:var(--bg-subtle)}
+.ds-btn[aria-disabled="true"],.ds-btn:disabled{
+  background:var(--disabled-bg);border-color:var(--disabled-bg);
+  color:var(--disabled-ink);cursor:not-allowed}
+
+.ds-input{width:100%;height:40px;padding:0 var(--sp-3);
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-control);
+  color:var(--fg);font:400 16px/1 var(--font-body)}
+.ds-input--error{background:var(--rejected-surface);border-color:var(--rejected-line);
+  color:var(--rejected-ink)}
+.ds-input:disabled{background:var(--disabled-bg);color:var(--disabled-ink)}
+.ds-label{display:block;font-size:14px;font-weight:600;margin-bottom:var(--sp-1)}
+.ds-err{color:var(--rejected-ink);font-size:14px;margin-top:var(--sp-1)}
+
+/* desktop queue row */
+.ds-row{display:grid;grid-template-columns:120px 130px 1fr 150px 120px 96px;
+  gap:var(--sp-3);align-items:center;
+  padding:var(--sp-3) var(--sp-4);background:var(--bg);
+  border-bottom:1px solid var(--border);font-size:14px;
+  transition:background-color var(--dur-fast) var(--ease)}
+.ds-row:hover{background:var(--bg-subtle)}
+.ds-row__head{background:var(--bg-subtle);font-size:12px;font-weight:600;
+  color:var(--fg-muted);text-transform:uppercase;letter-spacing:.04em}
+.ds-row__slot{font-family:var(--font-mono)}
+.ds-row__age{color:var(--fg-muted);font-variant-numeric:tabular-nums}
+
+/* 375px card — the list is NOT a table at this width */
+.ds-frame{width:375px;max-width:100%;border:1px solid var(--border);
+  border-radius:var(--r-panel);background:var(--bg);overflow:hidden}
+.ds-card{display:block;width:100%;text-align:left;padding:var(--sp-3) var(--sp-4);
+  background:var(--bg);border:0;border-bottom:1px solid var(--border);
+  font:400 14px/1.5 var(--font-body);color:var(--fg);cursor:pointer;
+  transition:background-color var(--dur-fast) var(--ease)}
+.ds-card:hover{background:var(--bg-subtle)}
+.ds-card__top{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-2)}
+.ds-card__slot{font-family:var(--font-mono);font-weight:600}
+.ds-card__team{margin-top:var(--sp-1)}
+.ds-card__meta{margin-top:var(--sp-1);color:var(--fg-muted);font-size:12px}
+
+/* state panels */
+.ds-state{padding:var(--sp-8) var(--sp-4);text-align:center;border-radius:var(--r-panel)}
+.ds-state--empty{background:var(--bg-subtle);color:var(--fg-muted);
+  border:1px dashed var(--border)}
+.ds-state--blocked{background:var(--rejected-surface);border:1px solid var(--rejected-line);
+  color:var(--rejected-ink);text-align:left}
+.ds-state--conflict{background:var(--pending-surface);border:1px solid var(--pending-line);
+  color:var(--pending-ink);text-align:left}
+
+/* proof panel */
+.ds-proof{border:1px solid var(--border);border-radius:var(--r-panel);
+  background:var(--bg-subtle);padding:var(--sp-4)}
+.ds-proof__img{width:100%;max-width:320px;aspect-ratio:3/4;border-radius:var(--r-control);
+  border:1px solid var(--border);
+  background:repeating-linear-gradient(45deg,var(--grey-50),var(--grey-50) 10px,
+             var(--white) 10px,var(--white) 20px);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--fg-muted);font-size:12px;text-align:center;padding:var(--sp-4)}
+.ds-proof__ttl{margin-top:var(--sp-2);font-size:12px;color:var(--fg-muted);
+  font-family:var(--font-mono)}
+
+/* swatches */
+.sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:var(--sp-2)}
+.sw{border:1px solid var(--border);border-radius:var(--r-control);overflow:hidden;background:var(--bg)}
+.sw__chip{height:48px}
+.sw__meta{padding:var(--sp-2);font-size:12px;line-height:1.4}
+.sw__name{font-weight:600}
+.sw__hex{font-family:var(--font-mono);color:var(--fg-muted)}
+
+/* alur walkthrough */
+.alur{border:1px solid var(--border);border-radius:var(--r-panel);background:var(--bg);
+  overflow:hidden}
+.alur__bar{display:flex;flex-wrap:wrap;gap:var(--sp-1);padding:var(--sp-2);
+  background:var(--bg-subtle);border-bottom:1px solid var(--border)}
+.alur__tab{height:32px;padding:0 var(--sp-3);border:1px solid var(--border);
+  background:var(--bg);color:var(--fg);border-radius:var(--r-control);
+  font:600 12px/1 var(--font-body);cursor:pointer;
+  transition:background-color var(--dur-fast) var(--ease),
+             border-color var(--dur-fast) var(--ease)}
+.alur__tab[aria-selected="true"]{background:var(--interactive);color:var(--fg-inverse);
+  border-color:var(--interactive)}
+.alur__stage{padding:var(--sp-4);background:var(--bg-subtle)}
+.alur__caption{padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--border);
+  font-size:14px;color:var(--fg-muted);background:var(--bg)}
+.alur__screen{background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--r-panel);overflow:hidden;max-width:840px;margin:0 auto}
+.alur__chrome{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--sp-2) var(--sp-4);background:var(--interactive);color:var(--fg-inverse);
+  font-size:12px}
+.alur__body{padding:var(--sp-4)}
+[hidden]{display:none !important}
+
+.dl{display:grid;grid-template-columns:max-content 1fr;gap:var(--sp-1) var(--sp-4);
+  font-size:14px;margin:0}
+.dl dt{color:var(--fg-muted)}
+.dl dd{margin:0}
+
+@media (max-width:720px){
+  .ds-row{grid-template-columns:1fr 1fr;gap:var(--sp-2)}
+  .ds-row__head{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Design System — Arena Player Admin</h1>
+<p class="lede">Reference artifact. Not production code, not a client deliverable. Tokens are normative in
+<code>docs/DESIGN.md</code>; if this page and that file disagree, <strong>that file wins</strong>.</p>
+
+<div class="note">
+<strong>The admin's language, in one line:</strong> same palette as the public site, none of its motion.
+Dense, boring, fast. The admin is doing data entry under time pressure with a customer waiting on
+WhatsApp — delight is a tax here. Every omission on this page (no Orbitron, no scroll effects, no
+hero, no fluid type) is that sentence being applied.
+</div>
+
+<h2><span class="sec-n">00</span>Open decisions — read before building anything</h2>
+<p>Four, and none can be answered from inside this repo. Placed before the specimens on purpose:
+a builder who reads the components first will assume these are settled.</p>
+<div class="scroll"><table>
+<thead><tr><th>Decision</th><th>Blocks</th><th>Where it lives</th></tr></thead>
+<tbody>
+<tr><td>Tailwind v4 tokens — hand-authored <code>@theme</code>, or generated from the frontmatter?</td>
+    <td>Phase 1a step 01</td><td><code>docs/tasks/1a-step-01-architecture.md</code></td></tr>
+<tr><td>Does <code>admin.arena-player.com</code> exist, over HTTPS?</td>
+    <td>Phase 5, and the session cookie is <code>Secure</code></td><td><code>docs/tasks/5-gate-subdomain.md</code></td></tr>
+<tr><td>Does the client ever close on a recurring weekly basis?</td>
+    <td>Whether <code>slot_closures</code> is ever built</td><td><code>docs/PRODUCT.md</code></td></tr>
+<tr><td>Who owns the expiry scheduler after handover?</td>
+    <td>Phase 3 DoD</td><td><code>docs/tasks/5-gate-cron-owner.md</code></td></tr>
+</tbody></table></div>
+
+<h2><span class="sec-n">01</span>Palette — every ratio measured</h2>
+<p>Computed against the sRGB formula, not recalled. An earlier draft of <code>DESIGN.md</code> claimed
+7.4:1 for confirmed ink; the true figure is <strong>6.49</strong>. It still passes AA and it was still
+wrong — a plausible number is the easiest kind to not check.</p>
+
+<div class="sw-grid">
+  <div class="sw"><div class="sw__chip" style="background:var(--navy-900)"></div>
+    <div class="sw__meta"><div class="sw__name">navy-900</div><div class="sw__hex">#011A43</div>
+    <div>body ink · <span class="num">17.07</span> on white</div></div></div>
+  <div class="sw"><div class="sw__chip" style="background:var(--navy-700)"></div>
+    <div class="sw__meta"><div class="sw__name">navy-700</div><div class="sw__hex">#0A2E6B</div>
+    <div>primary hover · <span class="num">12.99</span> w/ white ink</div></div></div>
+  <div class="sw"><div class="sw__chip" style="background:var(--navy-400)"></div>
+    <div class="sw__meta"><div class="sw__name">navy-400</div><div class="sw__hex">#4A5A78</div>
+    <div>muted + expired · <span class="num">6.94</span> on white</div></div></div>
+  <div class="sw"><div class="sw__chip" style="background:var(--blue-600)"></div>
+    <div class="sw__meta"><div class="sw__name">blue-600</div><div class="sw__hex">#2563EB</div>
+    <div>focus ring · <span class="num">5.17</span> on white</div></div></div>
+  <div class="sw"><div class="sw__chip" style="background:var(--blue-50)"></div>
+    <div class="sw__meta"><div class="sw__name">blue-50</div><div class="sw__hex">#EFF6FF</div>
+    <div>wash · <span class="num">15.69</span> w/ navy-900</div></div></div>
+  <div class="sw"><div class="sw__chip" style="background:var(--grey-200)"></div>
+    <div class="sw__meta"><div class="sw__name">grey-200</div><div class="sw__hex">#E5E7EB</div>
+    <div>row divider · exempt, see 02</div></div></div>
+</div>
+
+<h3>The four status triples</h3>
+<div class="scroll"><table>
+<thead><tr><th>Status</th><th>Rendered</th><th>Surface</th><th>Border</th><th>Ink on surface</th><th>Border vs white</th><th>Border vs fill</th></tr></thead>
+<tbody>
+<tr><td><code>pending</code></td><td><span class="ds-status ds-status--pending">Menunggu</span></td>
+  <td class="mono">#FEF3C7</td><td class="mono">#B45309</td>
+  <td class="num">6.37</td><td class="num">5.02</td><td class="num">4.51</td></tr>
+<tr><td><code>confirmed</code></td><td><span class="ds-status ds-status--confirmed">Dikonfirmasi</span></td>
+  <td class="mono">#DCFCE7</td><td class="mono">#15803D</td>
+  <td class="num">6.49</td><td class="num">5.02</td><td class="num">4.57</td></tr>
+<tr><td><code>rejected</code></td><td><span class="ds-status ds-status--rejected">Ditolak</span></td>
+  <td class="mono">#FEE2E2</td><td class="mono">#DC2626</td>
+  <td class="num">6.80</td><td class="num">4.83</td><td class="num">3.95</td></tr>
+<tr><td><code>expired</code></td><td><span class="ds-status ds-status--expired">Kedaluwarsa</span></td>
+  <td class="mono">#F9FAFB</td><td class="mono">#4A5A78</td>
+  <td class="num">6.64</td><td class="num">6.94</td><td class="num">6.64</td></tr>
+</tbody></table></div>
+<p class="sm">Ink needs 4.5. Borders need 3.0 <em>on both sides</em>. All twelve figures clear.</p>
+
+<div class="warn">
+<strong>These borders are a correction, not a preference.</strong> The web palette's <code>-300</code>
+tier measured <span class="num">1.29</span>–<span class="num">1.90</span> against both the page and its
+own fill — three to four times under the 3:1 the rule demands. Those borders were decorative while
+being documented as one third of a state signal, which is worse than having no border: the document
+claimed a guarantee the pixels did not deliver. Web's own component tokens name no
+<code>borderColor</code> at all, so the rule had never been tested against a measured value.
+<strong>Worth telling the web repo</strong> — if its Phase 2 slot cells grow a state-carrying border,
+they will fail the same way.
+</div>
+
+<h2><span class="sec-n">02</span>The layering rule, demonstrated</h2>
+<p>Primitive → semantic → component, three hops, no shortcuts. A component rule reaching a raw hex is
+a defect — the other repo's finish review caught seventeen of them as a single P0, on the very page
+that taught the rule.</p>
+<div class="panel">
+<pre class="mono" style="margin:0;overflow-x:auto">Layer 1  --amber-700: #B45309;                      /* primitive: a hue */
+Layer 2  --pending-line: var(--amber-700);          /* semantic: what it MEANS */
+Layer 3  .ds-status--pending { border-color: var(--pending-line); }   /* component */</pre>
+</div>
+<p class="sm">Every Layer 3 rule in this document's stylesheet reads a Layer 2 token. The one
+deliberate exception is page chrome — headings, the wrapper, this note — which is not part of the
+system and is marked as such in the CSS.</p>
+<p class="sm"><strong>The row-divider exemption.</strong> <code>grey-200</code> measures
+<span class="num">1.24</span> on white. It separates rows; it carries no state and no information.
+WCAG 1.4.11 governs boundaries that <em>are</em> the signal, and a table rule is not one. Recorded so
+it does not read as the same oversight as the <code>-300</code> tier.</p>
+
+<h2><span class="sec-n">03</span>Controls</h2>
+<div class="panel">
+  <div style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center">
+    <button class="ds-btn ds-btn--primary">Konfirmasi</button>
+    <button class="ds-btn ds-btn--danger">Tolak</button>
+    <button class="ds-btn ds-btn--quiet">Semua tanggal</button>
+    <button class="ds-btn ds-btn--primary" aria-disabled="true">Memproses…</button>
+  </div>
+  <p class="sm" style="margin-top:var(--sp-3)">The fourth is <code>aria-disabled</code>, not
+  <code>disabled</code> — a natively disabled button drops out of the tab order mid-interaction and
+  moves focus somewhere the admin did not choose. <strong>It has its own visual rule</strong>: the
+  other repo shipped an <code>aria-disabled</code> state that was byte-identical to idle, directly
+  beneath a paragraph explaining why <code>aria-disabled</code> was correct.</p>
+</div>
+
+<div class="panel" style="max-width:420px">
+  <label class="ds-label" for="spec-ok">Kata sandi</label>
+  <input class="ds-input" id="spec-ok" type="password" value="hunter2hunter2">
+  <div style="height:var(--sp-4)"></div>
+  <label class="ds-label" for="spec-err">Kata sandi</label>
+  <input class="ds-input ds-input--error" id="spec-err" type="password"
+         value="salah" aria-invalid="true" aria-describedby="spec-err-msg">
+  <p class="ds-err" id="spec-err-msg">Kata sandi salah.</p>
+  <p class="xs" style="color:var(--fg-muted);margin-top:var(--sp-2)">
+  Error text ties to its field via <code>aria-describedby</code>, and focus moves here on failure
+  rather than staying on a dead button. Baseline, not a nicety — the admin works this app from the
+  keyboard.</p>
+</div>
+
+<h2><span class="sec-n">04</span>The queue — desktop</h2>
+<p>Default view: <code>status = pending</code>, <code>booking_date &gt;= today</code>, sorted
+<code>booking_date asc, time_slot asc</code>. Not <code>created_at desc</code> — that is a feed, and
+this is a queue. What matters is which game is soonest, because that is the booking about to be lost.</p>
+
+<div class="panel" style="padding:0;overflow:hidden">
+  <div class="ds-row ds-row__head">
+    <div>Tanggal</div><div>Jam</div><div>Tim</div><div>WhatsApp</div><div>Status</div><div>Umur</div>
+  </div>
+  <div class="ds-row">
+    <div class="num">08 Agu 2026</div><div class="ds-row__slot">18.00 - 20.00</div>
+    <div>Garuda FC</div><div><a href="#04">0812-3456-7890</a></div>
+    <div><span class="ds-status ds-status--pending">Menunggu</span></div>
+    <div class="ds-row__age">3j</div>
+  </div>
+  <div class="ds-row">
+    <div class="num">08 Agu 2026</div><div class="ds-row__slot">20.00 - 22.00</div>
+    <div>Rajawali United</div><div><a href="#04">0813-2222-1111</a></div>
+    <div><span class="ds-status ds-status--confirmed">Dikonfirmasi</span></div>
+    <div class="ds-row__age">1h</div>
+  </div>
+  <div class="ds-row">
+    <div class="num">09 Agu 2026</div><div class="ds-row__slot">06.00 - 08.00</div>
+    <div>Pagi Squad</div><div><a href="#04">0857-9999-0000</a></div>
+    <div><span class="ds-status ds-status--pending">Menunggu</span></div>
+    <div class="ds-row__age" style="color:var(--pending-ink);font-weight:600">23j</div>
+  </div>
+  <div class="ds-row">
+    <div class="num">07 Agu 2026</div><div class="ds-row__slot">16.00 - 18.00</div>
+    <div>Senja FC</div><div><a href="#04">0811-7777-3333</a></div>
+    <div><span class="ds-status ds-status--expired">Kedaluwarsa</span></div>
+    <div class="ds-row__age">25j</div>
+  </div>
+</div>
+
+<p class="sm"><strong>Two rendering rules visible above.</strong> The phone is a <code>wa.me</code>
+link, because the admin's next action after reading a booking is to message that person — highest-value
+affordance on the page, costs nothing. And <code>notes</code> is absent: up to 500 characters wrecks
+row height, so it lives on the detail page only.</p>
+<p class="sm"><code>time_slot</code> renders monospace and sorts correctly as <em>plain text</em>,
+because the canonical form is zero-padded 24-hour. That is a load-bearing property of the string, not
+a coincidence — it means the sort needs no lookup table. Do not add one.</p>
+
+<h2><span class="sec-n">05</span>The queue — 375px</h2>
+<p>The admin runs a field and is frequently on a phone. <strong>At this width the list is not a
+table.</strong> The frame below is exactly 375px; the other repo shipped frames that claimed 375 and
+rendered 335, so this one is measured rather than asserted.</p>
+
+<div class="ds-frame" id="frame375">
+  <button class="ds-card">
+    <div class="ds-card__top"><span class="ds-card__slot">08 Agu · 18.00 - 20.00</span>
+      <span class="ds-status ds-status--pending">Menunggu</span></div>
+    <div class="ds-card__team">Garuda FC</div>
+    <div class="ds-card__meta">0812-3456-7890 · masuk 3 jam lalu</div>
+  </button>
+  <button class="ds-card">
+    <div class="ds-card__top"><span class="ds-card__slot">09 Agu · 06.00 - 08.00</span>
+      <span class="ds-status ds-status--pending">Menunggu</span></div>
+    <div class="ds-card__team">Pagi Squad</div>
+    <div class="ds-card__meta">0857-9999-0000 · masuk 23 jam lalu</div>
+  </button>
+  <button class="ds-card" style="border-bottom:0">
+    <div class="ds-card__top"><span class="ds-card__slot">07 Agu · 16.00 - 18.00</span>
+      <span class="ds-status ds-status--expired">Kedaluwarsa</span></div>
+    <div class="ds-card__team">Senja FC</div>
+    <div class="ds-card__meta">0811-7777-3333 · masuk 25 jam lalu</div>
+  </button>
+</div>
+<p class="xs" style="color:var(--fg-muted);margin-top:var(--sp-2)" id="frameProbe">
+  Measured width: <span class="mono">—</span></p>
+
+<h2><span class="sec-n">06</span>Payment proof, and its expiry</h2>
+<p>A presigned GET, <strong>120 seconds</strong>. Not fifteen minutes: it is a bearer capability for a
+document carrying a name, an amount, and a bank transfer, and it leaks through browser history and the
+<code>Referer</code> header.</p>
+
+<div class="panel">
+  <div class="ds-proof" id="proofDemo">
+    <div class="ds-proof__img" id="proofImg">bukti transfer<br>(specimen — no real proof exists yet)</div>
+    <div class="ds-proof__ttl" id="proofTtl">presigned GET · expires in 120s</div>
+    <div style="margin-top:var(--sp-3);display:flex;gap:var(--sp-2);flex-wrap:wrap">
+      <button class="ds-btn ds-btn--quiet" id="proofExpire">Simulate expiry</button>
+      <button class="ds-btn ds-btn--quiet" id="proofReset" hidden>Reset specimen</button>
+    </div>
+  </div>
+  <p class="sm" style="margin-top:var(--sp-3)">An expiring URL on a page left open renders a broken
+  image. The <code>&lt;img&gt;</code> carries an <code>onError</code> that swaps in the recovery button
+  above — <strong>the only client component in v1</strong>. Everything else on every screen is a
+  Server Component.</p>
+</div>
+
+<div class="warn">
+<strong>Never <code>next/image</code> on a proof.</strong> The optimizer proxies the presigned URL,
+writes the decoded output to an on-disk cache keyed by URL, and serves it from a stable
+<code>/_next/image?url=…</code> path with a long TTL — copying a private payment document out of the
+private bucket and outliving the presign entirely. Plain <code>&lt;img&gt;</code>. This is the worst
+mistake available in this repo, and it looks like an improvement.
+</div>
+
+<h2><span class="sec-n">07</span>The states nothing renders until they happen</h2>
+<p>Three of these exist only on a bad day, which is exactly why they get designed now rather than
+improvised then. The other repo's finish review found that nothing in its system had a loading,
+empty, or failed state at all.</p>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+  <div>
+    <h3>Empty queue — the good day</h3>
+    <div class="ds-state ds-state--empty">
+      <div style="font-weight:600;color:var(--fg)">Tidak ada booking menunggu</div>
+      <div class="sm" style="margin-top:var(--sp-1)">Semua sudah diproses.</div>
+    </div>
+  </div>
+  <div>
+    <h3>409 — lost the row</h3>
+    <div class="ds-state ds-state--conflict">
+      <div style="font-weight:600">Booking ini sudah diproses</div>
+      <div class="sm" style="margin-top:var(--sp-1)">Statusnya berubah sejak halaman ini dimuat.
+      Daftar sudah diperbarui.</div>
+    </div>
+  </div>
+  <div>
+    <h3>503 — migration not applied</h3>
+    <div class="ds-state ds-state--blocked">
+      <div style="font-weight:600">Fitur ini belum aktif</div>
+      <div class="sm" style="margin-top:var(--sp-1)">Jalankan
+      <code>db/migrations/0002_create_slot_blocks.sql</code> di Neon SQL editor.</div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+<strong>The 409 is not an error state, it is the normal case.</strong> The admin's screen is stale by
+default — two tabs, a phone and a laptop, and an expiry job all write the same rows. Every mutation
+carries a <code>where status in (…)</code> guard and zero rows means somebody else got there first.
+<br><br>
+<strong>The 503 is scoped, never global.</strong> A missing Phase 4 table degrades this app to its core
+function; it does not brick it. Someone will otherwise wrap the root layout in the schema guard because
+it looks tidier, and the first missing migration takes the bookings console down with it.
+</div>
+
+<h2><span class="sec-n">08</span>Alur — the journey, clickable</h2>
+<p>Five steps, in the order the admin actually walks them. A component inventory is not a design: the
+handlers below are what prove login → queue → detail → confirm → collision hangs together.</p>
+
+<div class="alur" id="alur">
+  <div class="alur__bar" role="tablist" aria-label="Alur admin">
+    <button class="alur__tab" role="tab" aria-selected="true"  data-step="1">1 · Masuk</button>
+    <button class="alur__tab" role="tab" aria-selected="false" data-step="2">2 · Antrean</button>
+    <button class="alur__tab" role="tab" aria-selected="false" data-step="3">3 · Detail + bukti</button>
+    <button class="alur__tab" role="tab" aria-selected="false" data-step="4">4 · Konfirmasi</button>
+    <button class="alur__tab" role="tab" aria-selected="false" data-step="5">5 · Tabrakan 409</button>
+  </div>
+
+  <div class="alur__stage">
+
+    <!-- 1 -->
+    <div class="alur__screen" data-panel="1" role="tabpanel">
+      <div class="alur__chrome"><span>admin.arena-player.com/login</span><span>—</span></div>
+      <div class="alur__body" style="max-width:360px;margin:0 auto;padding:var(--sp-12) var(--sp-4)">
+        <h3 style="margin-top:0">Arena Player · Admin</h3>
+        <label class="ds-label" for="alurPw">Kata sandi</label>
+        <input class="ds-input" id="alurPw" type="password" value="••••••••••">
+        <div style="height:var(--sp-3)"></div>
+        <button class="ds-btn ds-btn--primary" style="width:100%" data-goto="2">Masuk</button>
+        <p class="xs" style="color:var(--fg-muted);margin-top:var(--sp-3)">
+        Satu akun. Hash argon2id di env var, sesi berupa cookie JWT bertanda tangan.</p>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="alur__screen" data-panel="2" role="tabpanel" hidden>
+      <div class="alur__chrome"><span>admin.arena-player.com/bookings?status=pending</span>
+        <span>Keluar</span></div>
+      <div class="alur__body">
+        <div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-3)">
+          <button class="ds-btn ds-btn--primary" style="height:32px;font-size:12px">Menunggu · 2</button>
+          <button class="ds-btn ds-btn--quiet" style="height:32px;font-size:12px">Dikonfirmasi</button>
+          <button class="ds-btn ds-btn--quiet" style="height:32px;font-size:12px">Semua tanggal</button>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:var(--r-panel);overflow:hidden">
+          <div class="ds-row ds-row__head"><div>Tanggal</div><div>Jam</div><div>Tim</div>
+            <div>WhatsApp</div><div>Status</div><div>Umur</div></div>
+          <div class="ds-row" style="cursor:pointer" data-goto="3">
+            <div class="num">08 Agu</div><div class="ds-row__slot">18.00 - 20.00</div>
+            <div>Garuda FC</div><div>0812-3456-7890</div>
+            <div><span class="ds-status ds-status--pending">Menunggu</span></div>
+            <div class="ds-row__age">3j</div>
+          </div>
+          <div class="ds-row" style="border-bottom:0">
+            <div class="num">09 Agu</div><div class="ds-row__slot">06.00 - 08.00</div>
+            <div>Pagi Squad</div><div>0857-9999-0000</div>
+            <div><span class="ds-status ds-status--pending">Menunggu</span></div>
+            <div class="ds-row__age" style="color:var(--pending-ink);font-weight:600">23j</div>
+          </div>
+        </div>
+        <p class="xs" style="color:var(--fg-muted);margin-top:var(--sp-2)">
+        Booking tertua: <strong>23 jam</strong> — di bawah ambang 25 jam, cron berjalan normal.</p>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="alur__screen" data-panel="3" role="tabpanel" hidden>
+      <div class="alur__chrome"><span>admin.arena-player.com/bookings/8f3c…</span><span>Keluar</span></div>
+      <div class="alur__body" style="display:grid;grid-template-columns:1fr 280px;gap:var(--sp-6)">
+        <div>
+          <h3 style="margin-top:0">Garuda FC</h3>
+          <dl class="dl">
+            <dt>Tanggal</dt><dd class="num">08 Agustus 2026</dd>
+            <dt>Jam</dt><dd class="mono">18.00 - 20.00</dd>
+            <dt>WhatsApp</dt><dd><a href="#08">0812-3456-7890</a></dd>
+            <dt>Status</dt><dd><span class="ds-status ds-status--pending">Menunggu</span></dd>
+            <dt>Masuk</dt><dd class="num">08 Agu 2026, 14.12 · 3 jam lalu</dd>
+            <dt>Catatan</dt><dd>Tolong siapkan 2 bola. Kami datang 15 menit lebih awal.</dd>
+            <dt>ID</dt><dd class="mono xs">8f3c1a92-4d5e-4f21-9b77-0e2a8c14d6bb</dd>
+          </dl>
+          <div style="margin-top:var(--sp-6);display:flex;gap:var(--sp-2)">
+            <button class="ds-btn ds-btn--primary" data-goto="4">Konfirmasi</button>
+            <button class="ds-btn ds-btn--danger" data-goto="5">Tolak</button>
+          </div>
+        </div>
+        <div class="ds-proof" style="padding:var(--sp-3)">
+          <div class="ds-proof__img" style="aspect-ratio:3/4;max-width:100%">bukti transfer</div>
+          <div class="ds-proof__ttl">presigned · 120s</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="alur__screen" data-panel="4" role="tabpanel" hidden>
+      <div class="alur__chrome"><span>admin.arena-player.com/bookings/8f3c…</span><span>Keluar</span></div>
+      <div class="alur__body">
+        <div class="ds-state ds-state--empty" style="background:var(--confirmed-surface);
+             border:1px solid var(--confirmed-line);color:var(--confirmed-ink);text-align:left">
+          <div style="font-weight:600">Booking dikonfirmasi</div>
+          <div class="sm" style="margin-top:var(--sp-1)">Garuda FC · 08 Agu · 18.00 - 20.00</div>
+        </div>
+        <p class="sm" style="margin-top:var(--sp-4)">Slot ini sekarang tampil
+        <strong>Terisi</strong> di situs publik dalam 30 detik — keduanya membaca tabel
+        <code>bookings</code> yang sama.</p>
+        <div class="panel" style="background:var(--bg-subtle)">
+          <pre class="mono" style="margin:0;overflow-x:auto;font-size:12px">update bookings set status = 'confirmed'
+ where id = $1 and status = 'pending'
+returning id, status;</pre>
+        </div>
+        <p class="xs" style="color:var(--fg-muted)">The guard is the whole statement. Without
+        <code>and status = 'pending'</code> this silently overwrites a row the expiry job already
+        released.</p>
+        <button class="ds-btn ds-btn--quiet" data-goto="2">← Kembali ke antrean</button>
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="alur__screen" data-panel="5" role="tabpanel" hidden>
+      <div class="alur__chrome"><span>admin.arena-player.com/bookings/8f3c…</span><span>Keluar</span></div>
+      <div class="alur__body">
+        <div class="ds-state ds-state--conflict">
+          <div style="font-weight:600">Booking ini sudah diproses</div>
+          <div class="sm" style="margin-top:var(--sp-1)">Statusnya berubah sejak halaman ini dimuat.
+          Data di bawah sudah diperbarui.</div>
+        </div>
+        <div style="margin-top:var(--sp-4)">
+          <dl class="dl">
+            <dt>Tim</dt><dd>Garuda FC</dd>
+            <dt>Status</dt><dd><span class="ds-status ds-status--expired">Kedaluwarsa</span></dd>
+          </dl>
+        </div>
+        <p class="sm" style="margin-top:var(--sp-4)">The mutation returned <strong>zero rows</strong>.
+        That is not an error to swallow — the expiry job flipped this booking between page render and
+        click. Respond 409, re-render, and let the admin see what actually happened.</p>
+        <p class="sm"><strong>Why there is no "un-expire" button here.</strong> Confirming an expired
+        row can collide with <code>uniq_active_slot</code> and raise <code>23505</code>: another
+        booking may have taken the slot after it was released. Doing that properly needs the full
+        <code>isSlotConflict()</code> contract and a distinct 409. Parked, because a half-built version
+        is worse than none.</p>
+        <button class="ds-btn ds-btn--quiet" data-goto="2">← Kembali ke antrean</button>
+      </div>
+    </div>
+
+  </div>
+  <div class="alur__caption" id="alurCaption"></div>
+</div>
+
+<h2><span class="sec-n">09</span>What is deliberately not on this page</h2>
+<div class="scroll"><table>
+<thead><tr><th>Absent</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Orbitron, the fluid <code>clamp()</code> scale, section transitions, any hero</td>
+    <td>Landing-page art direction. A data table does not want it</td></tr>
+<tr><td>Any motion beyond 160ms colour transitions</td>
+    <td>No GSAP in this repo, so no <code>src/lib/motion.ts</code> either. Reduced-motion still removes
+        even those</td></tr>
+<tr><td>Any price</td>
+    <td>No rate card is confirmed. Web's rule forked at its 2026-08-11 checkpoint &mdash; <code>/booking</code>
+        now renders one, <code>/</code> still doesn't &mdash; so this is no longer "the same rule as the public
+        site," just the same missing figure both apps are waiting on</td></tr>
+<tr><td>A loading skeleton</td>
+    <td>Server Components with no client fetching. The page arrives rendered or it does not arrive</td></tr>
+<tr><td>Slot-blocking UI</td>
+    <td>Phase 4, and it is behind <code>4-gate-blocks.md</code> — a block web does not read is a
+        silent no-op</td></tr>
+<tr><td>Real data of any kind</td>
+    <td>The <code>bookings</code> table does not exist in Neon yet. Every value here is invented and
+        labelled as a specimen</td></tr>
+</tbody></table></div>
+
+<p class="sm" style="margin-top:var(--sp-8);color:var(--fg-muted)">
+This page is <strong>not</strong> under <code>check:domain</code>, and must not be added to it. That
+check covers <code>src/domain/*.ts</code> only. Token drift between the repos is cosmetic; slot-string
+drift silently disables anti-double-booking in both apps. Putting a documentation file under a byte
+diff would train people to skim past that check's failures — the one check in this project that must
+never be skimmed past.</p>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---- Alur ------------------------------------------------------
+     Every query is scoped to the alur root. The other repo shipped a
+     toggle whose handler fell back to `document` and cleared an
+     unrelated demo elsewhere on the page. */
+  var alur = document.getElementById('alur');
+  if (alur) {
+    var tabs     = alur.querySelectorAll('.alur__tab');
+    var panels   = alur.querySelectorAll('[data-panel]');
+    var caption  = document.getElementById('alurCaption');
+    var captions = {
+      '1': 'Satu akun, satu kata sandi. Middleware Edge memverifikasi JWT saja — argon2 tidak bisa jalan di Edge, jadi pengecekan kata sandi ada di route handler runtime Node.',
+      '2': 'Default: pending, dari hari ini, diurutkan pertandingan terdekat. Bukan created_at desc — itu feed, ini antrean.',
+      '3': 'Bukti transfer lewat presigned GET 120 detik. Catatan hanya muncul di sini, tidak di daftar.',
+      '4': 'UPDATE dengan penjaga status. Situs publik ikut berubah dalam 30 detik — satu tabel, dua aplikasi.',
+      '5': 'Nol baris terupdate. Bukan error yang ditelan: baris ini sudah diproses pihak lain.'
+    };
+
+    var show = function (n) {
+      for (var i = 0; i < panels.length; i++) {
+        panels[i].hidden = panels[i].getAttribute('data-panel') !== n;
+      }
+      for (var j = 0; j < tabs.length; j++) {
+        tabs[j].setAttribute('aria-selected',
+          tabs[j].getAttribute('data-step') === n ? 'true' : 'false');
+      }
+      caption.textContent = captions[n] || '';
+    };
+
+    alur.addEventListener('click', function (e) {
+      var tab = e.target.closest('.alur__tab');
+      if (tab && alur.contains(tab)) { show(tab.getAttribute('data-step')); return; }
+      var go = e.target.closest('[data-goto]');
+      if (go && alur.contains(go)) { show(go.getAttribute('data-goto')); }
+    });
+
+    show('1');
+  }
+
+  /* ---- Proof expiry specimen ------------------------------------- */
+  var img    = document.getElementById('proofImg');
+  var ttl    = document.getElementById('proofTtl');
+  var expire = document.getElementById('proofExpire');
+  var reset  = document.getElementById('proofReset');
+
+  if (img && expire && reset && ttl) {
+    expire.addEventListener('click', function () {
+      img.textContent = '';
+      img.style.background = 'var(--bg-subtle)';
+      img.style.flexDirection = 'column';
+      img.style.gap = '12px';
+
+      var msg = document.createElement('span');
+      msg.textContent = 'Bukti tidak dapat dimuat';
+      msg.style.color = 'var(--fg-muted)';
+
+      var btn = document.createElement('button');
+      btn.className = 'ds-btn ds-btn--quiet';
+      btn.textContent = 'Muat ulang bukti';
+      btn.addEventListener('click', function () { reset.click(); });
+
+      img.appendChild(msg);
+      img.appendChild(btn);
+
+      ttl.textContent = 'presigned GET · EXPIRED after 120s';
+      ttl.style.color = 'var(--rejected-ink)';
+      expire.hidden = true;
+      reset.hidden = false;
+    });
+
+    reset.addEventListener('click', function () {
+      img.textContent = 'bukti transfer (specimen — no real proof exists yet)';
+      img.style.background = '';
+      img.style.flexDirection = '';
+      img.style.gap = '';
+      ttl.textContent = 'presigned GET · expires in 120s';
+      ttl.style.color = '';
+      expire.hidden = false;
+      reset.hidden = true;
+    });
+  }
+
+  /* ---- Measure the 375px frame rather than claiming it ------------ */
+  var frame = document.getElementById('frame375');
+  var probe = document.getElementById('frameProbe');
+  if (frame && probe) {
+    var report = function () {
+      var w = Math.round(frame.getBoundingClientRect().width);
+      probe.innerHTML = 'Measured width: <span class="mono">' + w + 'px</span>' +
+        (w === 375
+          ? ' — matches the target.'
+          : ' — <strong>does not match 375px</strong>' +
+            ' (viewport is narrower than the frame; widen the window to verify).');
+    };
+    report();
+    window.addEventListener('resize', report);
+  }
+})();
+</script>
+
+</div>
+</body>
+</html>
