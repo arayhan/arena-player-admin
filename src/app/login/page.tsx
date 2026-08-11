@@ -72,7 +72,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <button
             type="submit"
-            className="rounded-control bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="h-10 rounded-control bg-navy-900 px-4 text-sm font-medium text-white hover:bg-navy-700"
           >
             Masuk
           </button>
