@@ -38,13 +38,13 @@ export default defineConfig({
     // see real credentials at all.
     setupFiles: ["./vitest.setup.ts"],
 
-    // Deliberate divergence from arena-player-web's vitest.config.ts: this
-    // step (1a-step-03) must leave check:unit passing before step 05 copies
-    // the first colocated test in. Vitest 4 exits non-zero on zero matched
-    // test files by default; without this, "pnpm check:unit" would be red on
-    // a clean scaffold for no reason a developer caused. Harmless once real
-    // tests exist — it only changes the zero-test outcome.
-    passWithNoTests: true,
+    // passWithNoTests intentionally NOT set (Vitest 4 default is false, i.e.
+    // it fails on zero matched test files). Step 03 set this to true because
+    // it landed before step 05 copied the first colocated test in; step 05
+    // landed 8 files / 67 tests, so the justification expired and leaving it
+    // true let check:unit — this repo's only behavioural gate — pass
+    // vacuously if the include glob or run target ever broke. See
+    // docs/PROGRESS.md step 08 checkpoint.
 
     // NOT decoration. This machine runs on Asia/Jakarta, which is the
     // timezone src/domain/dates.ts (copied at step 05) exists to compute in —

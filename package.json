@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm check:domain && pnpm check:unit",
+    "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm check:unit",
     "check:domain": "node scripts/check-domain.mjs",
     "check:unit": "pnpm check:domain && vitest run src",
     "check:schema": "vitest run scripts/check-schema.test.ts",

@@ -7,10 +7,15 @@
  * decides whether a slot-string drift is caught. See db.test.ts for the
  * same "credential-free proof" pattern applied to the Neon OID override.
  *
- * No `import "server-only"` here on purpose — this module touches no
- * secret, opens no connection, and its whole reason to exist is to be
- * importable from a plain, credential-free test.
+ * CLAUDE.md hard rule 3 states the `import "server-only"` requirement
+ * absolutely, for every file in src/server/, with no carve-out — so this
+ * file carries it too even though it touches no secret and opens no
+ * connection itself. `vitest.config.ts` already aliases `server-only` to
+ * its no-op build under the test runtime (see that file's comment), which
+ * is what keeps `scripts/check-schema.test.ts` able to import this module
+ * credential-free under plain Vitest.
  */
+import "server-only";
 
 /** Literals inside a Postgres-pretty-printed `= ANY (ARRAY['a'::text, ...])` CHECK clause. */
 export function extractLiterals(constraintDefinition: string): string[] {
