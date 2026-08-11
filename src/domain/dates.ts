@@ -1,5 +1,11 @@
 /**
- * Asia/Jakarta date helpers and the booking window.
+ * Field-local date helpers and the booking window.
+ *
+ * THE FIELD IS IN LOMBOK (NTB): Asia/Makassar, WITA, UTC+8 — one hour ahead
+ * of Jakarta. The first cut of this file pinned Asia/Jakarta, which shifted
+ * "today", the elapsed-slot collapse, and isPastSlot() by an hour on exactly
+ * the audience this product serves. The names below say "field", not a city,
+ * so a future correction never leaves a function lying about what it computes.
  *
  * BYTE-IDENTICAL WITH arena-player-admin at this same path. It is the ONLY
  * file under src/domain/ with dependencies, and that is a cost: the admin repo
@@ -9,7 +15,7 @@
  *
  * `toISOString()` IS BANNED anywhere near a booking date — it shifts to UTC and
  * can move the date across midnight. Nothing here constructs a TZDate either:
- * with the hoisted `{ in: JAKARTA }` context, plain Date objects flow through
+ * with the hoisted `{ in: FIELD_TZ }` context, plain Date objects flow through
  * and the method is simply never in reach. See docs/database.md.
  */
 import { tz } from "@date-fns/tz";
@@ -18,20 +24,20 @@ import { addDays, format, isValid, parse } from "date-fns";
 import { slotStartHour, type TimeSlot } from "./slots";
 
 // Built once and reused, per the @date-fns/tz docs — not re-created per call.
-const JAKARTA = tz("Asia/Jakarta");
+const FIELD_TZ = tz("Asia/Makassar");
 const DATE_FORMAT = "yyyy-MM-dd";
 
 /** Today plus the next 13 days. 14 dates inclusive. */
 export const BOOKING_WINDOW_DAYS = 14;
 
-export function todayInJakarta(now: Date = new Date()): string {
-  return format(now, DATE_FORMAT, { in: JAKARTA });
+export function todayAtField(now: Date = new Date()): string {
+  return format(now, DATE_FORMAT, { in: FIELD_TZ });
 }
 
 /** Every bookable date, earliest first. */
 export function bookingWindow(now: Date = new Date()): string[] {
   return Array.from({ length: BOOKING_WINDOW_DAYS }, (_, offset) =>
-    format(addDays(now, offset, { in: JAKARTA }), DATE_FORMAT, { in: JAKARTA }),
+    format(addDays(now, offset, { in: FIELD_TZ }), DATE_FORMAT, { in: FIELD_TZ }),
   );
 }
 
@@ -41,8 +47,8 @@ export function bookingWindow(now: Date = new Date()): string[] {
  */
 export function isBookingDateString(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = parse(value, DATE_FORMAT, new Date(0), { in: JAKARTA });
-  return isValid(parsed) && format(parsed, DATE_FORMAT, { in: JAKARTA }) === value;
+  const parsed = parse(value, DATE_FORMAT, new Date(0), { in: FIELD_TZ });
+  return isValid(parsed) && format(parsed, DATE_FORMAT, { in: FIELD_TZ }) === value;
 }
 
 /**
@@ -56,8 +62,8 @@ export function isWithinBookingWindow(date: string, now: Date = new Date()): boo
   return date >= window[0] && date <= window[window.length - 1];
 }
 
-function currentHourInJakarta(now: Date): number {
-  return Number(format(now, "H", { in: JAKARTA }));
+function currentHourAtField(now: Date): number {
+  return Number(format(now, "H", { in: FIELD_TZ }));
 }
 
 /**
@@ -69,8 +75,8 @@ function currentHourInJakarta(now: Date): number {
  * docs/database.md as a regression not to repeat.
  */
 export function isPastSlot(date: string, slot: TimeSlot, now: Date = new Date()): boolean {
-  const today = todayInJakarta(now);
+  const today = todayAtField(now);
   if (date < today) return true;
   if (date > today) return false;
-  return currentHourInJakarta(now) >= slotStartHour(slot);
+  return currentHourAtField(now) >= slotStartHour(slot);
 }

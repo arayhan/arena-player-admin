@@ -50,7 +50,7 @@ describe("canonicalSlot", () => {
     expect(canonicalSlot("")).toBeNull();
     expect(canonicalSlot("18:00 - 20:00")).toBeNull();
     expect(canonicalSlot("sore")).toBeNull();
-    expect(canonicalSlot("18.00 - 20.00 WIB")).toBeNull();
+    expect(canonicalSlot("18.00 - 20.00 WITA")).toBeNull();
   });
 });
 
