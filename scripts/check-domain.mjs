@@ -64,8 +64,10 @@ const theirs = listShared(SIBLING);
 // the output must make that unmistakable.
 if (theirs === null) {
   console.log(
-    `SKIPPED: arena-player-web has not built src/domain/ yet — this check proved nothing.\n` +
-      `         Re-run after web's Phase 1a step 06 lands. Until then, TIME_SLOTS here is unverified.\n` +
+    `SKIPPED: could not find arena-player-web's src/domain/ — this check proved nothing.\n` +
+      `         web's Phase 1a step 06 has landed, so this usually means the sibling checkout\n` +
+      `         is missing, or ARENA_WEB_PATH points somewhere wrong (it is a path, not a flag\n` +
+      `         that says "web isn't ready yet" — see .env.local.example).\n` +
       `         Looked for it at: ${join(SIBLING, SHARED)}\n` +
       `         The ${mine?.length ?? 0} file(s) in this repo's ${SHARED}/ are UNGUARDED until then.`,
   );
