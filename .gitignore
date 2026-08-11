@@ -20,6 +20,9 @@ next-env.d.ts
 # testing / coverage
 coverage/
 
+# tsc --noEmit incremental cache
+tsconfig.tsbuildinfo
+
 # misc
 .DS_Store
 *.pem

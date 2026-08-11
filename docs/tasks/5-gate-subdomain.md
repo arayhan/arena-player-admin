@@ -24,14 +24,14 @@ Only Node capability was confirmed during planning. Two apps, two ports, one dom
 
 - Second Node app supported on this plan? _____
 - Subdomain routing available, or is it path-based only? _____
-- Any additional cost? _____ *(a fixed-budget freelance project — a per-app charge is a client decision, not a technical one)*
+- Any additional cost? _____ _(a fixed-budget freelance project — a per-app charge is a client decision, not a technical one)_
 
 ### 2. Is HTTPS available on the subdomain? — **BLOCKS Phase 5, hard**
 
 Not cosmetic. The session cookie is `Secure`, so **it will not be set over plain HTTP** and login will fail in a way that looks like a wrong password. Automatic certificate provisioning on a subdomain is a separate feature from having it on the apex.
 
 - HTTPS on `admin.arena-player.com`? _____
-- Automatic renewal, or manual? _____ *(manual renewal is a handover item with a calendar date attached)*
+- Automatic renewal, or manual? _____ _(manual renewal is a handover item with a calendar date attached)_
 
 ### 3. Who controls the DNS? — **BLOCKS the subdomain existing at all**
 
@@ -43,11 +43,11 @@ Not cosmetic. The session cookie is `Secure`, so **it will not be set over plain
 
 Decide here rather than at deploy. Three options, in preference order:
 
-| Option | Cost | Consequence |
-|---|---|---|
-| Path-based on the same host — `arena-player.com/admin` | none | Two apps behind one origin, or the admin merged into web's deploy. **The second reverses the separate-repo decision**; the first needs a reverse proxy the plan may not offer |
-| A different host for the admin app only | a second small hosting bill | Cleanest technically. Two accounts at handover instead of one |
-| A subdomain on a domain the developer controls, transferred later | none now | Works, but the credential handover then includes a domain, and "later" has a way of not arriving |
+| Option                                                            | Cost                        | Consequence                                                                                                                                                                   |
+| ----------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Path-based on the same host — `arena-player.com/admin`            | none                        | Two apps behind one origin, or the admin merged into web's deploy. **The second reverses the separate-repo decision**; the first needs a reverse proxy the plan may not offer |
+| A different host for the admin app only                           | a second small hosting bill | Cleanest technically. Two accounts at handover instead of one                                                                                                                 |
+| A subdomain on a domain the developer controls, transferred later | none now                    | Works, but the credential handover then includes a domain, and "later" has a way of not arriving                                                                              |
 
 - Fallback chosen: _____
 - Reason: _____
@@ -61,13 +61,13 @@ The expiry cron must point at production, not at a staging or preview URL. If th
 
 ## Outcome — fill in during or immediately after
 
-| Question | Answer |
-|---|---|
-| Subdomain supported | _____ |
-| HTTPS available | _____ |
-| DNS controller (now / after handover) | _____ |
-| Fallback chosen, if needed | _____ |
-| Final expiry endpoint URL | _____ |
+| Question                              | Answer |
+| ------------------------------------- | ------ |
+| Subdomain supported                   | _____  |
+| HTTPS available                       | _____  |
+| DNS controller (now / after handover) | _____  |
+| Fallback chosen, if needed            | _____  |
+| Final expiry endpoint URL             | _____  |
 
 ### Sign-off
 

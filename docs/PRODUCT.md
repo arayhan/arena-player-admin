@@ -16,7 +16,7 @@ Next.js 16 (App Router) + TypeScript + Tailwind v4, deliberately the same as the
 
 ## Users
 
-**Exactly one: the field admin.** In the web repo's own words (`PRODUCT.md:25`) they are "not a user of this site at all" — this repo is the site they *are* a user of.
+**Exactly one: the field admin.** In the web repo's own words (`PRODUCT.md:25`) they are "not a user of this site at all" — this repo is the site they _are_ a user of.
 
 They are the same person who receives the WhatsApp message, quotes the DP amount, pastes the `/booking` link back, and later reads the transfer screenshot. Today all of that happens in WhatsApp and in their head. This app takes over the last third of it: the part where a payment proof has to be looked at and a decision recorded somewhere that the public site can see.
 

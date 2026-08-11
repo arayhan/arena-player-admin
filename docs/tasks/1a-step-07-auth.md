@@ -40,7 +40,7 @@ argon2id either way. `hash-wasm` is pure WASM with no build step; `@node-rs/argo
 
 **`SameSite=Lax` is the CSRF defence.** Single user, no cross-site form posts, `Lax` cookies. A CSRF token here would be machinery nobody maintains protecting against nothing. Write that in the file, so the next reviewer does not add one — and so that if a cross-origin embed is ever introduced, the decision is visibly reopened rather than silently invalidated.
 
-**Rotating `SESSION_SECRET` logs the admin out.** With no session table there is nothing to delete from, so that rotation *is* the emergency revocation. It goes in the handover guide as a feature, not discovered as a surprise.
+**Rotating `SESSION_SECRET` logs the admin out.** With no session table there is nothing to delete from, so that rotation _is_ the emergency revocation. It goes in the handover guide as a feature, not discovered as a surprise.
 
 ## Acceptance
 
@@ -75,6 +75,6 @@ grep -rniE "password\s*=\s*['\"][^'\"]{6,}" . --exclude-dir=node_modules --exclu
 # expect: no match outside .env.local (which is gitignored) and the acceptance line above
 ```
 
-**Not done until** the built middleware bundle has been grepped and confirmed free of argon2, **and** a forged token has been seen rejected. Both are things that pass in development and fail in production: the first at deploy, the second never — a middleware that checks only for a cookie's *presence* works perfectly in every manual test anyone will run.
+**Not done until** the built middleware bundle has been grepped and confirmed free of argon2, **and** a forged token has been seen rejected. Both are things that pass in development and fail in production: the first at deploy, the second never — a middleware that checks only for a cookie's _presence_ works perfectly in every manual test anyone will run.
 
 handoff: `code-reviewer` — checkpoint before step 08

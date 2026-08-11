@@ -22,11 +22,11 @@ The compensating control already built: the dashboard shows **"umur booking pend
 
 Requirements are modest: an HTTP POST every 15 minutes with a bearer header, failure notification, and a visible run history.
 
-| Candidate | Cost | Notes |
-|---|---|---|
-| `cron-job.org` | free | Purpose-built, has failure email and run history. The default recommendation |
-| A crontab on any always-on machine running `curl` | free | Fine if such a machine exists and outlives the project. Usually it does not |
-| Sumopod's own scheduler, if it has one | included | Best answer if it exists — one fewer account at handover. Check during `5-gate-subdomain` |
+| Candidate                                         | Cost     | Notes                                                                                     |
+| ------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `cron-job.org`                                    | free     | Purpose-built, has failure email and run history. The default recommendation              |
+| A crontab on any always-on machine running `curl` | free     | Fine if such a machine exists and outlives the project. Usually it does not               |
+| Sumopod's own scheduler, if it has one            | included | Best answer if it exists — one fewer account at handover. Check during `5-gate-subdomain` |
 
 - Chosen: _____
 - Reason: _____
@@ -71,14 +71,14 @@ The rule is ">24h", so 15-minute granularity releases a slot at most 15 minutes 
 
 ## Outcome — fill in during or immediately after
 
-| Question | Answer |
-|---|---|
-| Scheduler | _____ |
-| Account owner (build / after handover) | _____ |
-| Failure notifications go to | _____ |
-| Admin's action when the indicator goes red | _____ |
-| `CRON_SECRET` custody + rotation | _____ |
-| Interval | _____ |
+| Question                                   | Answer |
+| ------------------------------------------ | ------ |
+| Scheduler                                  | _____  |
+| Account owner (build / after handover)     | _____  |
+| Failure notifications go to                | _____  |
+| Admin's action when the indicator goes red | _____  |
+| `CRON_SECRET` custody + rotation           | _____  |
+| Interval                                   | _____  |
 
 ### Sign-off
 

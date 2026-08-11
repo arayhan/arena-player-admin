@@ -16,14 +16,14 @@ The full request, DDL, and rationale: [../schema-requests/001-slot-blocks.md](..
 
 ## The sequence — each row must be true before the next is attempted
 
-| # | Step | Who | Verified by |
-|---|---|---|---|
-| 1 | DDL transcribed **verbatim** into `arena-player-web/db/migrations/<ts>_create_slot_blocks.sql` and committed there | developer, in a web session | the file exists in web's repo, comments intact |
-| 2 | Migration applied by hand in the Neon SQL editor | the user | `slot_blocks` and `uniq_slot_block` both present |
-| 3 | `src/server/required-schema.ts` extended here; `pnpm check:schema` green | admin repo | the check passes, including CHECK literals vs `TIME_SLOTS` |
-| 4 | Web's availability read **unions** `slot_blocks`, and its booking insert carries the `not exists` guard | developer, in a web session | both statements in web's code |
-| 5 | **Web is deployed** with those two statements | developer | a blocked slot inserted by hand reads `booked` on the live public site |
-| 6 | Only now: admin's blocking UI ships | admin repo | end-to-end check below |
+| #   | Step                                                                                                               | Who                         | Verified by                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------ | --------------------------- | ---------------------------------------------------------------------- |
+| 1   | DDL transcribed **verbatim** into `arena-player-web/db/migrations/<ts>_create_slot_blocks.sql` and committed there | developer, in a web session | the file exists in web's repo, comments intact                         |
+| 2   | Migration applied by hand in the Neon SQL editor                                                                   | the user                    | `slot_blocks` and `uniq_slot_block` both present                       |
+| 3   | `src/server/required-schema.ts` extended here; `pnpm check:schema` green                                           | admin repo                  | the check passes, including CHECK literals vs `TIME_SLOTS`             |
+| 4   | Web's availability read **unions** `slot_blocks`, and its booking insert carries the `not exists` guard            | developer, in a web session | both statements in web's code                                          |
+| 5   | **Web is deployed** with those two statements                                                                      | developer                   | a blocked slot inserted by hand reads `booked` on the live public site |
+| 6   | Only now: admin's blocking UI ships                                                                                | admin repo                  | end-to-end check below                                                 |
 
 **Row 5 is the one that gets skipped.** Web having the code merged is not the same as web serving it. The verification for row 5 is a request against the live public site, not a look at a diff.
 
@@ -49,14 +49,14 @@ The design maps a block to the existing API status `booked`. No new API status, 
 
 - Blocked slot returns `booked` from `GET /api/availability`? _____
 - A `POST /api/bookings` for a blocked slot returns 409? _____
-- Does its 409 copy distinguish "blocked" from "already taken"? _____ *(if not, decide here whether that matters — the customer sees this message)*
+- Does its 409 copy distinguish "blocked" from "already taken"? _____ _(if not, decide here whether that matters — the customer sees this message)_
 
 ### 4. Who blocks a slot that already has a booking? — **BLOCKS nothing, but decide it now**
 
 `uniq_slot_block` prevents double-blocking. It does not prevent blocking a date+slot that already holds a `pending` or `confirmed` booking, and the two tables have no foreign key between them.
 
 - Does the admin UI warn before blocking a slot with an active booking? _____
-- Or is blocking-then-rejecting the intended workflow? _____ *(recommended — it matches how the admin already thinks, and needs no cross-table constraint)*
+- Or is blocking-then-rejecting the intended workflow? _____ _(recommended — it matches how the admin already thinks, and needs no cross-table constraint)_
 
 ### 5. The race, stated rather than engineered away
 
@@ -77,15 +77,15 @@ Not a code review. Performed against the deployed public site.
 
 ## Outcome — fill in during or immediately after
 
-| Row | Done | Evidence |
-|---|---|---|
-| 1 — DDL in web's migrations | ☐ | _____ |
-| 2 — applied in Neon | ☐ | _____ |
-| 3 — `check:schema` green | ☐ | _____ |
-| 4 — web's two statements written | ☐ | _____ |
-| 5 — **web deployed and reading** | ☐ | _____ |
-| 6 — admin UI shipped | ☐ | _____ |
-| End-to-end verification passed | ☐ | _____ |
+| Row                              | Done | Evidence |
+| -------------------------------- | ---- | -------- |
+| 1 — DDL in web's migrations      | ☐    | _____    |
+| 2 — applied in Neon              | ☐    | _____    |
+| 3 — `check:schema` green         | ☐    | _____    |
+| 4 — web's two statements written | ☐    | _____    |
+| 5 — **web deployed and reading** | ☐    | _____    |
+| 6 — admin UI shipped             | ☐    | _____    |
+| End-to-end verification passed   | ☐    | _____    |
 
 ### Sign-off
 

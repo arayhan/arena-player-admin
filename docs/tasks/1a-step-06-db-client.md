@@ -48,7 +48,7 @@ So `check:schema` reads `pg_get_constraintdef`, extracts the quoted literals, an
 
 **It must never wrap the root layout.** Phase 2 needs zero new migrations. A missing Phase 4 table degrades this app to its core function; it does not brick it. Someone will otherwise put the guard in `src/app/layout.tsx` because it looks tidier, and the first missing migration will take the bookings console down with it.
 
-**It must never `create table if not exists`.** The migration is wrapped in a transaction specifically so a half-failed paste cannot leave `bookings` created *without* `uniq_active_slot`. Application-code DDL defeats that entirely: it produces a table with no constraints, no index, and no error.
+**It must never `create table if not exists`.** The migration is wrapped in a transaction specifically so a half-failed paste cannot leave `bookings` created _without_ `uniq_active_slot`. Application-code DDL defeats that entirely: it produces a table with no constraints, no index, and no error.
 
 ## Acceptance
 

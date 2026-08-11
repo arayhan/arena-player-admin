@@ -10,7 +10,7 @@
 
 `arena-player-web/docs/architecture.md:129-143` carries an `UNRESOLVED` block: `GET /api/availability` sets `Cache-Control: public, s-maxage=30`, so a cache hit never reaches the origin, so lazy-on-read expiry starves — on a quiet night nothing frees an abandoned slot.
 
-Three candidates were written out there. The resolution is **candidate 1**: a scheduled job, owned by `arena-player-admin`, triggered by an external HTTP scheduler every 15 minutes. Expire-on-POST was rejected because it starves on exactly the quiet night the problem describes; dropping the cache was rejected because it pays origin load on every date-pill tap *and* leaves a write inside a GET.
+Three candidates were written out there. The resolution is **candidate 1**: a scheduled job, owned by `arena-player-admin`, triggered by an external HTTP scheduler every 15 minutes. Expire-on-POST was rejected because it starves on exactly the quiet night the problem describes; dropping the cache was rejected because it pays origin load on every date-pill tap _and_ leaves a write inside a GET.
 
 This is a gate rather than a step because the failure it prevents is silent: until the edits land, **two repos hold contradictory descriptions of where expiry runs**, and a future agent will build against whichever one it reads first. Nothing throws either way.
 
@@ -20,20 +20,20 @@ This is a gate rather than a step because the failure it prevents is silent: unt
 
 All paths relative to `arena-player-web/`. Line numbers are where they were when this gate was written; verify by content, not by number.
 
-| # | File | Edit |
-|---|---|---|
-| 1 | `docs/architecture.md:126` | **Delete step 2 of the `GET /api/availability` request flow** — the lazy-expiry step. The GET becomes a pure read with no write in it |
-| 2 | `docs/architecture.md` | **Keep `Cache-Control: public, s-maxage=30` exactly as it is.** Stated as an edit because it is the one people will assume changed. The conflict is resolved by removing the write, not the cache |
-| 3 | `docs/architecture.md:129-143` | **Replace the whole `> UNRESOLVED` block** with the decision above, naming `arena-player-admin` as the owner of the mechanism and pointing at `arena-player-admin/docs/architecture.md` for the handler |
-| 4 | `docs/PRD.md:266` and `docs/PRD.md:417` | `:266` — "Where that expiry runs is UNRESOLVED" becomes resolved, with the owner named. `:417` — **strike the "Where expiry runs" row** from the Phase 4 agenda table entirely |
-| 5 | `docs/database.md:45-49` | `bookings_pending_expiry_idx` is currently `(booking_date, created_at) where status = 'pending'`, justified by a **per-date** lazy expiry that no longer exists. The scheduled job filters on `created_at` alone across all dates. Change it to `(created_at) where status = 'pending'` with a comment naming the admin job — **and do it now, while the migration is still unapplied**, rather than shipping an index with a false comment |
-| 6 | `docs/PRD.md` Phase 4 DoD | Drop the expiry item. Add an operational-dependency line: the public site's slots are only freed by a cron in `arena-player-admin`, so **that app and its scheduler are a launch dependency of this one** |
+| #   | File                                    | Edit                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `docs/architecture.md:126`              | **Delete step 2 of the `GET /api/availability` request flow** — the lazy-expiry step. The GET becomes a pure read with no write in it                                                                                                                                                                                                                                                                                                       |
+| 2   | `docs/architecture.md`                  | **Keep `Cache-Control: public, s-maxage=30` exactly as it is.** Stated as an edit because it is the one people will assume changed. The conflict is resolved by removing the write, not the cache                                                                                                                                                                                                                                           |
+| 3   | `docs/architecture.md:129-143`          | **Replace the whole `> UNRESOLVED` block** with the decision above, naming `arena-player-admin` as the owner of the mechanism and pointing at `arena-player-admin/docs/architecture.md` for the handler                                                                                                                                                                                                                                     |
+| 4   | `docs/PRD.md:266` and `docs/PRD.md:417` | `:266` — "Where that expiry runs is UNRESOLVED" becomes resolved, with the owner named. `:417` — **strike the "Where expiry runs" row** from the Phase 4 agenda table entirely                                                                                                                                                                                                                                                              |
+| 5   | `docs/database.md:45-49`                | `bookings_pending_expiry_idx` is currently `(booking_date, created_at) where status = 'pending'`, justified by a **per-date** lazy expiry that no longer exists. The scheduled job filters on `created_at` alone across all dates. Change it to `(created_at) where status = 'pending'` with a comment naming the admin job — **and do it now, while the migration is still unapplied**, rather than shipping an index with a false comment |
+| 6   | `docs/PRD.md` Phase 4 DoD               | Drop the expiry item. Add an operational-dependency line: the public site's slots are only freed by a cron in `arena-player-admin`, so **that app and its scheduler are a launch dependency of this one**                                                                                                                                                                                                                                   |
 
 ## Questions that must not be left unasked
 
 ### 1. Does edit 5 still hold once the index is real? — **BLOCKS nothing, but is easy to get wrong later**
 
-The migration has not been applied anywhere. If it *has* been applied by the time this gate is held, changing the index is no longer a documentation edit — it is a second migration.
+The migration has not been applied anywhere. If it _has_ been applied by the time this gate is held, changing the index is no longer a documentation edit — it is a second migration.
 
 - Applied yet? _____
 - If yes: does the index change ship as a new migration, or is it left as-is with a corrected comment? _____
@@ -54,18 +54,18 @@ Edit 6 changes the project's critical path. Web's PRD currently reads as though 
 
 ## Outcome — fill in during or immediately after
 
-| Edit | Applied | Commit |
-|---|---|---|
-| 1 — delete lazy-expiry step | ☐ | _____ |
-| 2 — `s-maxage` confirmed unchanged | ☐ | _____ |
-| 3 — replace UNRESOLVED block | ☐ | _____ |
-| 4 — two PRD statements | ☐ | _____ |
-| 5 — index justification | ☐ | _____ |
-| 6 — Phase 4 DoD + launch dependency | ☐ | _____ |
+| Edit                                | Applied | Commit |
+| ----------------------------------- | ------- | ------ |
+| 1 — delete lazy-expiry step         | ☐       | _____  |
+| 2 — `s-maxage` confirmed unchanged  | ☐       | _____  |
+| 3 — replace UNRESOLVED block        | ☐       | _____  |
+| 4 — two PRD statements              | ☐       | _____  |
+| 5 — index justification             | ☐       | _____  |
+| 6 — Phase 4 DoD + launch dependency | ☐       | _____  |
 
 **Anything found while applying these that contradicts the decision:**
 
-_____
+---
 
 ### Sign-off
 

@@ -154,22 +154,22 @@ The status borders use the **`-600`/`-700` tier**, not the `-300` tier web carri
 
 Web's `DESIGN.md` states the surface + border + ink rule in prose but **its component tokens name no `borderColor` at all**, so the rule was never tested against a measured border. Specifying one here made it testable, and the `-300` tier failed immediately:
 
-| Border, measured | vs the white page | vs its own fill |
-|---|---|---|
-| `amber-300` `#FCD34D` | **1.44** | **1.29** |
-| `green-300` `#86EFAC` | **1.40** | **1.28** |
-| `red-300` `#FCA5A5` | **1.90** | **1.55** |
+| Border, measured      | vs the white page | vs its own fill |
+| --------------------- | ----------------- | --------------- |
+| `amber-300` `#FCD34D` | **1.44**          | **1.29**        |
+| `green-300` `#86EFAC` | **1.40**          | **1.28**        |
+| `red-300` `#FCA5A5`   | **1.90**          | **1.55**        |
 
 Against a 3:1 requirement, on both sides. Those borders were decorative while being documented as one third of a state signal — which is worse than having no border, because the document claimed a guarantee the pixels did not deliver.
 
 The replacements clear it on both sides:
 
-| Token | vs white | vs fill |
-|---|---|---|
-| `amber-700` `#B45309` | 5.02 | 4.51 |
-| `green-700` `#15803D` | 5.02 | 4.57 |
-| `red-600` `#DC2626` | 4.83 | 3.95 |
-| `navy-400` `#4A5A78` (expired) | 6.94 | 6.64 |
+| Token                          | vs white | vs fill |
+| ------------------------------ | -------- | ------- |
+| `amber-700` `#B45309`          | 5.02     | 4.51    |
+| `green-700` `#15803D`          | 5.02     | 4.57    |
+| `red-600` `#DC2626`            | 4.83     | 3.95    |
+| `navy-400` `#4A5A78` (expired) | 6.94     | 6.64    |
 
 **Worth telling the web repo**, and deliberately not fixed from here: if its Phase 2 slot cells ever grow a state-carrying border, `amber-300` and `red-300` will fail the same way. Its `slot-available` cell already borders in `blue-600`, which measures 5.17 on white and is fine.
 
@@ -177,20 +177,20 @@ The replacements clear it on both sides:
 
 Every figure below was computed against the sRGB formula at the time this file was last edited. **An earlier draft of this document claimed 7.4:1 for `green-800` on `green-100`; the true figure is 6.49.** It still passes AA, and it was still wrong — recorded here rather than quietly corrected, because the other repo shipped two overstated ratios and the lesson is that a plausible number is the easiest kind to not check.
 
-| Pair | Ratio | Needs |
-|---|---|---|
-| `amber-800` on `amber-100` — pending ink | 6.37 | 4.5 |
-| `green-800` on `green-100` — confirmed ink | 6.49 | 4.5 |
-| `red-800` on `red-100` — rejected ink | 6.80 | 4.5 |
-| `navy-400` on `grey-50` — expired ink | 6.64 | 4.5 |
-| `navy-900` on `white` — body | 17.07 | 4.5 |
-| `navy-400` on `white` — muted | 6.94 | 4.5 |
-| `white` on `navy-900` — primary button | 17.07 | 4.5 |
-| `white` on `navy-700` — primary hover | 12.99 | 4.5 |
-| `red-800` on `white` — danger button | 8.31 | 4.5 |
-| `blue-600` on `white` — focus ring | 5.17 | 3.0 |
+| Pair                                       | Ratio | Needs |
+| ------------------------------------------ | ----- | ----- |
+| `amber-800` on `amber-100` — pending ink   | 6.37  | 4.5   |
+| `green-800` on `green-100` — confirmed ink | 6.49  | 4.5   |
+| `red-800` on `red-100` — rejected ink      | 6.80  | 4.5   |
+| `navy-400` on `grey-50` — expired ink      | 6.64  | 4.5   |
+| `navy-900` on `white` — body               | 17.07 | 4.5   |
+| `navy-400` on `white` — muted              | 6.94  | 4.5   |
+| `white` on `navy-900` — primary button     | 17.07 | 4.5   |
+| `white` on `navy-700` — primary hover      | 12.99 | 4.5   |
+| `red-800` on `white` — danger button       | 8.31  | 4.5   |
+| `blue-600` on `white` — focus ring         | 5.17  | 3.0   |
 
-**One deliberate exemption:** `grey-200` row dividers measure 1.24 on white. They separate rows; they carry no state and no information. 1.4.11 governs boundaries that *are* the signal, and a table rule is not one. Noted so it does not read as the same oversight as the one above.
+**One deliberate exemption:** `grey-200` row dividers measure 1.24 on white. They separate rows; they carry no state and no information. 1.4.11 governs boundaries that _are_ the signal, and a table rule is not one. Noted so it does not read as the same oversight as the one above.
 
 ## Rules carried over unchanged
 

@@ -38,17 +38,17 @@ Two apps, one database, one bucket, no shared runtime. They communicate exclusiv
 
 ## Route map
 
-| Route | Runtime | Auth | Notes |
-|---|---|---|---|
-| `/login` | Node | public | The only unauthenticated page. Password comparison happens here |
-| `/` | Node | session | Dashboard: pending count, **oldest-pending age**, manual expiry button |
-| `/bookings` | Node | session | The list. All filter state in the URL |
-| `/bookings/[id]` | Node | session | Detail + payment proof. `export const dynamic = 'force-dynamic'` |
-| `/blocks` | Node | session | Phase 4. Behind the schema guard |
-| `POST /api/auth/login` | **Node** (explicit) | public | Rate-limited. `export const runtime = 'nodejs'` — argon2 cannot run on Edge |
-| `POST /api/auth/logout` | Node | session | Clears the cookie |
-| `POST /api/jobs/expire` | Node | Bearer **or** session | Bearer for the scheduler, session for the manual button |
-| `middleware.ts` | **Edge** | — | Verifies the JWT and nothing else |
+| Route                   | Runtime             | Auth                  | Notes                                                                       |
+| ----------------------- | ------------------- | --------------------- | --------------------------------------------------------------------------- |
+| `/login`                | Node                | public                | The only unauthenticated page. Password comparison happens here             |
+| `/`                     | Node                | session               | Dashboard: pending count, **oldest-pending age**, manual expiry button      |
+| `/bookings`             | Node                | session               | The list. All filter state in the URL                                       |
+| `/bookings/[id]`        | Node                | session               | Detail + payment proof. `export const dynamic = 'force-dynamic'`            |
+| `/blocks`               | Node                | session               | Phase 4. Behind the schema guard                                            |
+| `POST /api/auth/login`  | **Node** (explicit) | public                | Rate-limited. `export const runtime = 'nodejs'` — argon2 cannot run on Edge |
+| `POST /api/auth/logout` | Node                | session               | Clears the cookie                                                           |
+| `POST /api/jobs/expire` | Node                | Bearer **or** session | Bearer for the scheduler, session for the manual button                     |
+| `middleware.ts`         | **Edge**            | —                     | Verifies the JWT and nothing else                                           |
 
 **Server Components by default.** The one client component in v1 is the proof-image reload button (see [The R2 read path](#the-r2-read-path)). No TanStack Query, no zustand, no axios: filters live in the URL, the server reads Neon, and a mutation is a Server Action followed by `revalidatePath`.
 
@@ -75,18 +75,18 @@ The reason this is exact rather than approximate: `pnpm check:domain` compares t
 
 ### Shared with `arena-player-web` — majors must match
 
-| Package | Version | Section in web | Why this repo carries it |
-|---|---|---|---|
-| `next` | 16.3.0 | dependencies | Same framework, same App Router semantics |
-| `react` / `react-dom` | 19.2.8 | dependencies | — |
-| `date-fns` | 4.4.0 | dependencies | **Imported by `src/domain/dates.ts`** — `check:domain` asserts the range |
-| `@date-fns/tz` | 1.5.0 | dependencies | Same |
-| `zod` | 4.4.3 | dependencies | Filter and search-param parsing. Cheap here — no route-split budget rule in this repo |
-| `server-only` | 0.0.1 | dependencies | Every file in `src/server/` |
-| `typescript` | 5.9.3 | devDependencies | `src/domain/*.ts` is TypeScript |
-| `tailwindcss` | 4.3.3 | devDependencies | Same token layer |
-| `@tailwindcss/postcss` | 4.3.3 | devDependencies | Same |
-| `vitest` | 4.1.10 | devDependencies | `check:unit` and `check:schema`. Shared because the domain **tests** are inside the byte diff |
+| Package                | Version | Section in web  | Why this repo carries it                                                                      |
+| ---------------------- | ------- | --------------- | --------------------------------------------------------------------------------------------- |
+| `next`                 | 16.3.0  | dependencies    | Same framework, same App Router semantics                                                     |
+| `react` / `react-dom`  | 19.2.8  | dependencies    | —                                                                                             |
+| `date-fns`             | 4.4.0   | dependencies    | **Imported by `src/domain/dates.ts`** — `check:domain` asserts the range                      |
+| `@date-fns/tz`         | 1.5.0   | dependencies    | Same                                                                                          |
+| `zod`                  | 4.4.3   | dependencies    | Filter and search-param parsing. Cheap here — no route-split budget rule in this repo         |
+| `server-only`          | 0.0.1   | dependencies    | Every file in `src/server/`                                                                   |
+| `typescript`           | 5.9.3   | devDependencies | `src/domain/*.ts` is TypeScript                                                               |
+| `tailwindcss`          | 4.3.3   | devDependencies | Same token layer                                                                              |
+| `@tailwindcss/postcss` | 4.3.3   | devDependencies | Same                                                                                          |
+| `vitest`               | 4.1.10  | devDependencies | `check:unit` and `check:schema`. Shared because the domain **tests** are inside the byte diff |
 
 **`server-only` is shared, not admin-only.** Web carries it at `0.0.1`; a task-file draft listed it under admin-only. Recorded here because the version now has to match like any other shared line.
 
@@ -96,19 +96,19 @@ The reason this is exact rather than approximate: `pnpm check:domain` compares t
 
 Neither is installed in web today. This repo reaches Neon and R2 before web does, so **whatever it pins becomes the standard web adopts** when its own Phase 4 needs them. Recorded here for that reason: otherwise web resolves independently later and the two clients diverge for no reason anyone can reconstruct.
 
-| Package | Version | Note |
-|---|---|---|
-| `@neondatabase/serverless` | **1.1.0** | Web: absent. Carries the `CustomTypesConfig` OID 1082/1184 override — see [database.md](database.md) |
-| `@aws-sdk/client-s3` | **3.1106.0** | Web: absent. Both checksum flags set to `WHEN_REQUIRED`, identically to web's future client |
+| Package                    | Version      | Note                                                                                                 |
+| -------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
+| `@neondatabase/serverless` | **1.1.0**    | Web: absent. Carries the `CustomTypesConfig` OID 1082/1184 override — see [database.md](database.md) |
+| `@aws-sdk/client-s3`       | **3.1106.0** | Web: absent. Both checksum flags set to `WHEN_REQUIRED`, identically to web's future client          |
 
 **Revised from `3.1107.0` at install time (step 02).** `3.1107.0` was published 2026-08-10T18:55Z, inside pnpm's `minimumReleaseAge` cutoff at install — the exact trap `arena-player-web`'s own step 02 hit on `react-hook-form` (`docs/PROGRESS.md`, 2026-08-08). Same resolution: take the next-older already-aged version rather than relax the policy, `3.1106.0` (2026-08-07T18:58Z for `client-s3`, 2026-08-07T18:57Z for `s3-request-presigner` — still lockstep). Editing `package.json` alone was not enough; the stale resolution had to be cleared with `pnpm clean --lockfile` before reinstalling.
 
 ### Admin-only — no web equivalent, and none expected
 
-| Package | Version | Why |
-|---|---|---|
-| `jose` | 6.2.8 | HS256 sign/verify. The half of auth that runs on **Edge** |
-| `hash-wasm` | 4.12.0 | argon2id, pure WASM, no native binding — the Sumopod reason is above |
+| Package                         | Version  | Why                                                                                                                                                                                     |
+| ------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `jose`                          | 6.2.8    | HS256 sign/verify. The half of auth that runs on **Edge**                                                                                                                               |
+| `hash-wasm`                     | 4.12.0   | argon2id, pure WASM, no native binding — the Sumopod reason is above                                                                                                                    |
 | `@aws-sdk/s3-request-presigner` | 3.1106.0 | Presigned GET. **Pinned to the same version as `@aws-sdk/client-s3`**; the AWS SDK v3 packages release in lockstep and mixing minors across them is a class of bug with no useful error |
 
 ### Dev-only
@@ -119,18 +119,18 @@ Neither is installed in web today. This repo reaches Neon and R2 before web does
 
 Each of these is in web and is **not** an oversight here. Adding one back is a decision that belongs in this file, not a line in a lockfile.
 
-| Not installed | Why not |
-|---|---|
-| `gsap`, `@gsap/react` | No motion layer and no `src/lib/motion.ts`. Hard rule 7 — DESIGN.md here is web's palette with none of its motion |
-| `msw` | **No mock layer, by design.** This app is useless without real data; every screen reads live Neon from a Server Component. A mock here buys screens that pass with no database, which is the failure mode this repo exists downstream of |
-| `zustand` | No client state to hold. Filters are URL state |
-| `@tanstack/react-query` | No client data-fetching. Server Components read, Server Actions write, `revalidatePath` refreshes |
-| `axios` | No HTTP client. There is no call between the two apps in either direction, and adding one is a new coupling to justify |
-| `react-hook-form` | Three forms in the whole app — login, reject-with-reason, add-block — each a plain `<form>` posting to a Server Action. RHF makes every one of them a client component, which reverses the boundary above to buy validation `zod` already does server-side |
-| `react-icons` | DESIGN.md encodes status as a surface + border + ink triple, never an icon and never a single hue. No icon requirement exists to satisfy |
-| `clsx`, `tailwind-merge` | Status styling is a lookup object keyed by the four DB states, not a conditional class expression. If a real conditional-class need appears, adding `clsx` is a decision recorded here |
-| `babel-plugin-react-compiler` | It optimises client re-renders. v1 has one client component |
-| `check:budget` | See [Verification practice](#verification-practice). One authenticated user on wifi; the 200KB/LCP contract has no consumer here |
+| Not installed                 | Why not                                                                                                                                                                                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gsap`, `@gsap/react`         | No motion layer and no `src/lib/motion.ts`. Hard rule 7 — DESIGN.md here is web's palette with none of its motion                                                                                                                                          |
+| `msw`                         | **No mock layer, by design.** This app is useless without real data; every screen reads live Neon from a Server Component. A mock here buys screens that pass with no database, which is the failure mode this repo exists downstream of                   |
+| `zustand`                     | No client state to hold. Filters are URL state                                                                                                                                                                                                             |
+| `@tanstack/react-query`       | No client data-fetching. Server Components read, Server Actions write, `revalidatePath` refreshes                                                                                                                                                          |
+| `axios`                       | No HTTP client. There is no call between the two apps in either direction, and adding one is a new coupling to justify                                                                                                                                     |
+| `react-hook-form`             | Three forms in the whole app — login, reject-with-reason, add-block — each a plain `<form>` posting to a Server Action. RHF makes every one of them a client component, which reverses the boundary above to buy validation `zod` already does server-side |
+| `react-icons`                 | DESIGN.md encodes status as a surface + border + ink triple, never an icon and never a single hue. No icon requirement exists to satisfy                                                                                                                   |
+| `clsx`, `tailwind-merge`      | Status styling is a lookup object keyed by the four DB states, not a conditional class expression. If a real conditional-class need appears, adding `clsx` is a decision recorded here                                                                     |
+| `babel-plugin-react-compiler` | It optimises client re-renders. v1 has one client component                                                                                                                                                                                                |
+| `check:budget`                | See [Verification practice](#verification-practice). One authenticated user on wifi; the 200KB/LCP contract has no consumer here                                                                                                                           |
 
 ### Design tokens: a hand-authored `@theme` block
 
@@ -139,7 +139,7 @@ Each of these is in web and is **not** an oversight here. Adding one back is a d
 The case for generating was that it would keep this palette and web's in lockstep automatically. That case is factually wrong, and checking it is what settled the decision:
 
 - **The two palettes are already deliberately different.** Web's frontmatter carries `amber-300` and `red-300` and no green tier at all; this one carries `green-100/700/800`, `amber-700` and `red-600`, because the `-300` status borders measured 1.29–1.90 against a 3:1 requirement and failed WCAG 1.4.11 (recorded in [PROGRESS.md](PROGRESS.md), 2026-08-08). Web's type ramp is Orbitron display faces at `clamp()` sizes; this one is fixed-px Inter. "Same palette" is a description of intent, not an equality anyone can generate.
-- **A generator would read `docs/DESIGN.md` in *this* repo.** So it would prevent CSS-vs-DESIGN.md drift — a two-file, ~30-value surface that a human diff catches — while doing nothing at all about DESIGN.md-vs-web drift, which is the only cross-repo hazard in the vicinity. It buys the wrong guarantee.
+- **A generator would read `docs/DESIGN.md` in _this_ repo.** So it would prevent CSS-vs-DESIGN.md drift — a two-file, ~30-value surface that a human diff catches — while doing nothing at all about DESIGN.md-vs-web drift, which is the only cross-repo hazard in the vicinity. It buys the wrong guarantee.
 - **`docs/DESIGN.md` is explicitly outside `check:domain`**, which covers `src/domain/*.ts` and nothing else. A generator would therefore be the one piece of machinery here with no check behind it — and under hard rule 9 it would need one, proven to fail, making it a fifth check in a repo that deliberately has four.
 - **The surface is 18 colours, 6 type steps, 3 radii and a spacing scale, written once.** Web hand-authors for the same reason; matching its approach means a palette change is one workflow in both repos rather than two.
 
@@ -196,15 +196,15 @@ In-memory, per-IP, on the login route only: 5 attempts per 15 minutes, then 429.
 
 ### Contract
 
-| Aspect | Decision | Why |
-|---|---|---|
-| Filters | `status` (multi-select over the four DB states), `from` / `to` on `booking_date`, `q` free text over team name + phone | Matches `status_valid` exactly; no derived states |
-| Default status | `pending` **only** | The admin opens this page to do work. Defaulting to "all" makes the first screen a history log |
-| Default date range | `from = today` (Asia/Jakarta), no `to`, plus an explicit "Semua tanggal" toggle | Yesterday's unconfirmed booking is about to be auto-expired and its game already happened. Stragglers surface through the dashboard's oldest-pending indicator instead |
-| Default sort | `booking_date asc, time_slot asc` | A queue's question is *which game is soonest* — that is the booking about to be lost. `created_at desc` is a feed. `created_at` is displayed (it drives the 24h clock) but is not the sort key |
-| Pagination | `LIMIT`/`OFFSET`, 50 per page, page number in the URL | Keyset is the right answer at scale and the wrong answer here. Low thousands of rows for the life of the project, against the cost of a compound cursor |
-| State | Entirely in the URL | Shareable links, working back button, zero client data-fetching |
-| Indexes | **None added** | Max 126 active rows (9 slots × 14 days). Revisit past ~50k rows, which at 9 slots/day is roughly 15 years |
+| Aspect             | Decision                                                                                                               | Why                                                                                                                                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Filters            | `status` (multi-select over the four DB states), `from` / `to` on `booking_date`, `q` free text over team name + phone | Matches `status_valid` exactly; no derived states                                                                                                                                              |
+| Default status     | `pending` **only**                                                                                                     | The admin opens this page to do work. Defaulting to "all" makes the first screen a history log                                                                                                 |
+| Default date range | `from = today` (Asia/Jakarta), no `to`, plus an explicit "Semua tanggal" toggle                                        | Yesterday's unconfirmed booking is about to be auto-expired and its game already happened. Stragglers surface through the dashboard's oldest-pending indicator instead                         |
+| Default sort       | `booking_date asc, time_slot asc`                                                                                      | A queue's question is _which game is soonest_ — that is the booking about to be lost. `created_at desc` is a feed. `created_at` is displayed (it drives the 24h clock) but is not the sort key |
+| Pagination         | `LIMIT`/`OFFSET`, 50 per page, page number in the URL                                                                  | Keyset is the right answer at scale and the wrong answer here. Low thousands of rows for the life of the project, against the cost of a compound cursor                                        |
+| State              | Entirely in the URL                                                                                                    | Shareable links, working back button, zero client data-fetching                                                                                                                                |
+| Indexes            | **None added**                                                                                                         | Max 126 active rows (9 slots × 14 days). Revisit past ~50k rows, which at 9 slots/day is roughly 15 years                                                                                      |
 
 ### The query
 
@@ -342,7 +342,7 @@ This repo may not create tables, and application code must never `create table i
 
 - One `select to_regclass('public.<table>')` per feature table, memoised in module scope.
 - **Positive cache only.** Cache `true` for the process lifetime; re-check on `false`. Applying a migration must not require a redeploy.
-- Missing → the feature's page renders a loud error naming the exact file: *"Jalankan `db/migrations/0002_create_slot_blocks.sql` di Neon SQL editor"*. Every mutating route for that feature returns **503** `{"error":"migration_missing","migration":"0002_create_slot_blocks"}`.
+- Missing → the feature's page renders a loud error naming the exact file: _"Jalankan `db/migrations/0002_create_slot_blocks.sql` di Neon SQL editor"_. Every mutating route for that feature returns **503** `{"error":"migration_missing","migration":"0002_create_slot_blocks"}`.
 - A Postgres `42P01` (undefined_table) escaping anywhere becomes a 503 — never caught-and-return-empty, which would render "no blocks" for "no table".
 
 **The guard never sits in front of the bookings console.** Phase 2 needs zero new migrations. A missing Phase 4 table degrades this app to its core function; it does not brick it. Someone will otherwise wrap the root layout in the guard, which is why this sentence is here.
@@ -389,12 +389,12 @@ A feature here that writes rows web does not read is a silent no-op. For `slot_b
 
 Four scripts. Each is a Vitest run or a Node script; none is a convention anyone has to remember.
 
-| Script | What it proves | Needs credentials |
-|---|---|---|
-| `pnpm check:unit` | `vitest run src` — colocated `*.test.ts` beside each module | **No, ever** |
-| `pnpm check:domain` | `src/domain/` byte-identity + shared peer-dep ranges | No |
-| `pnpm check:schema` | `vitest run scripts` — live Neon: table, columns, indexes, CHECK literals vs `TIME_SLOTS` | Yes |
-| `pnpm check:setup` | Live preflight: Neon reachable, R2 presign round-trips | Yes |
+| Script              | What it proves                                                                            | Needs credentials |
+| ------------------- | ----------------------------------------------------------------------------------------- | ----------------- |
+| `pnpm check:unit`   | `vitest run src` — colocated `*.test.ts` beside each module                               | **No, ever**      |
+| `pnpm check:domain` | `src/domain/` byte-identity + shared peer-dep ranges                                      | No                |
+| `pnpm check:schema` | `vitest run scripts` — live Neon: table, columns, indexes, CHECK literals vs `TIME_SLOTS` | Yes               |
+| `pnpm check:setup`  | Live preflight: Neon reachable, R2 presign round-trips                                    | Yes               |
 
 `check:unit` and `check:schema` are separate globs on purpose, so unit tests never require a database. The acceptance for that is literal: move `.env.local` aside and `check:unit` still exits 0.
 

@@ -1,0 +1,12 @@
+.next/
+node_modules/
+pnpm-lock.yaml
+
+# Reference artifact, hand-authored, not production. Reformatting it would
+# produce a large meaningless diff.
+docs/DESIGN.html
+
+# Closed phases. History records what was true when the work ran and is
+# never rewritten, whitespace included. docs/PROGRESS.md is deliberately NOT
+# here: it is appended every step, so keeping it formatted costs nothing.
+docs/progress-archive/

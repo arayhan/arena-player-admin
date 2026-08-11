@@ -8,13 +8,13 @@ Delivery is sequenced **backend-outward**, the opposite of the web repo. There i
 
 ## Phase overview
 
-| Phase | Scope | Blockers |
-|---|---|---|
-| 1a | Foundation — architecture, scaffold, DX, dev rules, shared copy, db client, auth, verification | None — start here |
-| 2 | Bookings console — list + filters, detail, proof view, confirm / reject | 1a, **and web Phase 4 applied** |
-| 3 | Expiry job — `POST /api/jobs/expire`, external cron, staleness indicator | 2, and `3-gate-web-expiry` |
-| 4 | Slot blocking — block/unblock a date+slot | `4-gate-blocks` (a migration web must own, apply, **and read**) |
-| 5 | Deploy + handover — `admin.arena-player.com`, user guide, credentials | `5-gate-subdomain`, `5-gate-cron-owner` |
+| Phase | Scope                                                                                          | Blockers                                                        |
+| ----- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 1a    | Foundation — architecture, scaffold, DX, dev rules, shared copy, db client, auth, verification | None — start here                                               |
+| 2     | Bookings console — list + filters, detail, proof view, confirm / reject                        | 1a, **and web Phase 4 applied**                                 |
+| 3     | Expiry job — `POST /api/jobs/expire`, external cron, staleness indicator                       | 2, and `3-gate-web-expiry`                                      |
+| 4     | Slot blocking — block/unblock a date+slot                                                      | `4-gate-blocks` (a migration web must own, apply, **and read**) |
+| 5     | Deploy + handover — `admin.arena-player.com`, user guide, credentials                          | `5-gate-subdomain`, `5-gate-cron-owner`                         |
 
 **This app is a launch dependency of the public site.** Phase 3 owns expiry. Until its cron is scheduled, a pending booking older than 24h is never released and the public site accumulates permanently-held slots. Launch order:
 
@@ -32,20 +32,20 @@ Stated plainly because the web repo's PRD currently reads as though the admin ap
 
 No product screen ships here beyond `/login`. It ends with a repo that runs, rules written down, a database client that cannot silently corrupt a date, and four checks that have each been proven to fail.
 
-| # | Task | Output |
-|---|------|--------|
-| 1 | Plan the architecture | Route map, server/client boundary, folder structure, and the peer-dependency set that the shared-code contract obliges this repo to carry — reconciled against [architecture.md](architecture.md) |
-| 2 | Scaffold | Next 16 + TypeScript + Tailwind v4 via pnpm, serving `localhost:3001`. Versions pinned to match web wherever a package is shared |
-| 3 | Developer experience | Lint / typecheck, Vitest wired as `pnpm check:unit`, credential-free |
-| 4 | Development rules | `docs/dev-rules.md` — naming, file layout, the accessibility baseline, what never goes in `src/app/` |
-| 5 | Shared copy | Byte-identical `src/domain/{slots,dates,status,phone}.ts` and `pnpm check:domain` |
-| 6 | Database client | Neon client with the OID `1082`/`1184` parser override, `src/server/required-schema.ts`, `pnpm check:schema` |
-| 7 | Auth | argon2id via `hash-wasm`, `jose` HS256 session cookie, Edge middleware, `/login`, rate-limited login route on the Node runtime |
-| 8 | Verification | All four `check:` scripts run, and **each has been proven to fail** |
+| #   | Task                  | Output                                                                                                                                                                                            |
+| --- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Plan the architecture | Route map, server/client boundary, folder structure, and the peer-dependency set that the shared-code contract obliges this repo to carry — reconciled against [architecture.md](architecture.md) |
+| 2   | Scaffold              | Next 16 + TypeScript + Tailwind v4 via pnpm, serving `localhost:3001`. Versions pinned to match web wherever a package is shared                                                                  |
+| 3   | Developer experience  | Lint / typecheck, Vitest wired as `pnpm check:unit`, credential-free                                                                                                                              |
+| 4   | Development rules     | `docs/dev-rules.md` — naming, file layout, the accessibility baseline, what never goes in `src/app/`                                                                                              |
+| 5   | Shared copy           | Byte-identical `src/domain/{slots,dates,status,phone}.ts` and `pnpm check:domain`                                                                                                                 |
+| 6   | Database client       | Neon client with the OID `1082`/`1184` parser override, `src/server/required-schema.ts`, `pnpm check:schema`                                                                                      |
+| 7   | Auth                  | argon2id via `hash-wasm`, `jose` HS256 session cookie, Edge middleware, `/login`, rate-limited login route on the Node runtime                                                                    |
+| 8   | Verification          | All four `check:` scripts run, and **each has been proven to fail**                                                                                                                               |
 
 **Task 5 is the one that looks trivial and is not.** `uniq_active_slot` compares `time_slot` as text, so `'06.00 - 08.00'` and `'06.00-08.00'` are different slots. A one-character drift between the two repos means this app writes rows the public site cannot match, and anti-double-booking silently stops working for both. Nothing throws. **Web has now built `src/domain/`** — four modules plus their tests — so unlike when this task was written there is a real source to copy from and to diff against on day one. Tests are inside the diff, which makes **vitest** a third shared obligation alongside `date-fns` and `@date-fns/tz`. `check:domain` must still **skip loudly** whenever either side is missing: a skip is not a pass, and its output has to say so.
 
-**Task 6 adds a check the web repo does not have.** `check:domain` guards source against source. Nothing guards source against the *database*, and the nine canonical slot strings live in three places — `src/domain/slots.ts`, the `time_slot_canonical` CHECK constraint, and web's copy — becoming four once `slot_blocks` exists. `check:schema` reads `pg_get_constraintdef` and asserts the constraint's literals are set-equal to `TIME_SLOTS`. Deliberately **not** solved with a Postgres `DOMAIN`: that would require `alter column type` on `bookings`, a hand-run destructive change to the one table the whole race guard sits on. Duplicate the literal; detect the drift.
+**Task 6 adds a check the web repo does not have.** `check:domain` guards source against source. Nothing guards source against the _database_, and the nine canonical slot strings live in three places — `src/domain/slots.ts`, the `time_slot_canonical` CHECK constraint, and web's copy — becoming four once `slot_blocks` exists. `check:schema` reads `pg_get_constraintdef` and asserts the constraint's literals are set-equal to `TIME_SLOTS`. Deliberately **not** solved with a Postgres `DOMAIN`: that would require `alter column type` on `bookings`, a hand-run destructive change to the one table the whole race guard sits on. Duplicate the literal; detect the drift.
 
 **Task 7 has a runtime trap with no author-time warning.** Next middleware runs on the Edge runtime. `jose` works there; argon2 does not — it needs WASM instantiation or native bindings that Edge will not give it. So middleware verifies the JWT only, and the password comparison lives in the login route handler with `export const runtime = 'nodejs'`. Getting this wrong fails at deploy, not at `pnpm dev`.
 
@@ -70,13 +70,13 @@ No product screen ships here beyond `/login`. It ends with a repo that runs, rul
 
 The product. Everything else in this repo supports it.
 
-| # | Task | Output |
-|---|------|--------|
-| 1 | App shell | Layout, nav, the token subset from [DESIGN.md](DESIGN.md), Indonesian copy. Usable at 375px — the admin is often on a phone |
-| 2 | Bookings list | The list query from [architecture.md](architecture.md), server-rendered, filters and pagination entirely in the URL |
-| 3 | Booking detail | One booking, all fields including `notes`, and the payment proof through a presigned GET |
-| 4 | Confirm / reject | Guarded status mutations, the 409 "already processed" path, revalidation |
-| 5 | Verification | A status change made here is visible on the public site's availability within 30s |
+| #   | Task             | Output                                                                                                                      |
+| --- | ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 1   | App shell        | Layout, nav, the token subset from [DESIGN.md](DESIGN.md), Indonesian copy. Usable at 375px — the admin is often on a phone |
+| 2   | Bookings list    | The list query from [architecture.md](architecture.md), server-rendered, filters and pagination entirely in the URL         |
+| 3   | Booking detail   | One booking, all fields including `notes`, and the payment proof through a presigned GET                                    |
+| 4   | Confirm / reject | Guarded status mutations, the 409 "already processed" path, revalidation                                                    |
+| 5   | Verification     | A status change made here is visible on the public site's availability within 30s                                           |
 
 **Defaults matter more than features here.** The list opens on `status = pending`, `booking_date >= today`, sorted `booking_date asc, time_slot asc`. Not `created_at desc` — that is a feed, and this is a queue; what matters is which game is soonest, because that is the booking about to be lost. `created_at` is displayed (it drives the 24h clock) but is not the sort key.
 
@@ -106,18 +106,18 @@ Resolves an open question in the **other** repo. `arena-player-web/docs/architec
 
 Three candidates were written out there. This is the resolution:
 
-| Candidate | Verdict |
-|---|---|
-| Scheduled job | **Chosen.** Owned by this repo |
-| Expire on POST | Rejected — expiry then only runs when someone books, which starves on exactly the quiet night the problem describes |
-| Drop `s-maxage` | Rejected — pays origin load on every date-pill tap *and* leaves a write inside a GET |
+| Candidate       | Verdict                                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Scheduled job   | **Chosen.** Owned by this repo                                                                                      |
+| Expire on POST  | Rejected — expiry then only runs when someone books, which starves on exactly the quiet night the problem describes |
+| Drop `s-maxage` | Rejected — pays origin load on every date-pill tap _and_ leaves a write inside a GET                                |
 
-| # | Task | Output |
-|---|------|--------|
-| 1 | Expiry route | `POST /api/jobs/expire` — bearer auth, one idempotent UPDATE, plus a manual "Jalankan sekarang" button using the session cookie |
-| 2 | Scheduler | External HTTP cron every 15 minutes, failure notification on, ownership recorded for handover |
+| #   | Task         | Output                                                                                                                          |
+| --- | ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Expiry route | `POST /api/jobs/expire` — bearer auth, one idempotent UPDATE, plus a manual "Jalankan sekarang" button using the session cookie |
+| 2   | Scheduler    | External HTTP cron every 15 minutes, failure notification on, ownership recorded for handover                                   |
 
-**Not `node-cron`.** A timer inside the Node process stops when Sumopod restarts, redeploys, or idles the container — silently. That trades a cache-starved expiry for a lifecycle-starved one and learns nothing. Not Vercel cron either; this deploys to Sumopod. An external scheduler hitting an authenticated URL keeps the trigger outside the app, and its own failure history *is* the monitoring.
+**Not `node-cron`.** A timer inside the Node process stops when Sumopod restarts, redeploys, or idles the container — silently. That trades a cache-starved expiry for a lifecycle-starved one and learns nothing. Not Vercel cron either; this deploys to Sumopod. An external scheduler hitting an authenticated URL keeps the trigger outside the app, and its own failure history _is_ the monitoring.
 
 **Fifteen minutes, not one.** The rule is ">24h", so 15-minute granularity releases a slot at most 15 minutes late, at 96 trivially-indexed UPDATEs a day.
 

@@ -4,14 +4,14 @@ Four agents, one skill, and a permissions file. Adapted from `arena-player-web/.
 
 ## What is here
 
-| Path | Purpose |
-|---|---|
-| `agents/project-manager.md` | Owns `docs/PRD.md`, the scope boundary, the four gates |
-| `agents/engineering-lead.md` | Architecture, task breakdowns, the boundary with `arena-player-web` |
-| `agents/software-engineer.md` | All build work |
-| `agents/code-reviewer.md` | Read-only by design. Verdict `APPROVE` / `FIX-FIRST` |
-| `skills/arena-player-admin-gotchas/` | The condensed trap list. Every agent loads it once per session |
-| `settings.json` | Permissions. Note the two deny entries writing to `../arena-player-web/**` |
+| Path                                 | Purpose                                                                    |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| `agents/project-manager.md`          | Owns `docs/PRD.md`, the scope boundary, the four gates                     |
+| `agents/engineering-lead.md`         | Architecture, task breakdowns, the boundary with `arena-player-web`        |
+| `agents/software-engineer.md`        | All build work                                                             |
+| `agents/code-reviewer.md`            | Read-only by design. Verdict `APPROVE` / `FIX-FIRST`                       |
+| `skills/arena-player-admin-gotchas/` | The condensed trap list. Every agent loads it once per session             |
+| `settings.json`                      | Permissions. Note the two deny entries writing to `../arena-player-web/**` |
 
 The skill points at `docs/` for values and holds only rules. That is deliberate: the sibling repo lost time three separate ways to a value copied out of a source document with nothing checking the copy — it hit the skills, the agents, and the hooks.
 

@@ -82,7 +82,7 @@ returning id, status;
 
 Zero rows returned → 409, with copy distinguishing a blocked slot from a taken one.
 
-**This is not check-then-insert.** There is no separate read: the guard lives in the INSERT's own `WHERE`, evaluated in the same statement, and `uniq_active_slot` still owns booking-versus-booking exclusion exactly as before. The rule the web repo's hard rule 1 forbids is *reading, deciding in application code, then inserting* — this does neither.
+**This is not check-then-insert.** There is no separate read: the guard lives in the INSERT's own `WHERE`, evaluated in the same statement, and `uniq_active_slot` still owns booking-versus-booking exclusion exactly as before. The rule the web repo's hard rule 1 forbids is _reading, deciding in application code, then inserting_ — this does neither.
 
 ### The remaining hole, stated rather than engineered away
 

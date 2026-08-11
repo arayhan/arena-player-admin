@@ -10,7 +10,7 @@
 
 ## Why it is separate from CLAUDE.md
 
-CLAUDE.md is a pointer document plus hard rules, and it states its own length budget: at ~95 lines it gets read, at 300 it gets skimmed, and a CLAUDE.md nobody reads is worse than a short one. Every rule that is *specific* rather than *load-bearing* belongs here instead — read at the moment it is needed, not on every session.
+CLAUDE.md is a pointer document plus hard rules, and it states its own length budget: at ~95 lines it gets read, at 300 it gets skimmed, and a CLAUDE.md nobody reads is worse than a short one. Every rule that is _specific_ rather than _load-bearing_ belongs here instead — read at the moment it is needed, not on every session.
 
 The test for which file a rule goes in: **does violating it cause rework, or just inconsistency?** Rework rules go in CLAUDE.md. Everything else goes here.
 

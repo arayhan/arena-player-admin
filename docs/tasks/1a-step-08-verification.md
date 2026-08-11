@@ -24,19 +24,19 @@ Four checks land in Phase 1a, and **three of them guard failures that raise noth
 
 ## The matrix
 
-| Check | Planted violation | Owning step |
-|---|---|---|
-| `check:unit` | A failing assertion in a colocated test | 03 |
-| `check:unit` (no credentials) | `.env.local` moved away — must still exit 0 | 03 |
-| `check:domain` | One character changed in `src/domain/slots.ts` | 05 |
-| `check:domain` | `date-fns` range changed to a different major in `package.json` | 05 |
-| `check:domain` | An extra file added under `src/domain/` | 05 |
-| `check:domain` (skip) | Web's `src/domain/` absent — must exit 0 **and say it proved nothing** | 05 |
-| `check:schema` | No `bookings` table in the target database | 06 |
-| `check:schema` | A slot string in `src/domain/slots.ts` drifted from the CHECK constraint | 06 |
-| `check:setup` | Wrong R2 credential | 06 |
-| middleware | A forged session token | 07 |
-| middleware bundle | argon2 reachable from the Edge bundle | 07 |
+| Check                         | Planted violation                                                        | Owning step |
+| ----------------------------- | ------------------------------------------------------------------------ | ----------- |
+| `check:unit`                  | A failing assertion in a colocated test                                  | 03          |
+| `check:unit` (no credentials) | `.env.local` moved away — must still exit 0                              | 03          |
+| `check:domain`                | One character changed in `src/domain/slots.ts`                           | 05          |
+| `check:domain`                | `date-fns` range changed to a different major in `package.json`          | 05          |
+| `check:domain`                | An extra file added under `src/domain/`                                  | 05          |
+| `check:domain` (skip)         | Web's `src/domain/` absent — must exit 0 **and say it proved nothing**   | 05          |
+| `check:schema`                | No `bookings` table in the target database                               | 06          |
+| `check:schema`                | A slot string in `src/domain/slots.ts` drifted from the CHECK constraint | 06          |
+| `check:setup`                 | Wrong R2 credential                                                      | 06          |
+| middleware                    | A forged session token                                                   | 07          |
+| middleware bundle             | argon2 reachable from the Edge bundle                                    | 07          |
 
 ## Acceptance
 
@@ -80,6 +80,6 @@ grep -rniE "create table|alter table|drop table" src/ scripts/
 Two Phase 1a items may legitimately remain open, and both belong in the PROGRESS entry rather than being quietly ticked:
 
 - **`check:domain` may still be skipping**, if web's `src/domain/` has not landed. Phase 1a can close with a loud skip; **Phase 2 cannot**, because by then this app is writing slot strings into a shared table.
-- **`check:schema` may still be failing correctly**, if web's Phase 4 migration has not been applied. That is a blocker on Phase 2, not on Phase 1a — this repo's foundation is done when it can *detect* the missing schema, not when the schema exists.
+- **`check:schema` may still be failing correctly**, if web's Phase 4 migration has not been applied. That is a blocker on Phase 2, not on Phase 1a — this repo's foundation is done when it can _detect_ the missing schema, not when the schema exists.
 
 handoff: `project-manager` — Phase 1a Definition of Done in [PRD.md](../PRD.md)

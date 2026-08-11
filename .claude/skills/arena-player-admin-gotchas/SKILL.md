@@ -19,25 +19,25 @@ Source of truth: [docs/PRD.md](../../../docs/PRD.md), [docs/architecture.md](../
 - **Never `create table if not exists`.** Fail loudly. Web's migration is wrapped in a transaction precisely so a half-failed paste cannot create `bookings` without `uniq_active_slot`; application-code DDL defeats that entirely and produces a table with no constraints and no error.
 - **Out of scope entirely**: the landing page, the booking form, `GET /api/availability`, any customer-facing copy, and **any price**. Those are `arena-player-web`.
 - **Descoped with reasons recorded** in the PRD, do not re-propose from scratch: runtime operating-hours config, un-expiring a booking, password reset / MFA / a second account, reporting.
-- **Phases 2 and 4 are blocked on the other repo**, not on effort. Phase 2 needs web's migration applied; Phase 4 needs web deployed and *reading* `slot_blocks`. `pnpm check:schema` is how you find out, not a conversation.
+- **Phases 2 and 4 are blocked on the other repo**, not on effort. Phase 2 needs web's migration applied; Phase 4 needs web deployed and _reading_ `slot_blocks`. `pnpm check:schema` is how you find out, not a conversation.
 - **This app is a launch dependency of the public site.** Expiry runs from a cron here. Until Phase 3 ships and its scheduler is wired, abandoned slots on the public site are never freed.
 
 ## Four silent failures, and what catches each
 
 Nothing throws for any of these. That is the whole reason they are listed together.
 
-| Failure | Detector |
-|---|---|
-| `src/domain/` drifts by one character from web → anti-double-booking silently stops working **in both apps** | `pnpm check:domain` — byte diff **and** shared peer-dependency ranges |
-| A slot string drifts between source and the `time_slot_canonical` CHECK constraint | `pnpm check:schema` — reads `pg_get_constraintdef`, asserts set equality with `TIME_SLOTS` |
-| The expiry cron stops firing → slots held forever | The dashboard's **"umur booking pending tertua"**. Over ~25h means it is not running |
-| A block written here that web never reads → the feature does nothing | `4-gate-blocks.md` ordering, enforced by a signature |
+| Failure                                                                                                      | Detector                                                                                   |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `src/domain/` drifts by one character from web → anti-double-booking silently stops working **in both apps** | `pnpm check:domain` — byte diff **and** shared peer-dependency ranges                      |
+| A slot string drifts between source and the `time_slot_canonical` CHECK constraint                           | `pnpm check:schema` — reads `pg_get_constraintdef`, asserts set equality with `TIME_SLOTS` |
+| The expiry cron stops firing → slots held forever                                                            | The dashboard's **"umur booking pending tertua"**. Over ~25h means it is not running       |
+| A block written here that web never reads → the feature does nothing                                         | `4-gate-blocks.md` ordering, enforced by a signature                                       |
 
 **`src/domain/` is read-only in this repo.** Drift is repaired by fixing web and re-copying, never by editing the copy here. Web's copy exists now (its step 06 landed), and the diff includes the four TEST files too — so this repo owes vitest as well as date-fns and @date-fns/tz. `check:domain` still **skips loudly** whenever a side is missing: a skip is not a pass, and its output says so.
 
 ## The traps that fail at deploy, not at author time
 
-- **argon2 cannot run on the Edge runtime.** Middleware verifies the `jose` JWT only; the password comparison lives in the login route with `export const runtime = 'nodejs'`. Wrong way round builds clean, runs clean in `pnpm dev`, and fails on Sumopod. Grep the *built* middleware bundle, not the source — the import can arrive through a barrel file.
+- **argon2 cannot run on the Edge runtime.** Middleware verifies the `jose` JWT only; the password comparison lives in the login route with `export const runtime = 'nodejs'`. Wrong way round builds clean, runs clean in `pnpm dev`, and fails on Sumopod. Grep the _built_ middleware bundle, not the source — the import can arrive through a barrel file.
 - **`hash-wasm`, not `@node-rs/argon2`.** Sumopod's build environment is unverified; native bindings fail at deploy, on a login that happens twice a day and does not need the speed.
 - **The session cookie is `Secure`, so login fails over plain HTTP** — in a way that looks like a wrong password. HTTPS on the subdomain is a Phase 5 gate for this reason.
 
@@ -46,6 +46,7 @@ Nothing throws for any of these. That is the whole reason they are listed togeth
 **Never `next/image` on a payment proof.** Next's optimizer proxies the presigned URL, writes the decoded output to an on-disk cache keyed by URL, and serves it from a stable `/_next/image?url=…` path with a long TTL — copying a private payment document out of a private bucket and outliving the presign entirely. Plain `<img>`.
 
 Related, same class:
+
 - Presign TTL is **120 seconds**, not fifteen minutes. It is a bearer capability for a document carrying a name, an amount, and a bank transfer, and it leaks through browser history and the `Referer` header.
 - `export const dynamic = 'force-dynamic'` on the proof page; a cached RSC payload serves an expired URL.
 - `Cache-Control: private, no-store` on every admin response.

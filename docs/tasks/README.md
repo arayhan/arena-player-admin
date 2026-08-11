@@ -29,7 +29,7 @@ State a goal, a concrete deliverables list, and **acceptance criteria written as
 
 Every step also carries a **`Not done until`** line: one hard completion condition, separate from the checklist, with the reason it exists. A checklist can be ticked by someone who did the motions; that line is what they cannot fake.
 
-Before writing a step file, **check whether its work is already done**. In this repo the specific hazard is the opposite of the web repo's: work that *looks* done because it is documented. The API contract, the SQL, and the auth design are all written in [architecture.md](../architecture.md) — none of it is code.
+Before writing a step file, **check whether its work is already done**. In this repo the specific hazard is the opposite of the web repo's: work that _looks_ done because it is documented. The API contract, the SQL, and the auth design are all written in [architecture.md](../architecture.md) — none of it is code.
 
 ## Gates
 

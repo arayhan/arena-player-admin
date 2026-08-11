@@ -10,12 +10,12 @@ This file exists for the half that is different here: what the admin is allowed 
 
 ## What this repo may do
 
-| Object | Admin's access |
-|---|---|
-| `bookings` — rows | `select` freely; `update status` under a guard; **never** `insert`, **never** `delete` |
-| `bookings` — schema | none. No `create`, `alter`, or `drop`, ever |
-| `slot_blocks` (Phase 4) | `select`, `insert`, `delete`. Schema still owned by web |
-| R2 `arena-player-proofs` | `GetObject` only, via a read-only token. No write, no delete, no listing needed |
+| Object                   | Admin's access                                                                         |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| `bookings` — rows        | `select` freely; `update status` under a guard; **never** `insert`, **never** `delete` |
+| `bookings` — schema      | none. No `create`, `alter`, or `drop`, ever                                            |
+| `slot_blocks` (Phase 4)  | `select`, `insert`, `delete`. Schema still owned by web                                |
+| R2 `arena-player-proofs` | `GetObject` only, via a read-only token. No write, no delete, no listing needed        |
 
 `DATABASE_URL` here cannot be a read-only role — this app writes `bookings.status`. The correct hardening is a separate Neon role scoped to `select, update(status) on bookings`, which costs one hand-run `GRANT`. Recorded as a handover nice-to-have in [PRD.md](PRD.md), not built in v1.
 
@@ -23,17 +23,17 @@ This file exists for the half that is different here: what the admin is allowed 
 
 Reference only — the source is web's `database.md`. Listed here because every query in [architecture.md](architecture.md) names these and an agent should not have to open the other repo to read a column list.
 
-| Column | Type | What the admin does with it |
-|---|---|---|
-| `id` | `uuid` | The mutation key. Always paired with a status guard, never used alone |
-| `booking_date` | `date` | Displayed and sorted. **Always cast `::text` in the select** — see the OID trap below |
-| `time_slot` | `text` | One of nine canonical strings. Sorts correctly as plain text; see [architecture.md](architecture.md) |
-| `team_name` | `text` | Displayed, and one half of the search |
-| `phone` | `text` | Stored normalised as `628xxxxxxxxx`, never as typed. Rendered as a `wa.me` link; searched through `normalisePhone()` |
-| `notes` | `text` | ≤500 chars. Detail page only — it wrecks list row height |
-| `proof_key` | `text` | An R2 object **key**, not a URL. There is no URL to store; the bucket has none |
-| `status` | `text` | `pending` · `confirmed` · `rejected` · `expired`. The only column this app writes |
-| `created_at` | `timestamptz` | Drives the 24h expiry clock and the "age" column. **Cast `::text`** |
+| Column         | Type          | What the admin does with it                                                                                          |
+| -------------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `uuid`        | The mutation key. Always paired with a status guard, never used alone                                                |
+| `booking_date` | `date`        | Displayed and sorted. **Always cast `::text` in the select** — see the OID trap below                                |
+| `time_slot`    | `text`        | One of nine canonical strings. Sorts correctly as plain text; see [architecture.md](architecture.md)                 |
+| `team_name`    | `text`        | Displayed, and one half of the search                                                                                |
+| `phone`        | `text`        | Stored normalised as `628xxxxxxxxx`, never as typed. Rendered as a `wa.me` link; searched through `normalisePhone()` |
+| `notes`        | `text`        | ≤500 chars. Detail page only — it wrecks list row height                                                             |
+| `proof_key`    | `text`        | An R2 object **key**, not a URL. There is no URL to store; the bucket has none                                       |
+| `status`       | `text`        | `pending` · `confirmed` · `rejected` · `expired`. The only column this app writes                                    |
+| `created_at`   | `timestamptz` | Drives the 24h expiry clock and the "age" column. **Cast `::text`**                                                  |
 
 **Four statuses, and this app is the only thing that can reach three of them.** Without it, every row stays `pending` forever. `rejected` doubles as the cancellation mechanism, since no customer-facing cancel route exists anywhere in the system.
 
@@ -64,7 +64,7 @@ const customTypes: CustomTypesConfig = {
 
 **Verify:** `types.getTypeParser(1082)('2026-08-01')` must return the **string**, not a `Date` instance. That assertion belongs in `src/server/db.test.ts` and runs under `check:unit` with no credentials.
 
-Every query in [architecture.md](architecture.md) *also* casts `::text` on both date columns. That is belt and braces on purpose: if the override is ever "simplified" away, the queries still return strings, and the cast documents why at the point of use.
+Every query in [architecture.md](architecture.md) _also_ casts `::text` on both date columns. That is belt and braces on purpose: if the override is ever "simplified" away, the queries still return strings, and the cast documents why at the point of use.
 
 ### 2. R2 checksums — applies even though this app only reads
 

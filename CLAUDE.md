@@ -6,15 +6,15 @@ Back-office for the mini soccer field. The field admin logs in, works the pendin
 
 ## Docs (read in this order)
 
-| Doc | Content |
-|---|---|
-| [docs/PRODUCT.md](docs/PRODUCT.md) | Who the admin is, the job to be done, what must not be fabricated, open client decisions |
-| [docs/PRD.md](docs/PRD.md) | Phases, screens, Definition of Done, what was descoped and why |
-| [docs/architecture.md](docs/architecture.md) | Route map, auth, every SQL contract, the R2 read path, cross-repo contracts |
-| [docs/database.md](docs/database.md) | The **inherited** schema and the gotchas that arrive with it. This repo reads; it never migrates |
-| [docs/DESIGN.md](docs/DESIGN.md) | Token frontmatter + measured contrast. Same palette as web, none of the motion. **Normative** |
-| [docs/DESIGN.html](docs/DESIGN.html) | Rendered specimens + the clickable `Alur` walkthrough. Reference only — if it disagrees with DESIGN.md, that file wins |
-| [docs/schema-requests/](docs/schema-requests/) | How a schema change gets from here into web's `db/migrations/` |
+| Doc                                            | Content                                                                                                                |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| [docs/PRODUCT.md](docs/PRODUCT.md)             | Who the admin is, the job to be done, what must not be fabricated, open client decisions                               |
+| [docs/PRD.md](docs/PRD.md)                     | Phases, screens, Definition of Done, what was descoped and why                                                         |
+| [docs/architecture.md](docs/architecture.md)   | Route map, auth, every SQL contract, the R2 read path, cross-repo contracts                                            |
+| [docs/database.md](docs/database.md)           | The **inherited** schema and the gotchas that arrive with it. This repo reads; it never migrates                       |
+| [docs/DESIGN.md](docs/DESIGN.md)               | Token frontmatter + measured contrast. Same palette as web, none of the motion. **Normative**                          |
+| [docs/DESIGN.html](docs/DESIGN.html)           | Rendered specimens + the clickable `Alur` walkthrough. Reference only — if it disagrees with DESIGN.md, that file wins |
+| [docs/schema-requests/](docs/schema-requests/) | How a schema change gets from here into web's `db/migrations/`                                                         |
 
 Source of truth for anything shared: the web repo's own docs. This repo points at them rather than restating them — a copied rule is a rule that drifts, and this project has already paid for that three times.
 
@@ -28,13 +28,13 @@ This file is **what an agent must know before touching code and cannot discover 
 
 ## Phases
 
-| Phase | Scope | Status |
-|---|---|---|
-| 1a | Foundation — architecture, scaffold, DX, dev rules, shared copy, db client, auth, verification | Build now |
-| 2 | Bookings console — list, filters, detail, proof view, confirm/reject | After 1a |
-| 3 | Expiry job — `POST /api/jobs/expire`, external cron, dashboard staleness indicator | After 2 |
-| 4 | Slot blocking — needs a migration web must own and apply first | After the blocks gate |
-| 5 | Deploy + handover — `admin.arena-player.com`, admin user guide, credential handover | After 4 |
+| Phase | Scope                                                                                          | Status                |
+| ----- | ---------------------------------------------------------------------------------------------- | --------------------- |
+| 1a    | Foundation — architecture, scaffold, DX, dev rules, shared copy, db client, auth, verification | Build now             |
+| 2     | Bookings console — list, filters, detail, proof view, confirm/reject                           | After 1a              |
+| 3     | Expiry job — `POST /api/jobs/expire`, external cron, dashboard staleness indicator             | After 2               |
+| 4     | Slot blocking — needs a migration web must own and apply first                                 | After the blocks gate |
+| 5     | Deploy + handover — `admin.arena-player.com`, admin user guide, credential handover            | After 4               |
 
 **This app is a launch dependency of the public site.** Phase 3 owns expiry: pending bookings older than 24h only become `expired` because a cron here says so. Until Phase 3 ships and its scheduler is wired, abandoned slots on the public site are never freed. Launch order is web Phase 4 → admin 1a–3 → public launch → admin 4–5.
 
@@ -93,7 +93,7 @@ Full detail: [docs/architecture.md](docs/architecture.md).
 3. **`DATABASE_URL` and the R2 secrets never reach the client.** Never `NEXT_PUBLIC_*`. `import "server-only"` at the top of every file in `src/server/` so the build fails instead of the review catching it.
 4. **`src/domain/**` is byte-identical with the web repo and read-only here.** `uniq_active_slot` compares `time_slot` as text, so a one-character drift in `TIME_SLOTS` means this app writes rows the site cannot match and anti-double-booking silently stops working **for both**. Nothing throws. Fix drift by fixing the web repo, then re-copying.
 5. **Never blind-update a booking by id.** Every status mutation carries its own `where status in (…)` guard and returns 409 on zero rows — the row may have been actioned in another tab, or flipped by the expiry job between render and click.
-6. **A missing migration fails loudly and *scoped*.** The schema guard gates the one feature that needs the table; it never wraps the root layout. The bookings console needs zero new migrations and must keep working when a Phase 4 table is absent. Never `create table if not exists`.
+6. **A missing migration fails loudly and _scoped_.** The schema guard gates the one feature that needs the table; it never wraps the root layout. The bookings console needs zero new migrations and must keep working when a Phase 4 table is absent. Never `create table if not exists`.
 7. **No GSAP, no `src/lib/motion.ts`, no performance budget, no MSW.** One authenticated user on wifi, on purpose. Dense, boring, fast. Importing web's motion and budget machinery creates ceremony nobody here will enforce.
 8. **argon2 cannot run on the Edge runtime.** Middleware verifies the `jose` JWT only; the password comparison lives in the login route handler with `export const runtime = 'nodejs'`. Putting the hash check in middleware fails at deploy, not at author time.
 9. **Every `check:` script must be proven to fail before it is trusted.** A check that has only ever passed is a check nobody has tested. The web repo shipped a `Stop` hook that never fired once, for exactly that reason.

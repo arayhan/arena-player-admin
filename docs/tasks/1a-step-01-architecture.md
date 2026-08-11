@@ -6,7 +6,7 @@
 
 ## Goal
 
-Confirm the route map, the server/client boundary, and the exact dependency set — then write anything this step *changes* back into [architecture.md](../architecture.md). Nothing product-shaped ships here and no package is installed.
+Confirm the route map, the server/client boundary, and the exact dependency set — then write anything this step _changes_ back into [architecture.md](../architecture.md). Nothing product-shaped ships here and no package is installed.
 
 **Most of this work is already written.** [architecture.md](../architecture.md) carries the route map, the auth split, every SQL statement, the R2 read path, and the cross-repo contracts. This step is a verification pass with one genuinely open decision in it, not a design exercise. Do not re-derive a decision that is already recorded — extend it or dispute it in writing.
 
@@ -32,18 +32,18 @@ Decide it here, write the answer into `architecture.md`, and say why. Do **not**
 
 Shared with `arena-player-web`, majors must match:
 
-| Package | Web has | Why this repo needs it |
-|---|---|---|
-| `next` | 16.3.0 | Same framework, same App Router semantics |
-| `react` / `react-dom` | 19.2.8 | — |
-| `typescript` | 5.9.3 | `src/domain/*.ts` is TypeScript |
-| `tailwindcss` + `@tailwindcss/postcss` | 4.3.3 | Same token layer |
-| `date-fns` | 4.4.0 | **Imported by `src/domain/dates.ts`** — `check:domain` asserts the range |
-| `@date-fns/tz` | 1.5.0 | Same |
-| `zod` | 4.4.3 | Filter/param parsing. Cheap here — no route-split budget rule in this repo |
-| `vitest` | 4.1.10 | `check:unit` and `check:schema` |
-| `@neondatabase/serverless` | *not yet installed in web* | Resolve at install; note the version so web matches when its Phase 4 lands |
-| `@aws-sdk/client-s3` | *not yet installed in web* | Same |
+| Package                                | Web has                    | Why this repo needs it                                                     |
+| -------------------------------------- | -------------------------- | -------------------------------------------------------------------------- |
+| `next`                                 | 16.3.0                     | Same framework, same App Router semantics                                  |
+| `react` / `react-dom`                  | 19.2.8                     | —                                                                          |
+| `typescript`                           | 5.9.3                      | `src/domain/*.ts` is TypeScript                                            |
+| `tailwindcss` + `@tailwindcss/postcss` | 4.3.3                      | Same token layer                                                           |
+| `date-fns`                             | 4.4.0                      | **Imported by `src/domain/dates.ts`** — `check:domain` asserts the range   |
+| `@date-fns/tz`                         | 1.5.0                      | Same                                                                       |
+| `zod`                                  | 4.4.3                      | Filter/param parsing. Cheap here — no route-split budget rule in this repo |
+| `vitest`                               | 4.1.10                     | `check:unit` and `check:schema`                                            |
+| `@neondatabase/serverless`             | _not yet installed in web_ | Resolve at install; note the version so web matches when its Phase 4 lands |
+| `@aws-sdk/client-s3`                   | _not yet installed in web_ | Same                                                                       |
 
 Admin-only, no web equivalent: `jose`, `hash-wasm`, `@aws-sdk/s3-request-presigner`.
 
