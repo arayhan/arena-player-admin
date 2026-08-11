@@ -164,14 +164,21 @@ Getting this backwards builds fine and runs fine in `pnpm dev`, then fails on Su
 
 argon2id either way. `hash-wasm` is pure WASM with no build step; `@node-rs/argon2` is faster but ships native bindings that must compile or find a prebuilt for the host. Sumopod's build environment is unverified — only Node capability was confirmed — and a native-binding failure surfaces at deploy, on a login that happens twice a day and does not need the speed.
 
-Generate the hash with a one-off script; **never commit a plaintext password anywhere, including a comment**:
+Generate the hash with `scripts/hash-password.mjs`. It prompts for the
+password with terminal echo suppressed and prints only the encoded hash —
+**never pass the password as an argv, and never commit a plaintext password
+anywhere, including a comment**, since argv lands in a process listing and
+shell history either way:
 
 ```bash
-node -e "import('hash-wasm').then(async h => console.log(await h.argon2id({
-  password: process.argv[1], salt: require('crypto').randomBytes(16),
-  parallelism: 1, iterations: 3, memorySize: 65536, hashLength: 32, outputType: 'encoded'
-})))" 'the-password-here'
+node scripts/hash-password.mjs
+# Password: <hidden — type it and press Enter>
+# $argon2id$v=19$m=65536,t=3,p=1$...
 ```
+
+Same cost parameters either way: `parallelism: 1, iterations: 3, memorySize: 65536, hashLength: 32, outputType: 'encoded'`.
+
+**Every `$` in the hash must be escaped as `\$` in `.env.local`.** Next.js's built-in `.env` loader (`@next/env`, `dotenv-expand` under it) expands `$name` in a value by looking up another env var literally called `name`. An argon2id hash is nothing but `$`-delimited fields (`$argon2id$v=19$m=65536,t=3,p=1$<salt>$<hash>`), so an unescaped hash is silently rewritten into a short garbage string — no error, no warning, and the resulting login failure is indistinguishable from a wrong password. Confirmed directly: an unescaped 97-character hash was observed truncated to 17 characters at `process.env.ADMIN_PASSWORD_HASH` inside the running dev server, purely from this expansion. `scripts/hash-password.mjs` prints the pre-escaped line — copy that one, not the bare hash — and the same applies to `SESSION_SECRET`/`CRON_SECRET` in the unlikely event either random value ever contains a `$`.
 
 ### Session cookie
 
