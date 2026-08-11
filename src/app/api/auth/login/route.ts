@@ -27,9 +27,32 @@ import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, signSession } from "@/ser
 const FALLBACK_HASH =
   "$argon2id$v=19$m=65536,t=3,p=1$AQEBAQEBAQEBAQEBAQEBAQ$Vc0T4HeLi1jJ4wIYOCfGofeE5jXn0TKV6rd5TvOLUL8";
 
+/**
+ * Takes the RIGHTMOST `X-Forwarded-For` entry, not the leftmost. Every hop
+ * a request passes through APPENDS its own view of the client to this
+ * header — the leftmost entry is whatever the original caller claimed to
+ * be, which is attacker-controlled and free to rotate on every request,
+ * defeating the rate limiter entirely (or, run in reverse, letting an
+ * attacker spoof the real admin's IP to lock them out for 15 minutes). The
+ * rightmost entry is the one hop closest to this process, appended by
+ * infrastructure this app trusts (its own reverse proxy), not by the
+ * client.
+ *
+ * ASSUMPTION FLAGGED FOR PHASE 5: this repo has no documented Sumopod
+ * deployment notes confirming what header its edge/proxy layer sets or
+ * whether it appends to `X-Forwarded-For` at all (a platform-provided
+ * header, if one exists, would be a stronger signal than any hop count in
+ * a client-supplied header). Rightmost-XFF is the safer default absent
+ * that confirmation. Whoever runs step 08 / Phase 5 against the real
+ * platform must verify this against an actual multi-hop request and
+ * correct it here if Sumopod's proxy behaves differently.
+ */
 function getClientIp(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
+  if (forwarded) {
+    const hops = forwarded.split(",");
+    return hops[hops.length - 1]!.trim();
+  }
   return request.headers.get("x-real-ip") ?? "unknown";
 }
 
