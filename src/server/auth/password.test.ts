@@ -7,7 +7,9 @@ import { verifyPassword } from "./password";
  * No credentials, no env var, no network — this proves the compare logic
  * itself, independent of ADMIN_PASSWORD_HASH ever being set. The login
  * route (src/app/api/auth/login/route.ts) is what wires this to the real
- * env var and is exercised separately in that route's own test.
+ * env var and is exercised separately in
+ * src/app/api/auth/login/route.test.ts (candidateMatchesHash &&
+ * configuredHash, the wantsHtml negotiation, cookie flags, rate limiting).
  */
 describe("verifyPassword", () => {
   it("accepts the correct plaintext against its own argon2id hash", async () => {
