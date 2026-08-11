@@ -1,0 +1,8 @@
+# pnpm 11 refuses to run any dependency's install scripts until each is listed
+# here. An unlisted one fails the install outright, so this file is a decision
+# log, not configuration noise — same convention as arena-player-web's.
+
+allowBuilds:
+  # Transitive of eslint (via @typescript-eslint's parser/tsgo tooling). Not
+  # used: no native resolver is needed anywhere in this app.
+  unrs-resolver: false
