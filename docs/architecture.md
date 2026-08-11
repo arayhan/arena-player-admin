@@ -365,7 +365,7 @@ Three bindings to `arena-player-web`. All three fail silently if broken, which i
 
 **Tests are in the diff, not only the four modules.** Web decided that deliberately: this repo inherits the proof, not just the code, so the copy is verified to _behave_ identically rather than merely to look identical. The price is a third shared obligation — **vitest**, alongside `date-fns` and `@date-fns/tz`.
 
-**Keep the skip-loudly behaviour regardless.** Whenever a side is absent, or `ARENA_ADMIN_PATH` points somewhere wrong, the check must print `SKIPPED`, name what it did not compare, and exit 0. Never pass silently — a check reporting success having compared nothing is worse than no check.
+**Keep the skip-loudly behaviour regardless.** Whenever a side is absent, or `ARENA_WEB_PATH` points somewhere wrong, the check must print `SKIPPED`, name what it did not compare, and exit 0. Never pass silently — a check reporting success having compared nothing is worse than no check.
 
 **Direction of repair:** web is the source. Drift is fixed by fixing web and re-copying, never by editing the copy here.
 

@@ -8,13 +8,13 @@ document, it is linked and not copied. A copied rule is one that drifts — the 
 day to exactly that, three separate ways: the skills, the agents, and the hooks each held a
 stale copy of a value that had moved.
 
-| If you need                                    | Read                                          |
-| ------------------------------------------------ | ---------------------------------------------- |
-| The rules whose violation means rework            | [CLAUDE.md](../CLAUDE.md) hard rules           |
-| Every SQL statement, the route map, the R2 path   | [architecture.md](architecture.md)             |
-| Colour, type, spacing, contrast ratios            | [DESIGN.md](DESIGN.md) — normative             |
-| The inherited schema and its gotchas              | [database.md](database.md)                    |
-| Who the admin is, what must not be fabricated     | [PRODUCT.md](PRODUCT.md)                       |
+| If you need                                     | Read                                 |
+| ----------------------------------------------- | ------------------------------------ |
+| The rules whose violation means rework          | [CLAUDE.md](../CLAUDE.md) hard rules |
+| Every SQL statement, the route map, the R2 path | [architecture.md](architecture.md)   |
+| Colour, type, spacing, contrast ratios          | [DESIGN.md](DESIGN.md) — normative   |
+| The inherited schema and its gotchas            | [database.md](database.md)           |
+| Who the admin is, what must not be fabricated   | [PRODUCT.md](PRODUCT.md)             |
 
 This repo mirrors `arena-player-web`'s conventions rather than inventing parallel ones —
 one developer moves between the two repos, and a second naming scheme is a second thing to
@@ -24,15 +24,15 @@ remember for no product reason.
 
 ## Naming and file layout
 
-| Kind          | Convention                                                             | Example                                     |
-| ------------- | ------------------------------------------------------------------------ | -------------------------------------------- |
-| Module file   | `<module>.<role>.ts`                                                     | `bookings.queries.ts`, `bookings.actions.ts` |
-| Component     | kebab-case file, PascalCase export                                       | `proof-image.tsx` → `ProofImage`             |
-| Hook          | `use-<thing>.ts` in `src/hooks/`, or `<module>.queries.ts` in a module   | `use-media-query.ts`, `bookings.queries.ts`  |
-| Test          | colocated `<file>.test.ts`, beside what it covers                        | `slots.ts` → `slots.test.ts`                 |
-| Route handler | `route.ts` under its path segment                                        | `src/app/api/jobs/expire/route.ts`           |
-| Server Action | `<module>.actions.ts`, one file per module                               | `bookings.actions.ts`                        |
-| Domain module | plain noun, no suffix — this half is frozen, see architecture.md         | `slots.ts`, `dates.ts`, `status.ts`, `phone.ts` |
+| Kind          | Convention                                                             | Example                                         |
+| ------------- | ---------------------------------------------------------------------- | ----------------------------------------------- |
+| Module file   | `<module>.<role>.ts`                                                   | `bookings.queries.ts`, `bookings.actions.ts`    |
+| Component     | kebab-case file, PascalCase export                                     | `proof-image.tsx` → `ProofImage`                |
+| Hook          | `use-<thing>.ts` in `src/hooks/`, or `<module>.queries.ts` in a module | `use-media-query.ts`, `bookings.queries.ts`     |
+| Test          | colocated `<file>.test.ts`, beside what it covers                      | `slots.ts` → `slots.test.ts`                    |
+| Route handler | `route.ts` under its path segment                                      | `src/app/api/jobs/expire/route.ts`              |
+| Server Action | `<module>.actions.ts`, one file per module                             | `bookings.actions.ts`                           |
+| Domain module | plain noun, no suffix — this half is frozen, see architecture.md       | `slots.ts`, `dates.ts`, `status.ts`, `phone.ts` |
 
 Roles in use in this repo: `queries` (a module's own data-reading helpers, never a data-fetching
 library — see [Data fetching](#data-fetching-and-mutations)), `actions` (Server Actions), `schema`
@@ -60,10 +60,10 @@ Indonesian for the same reason: the person reading them is the admin, not a deve
 
 ## Where a thing goes
 
-| Order | Ask                                                                                              | Settles                             |
-| ----- | --------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **1** | **Is this a file under `src/domain/`?** It is frozen and copied from web — see architecture.md      | `domain/` vs everything else         |
-| **2** | **Does this file exist because of a package in `package.json`?** Yes → `lib/`. No → `utils/`        | `src/lib/` vs `src/utils/`           |
+| Order | Ask                                                                                                                                        | Settles                                              |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| **1** | **Is this a file under `src/domain/`?** It is frozen and copied from web — see architecture.md                                             | `domain/` vs everything else                         |
+| **2** | **Does this file exist because of a package in `package.json`?** Yes → `lib/`. No → `utils/`                                               | `src/lib/` vs `src/utils/`                           |
 | **3** | **Does more than one module use it?** One consumer means it belongs to that module. Promote later, when a second consumer actually appears | `src/components/` and `src/hooks/` vs a module's own |
 
 `src/hooks/` and `src/components/` sit **below** modules in the import graph and never import
@@ -220,16 +220,16 @@ or `.env.local`.
 
 Never claim something works without running the check and quoting the decisive line.
 
-| Command             | Proves                                                                    |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `pnpm lint`          | banned imports, the import-zone rules, the `@/` form of every rule above     |
-| `pnpm typecheck`     | types resolve                                                                |
-| `pnpm check`         | lint, typecheck, `format:check`, `check:domain`, `check:unit` — cheapest first |
-| `pnpm check:unit`    | logic gives the right answers — no credentials, ever                        |
-| `pnpm check:domain`  | `src/domain/` has not drifted from the web repo's copy                      |
-| `pnpm check:schema`  | the migration this feature needs is actually applied, live                  |
-| `pnpm check:setup`   | Neon reachable, R2 presign round-trips                                      |
-| `pnpm format:check`  | formatting is settled, not argued                                           |
+| Command             | Proves                                                                         |
+| ------------------- | ------------------------------------------------------------------------------ |
+| `pnpm lint`         | banned imports, the import-zone rules, the `@/` form of every rule above       |
+| `pnpm typecheck`    | types resolve                                                                  |
+| `pnpm check`        | lint, typecheck, `format:check`, `check:domain`, `check:unit` — cheapest first |
+| `pnpm check:unit`   | logic gives the right answers — no credentials, ever                           |
+| `pnpm check:domain` | `src/domain/` has not drifted from the web repo's copy                         |
+| `pnpm check:schema` | the migration this feature needs is actually applied, live                     |
+| `pnpm check:setup`  | Neon reachable, R2 presign round-trips                                         |
+| `pnpm format:check` | formatting is settled, not argued                                              |
 
 **Every check must be proven to fail before it is trusted.** Plant a violation, watch it exit
 non-zero, revert — see CLAUDE.md hard rule 9. A check that has only ever passed is a check
