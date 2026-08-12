@@ -38,17 +38,17 @@ Two apps, one database, one bucket, no shared runtime. They communicate exclusiv
 
 ## Route map
 
-| Route                   | Runtime             | Auth                  | Notes                                                                       |
-| ----------------------- | ------------------- | --------------------- | --------------------------------------------------------------------------- |
-| `/login`                | Node                | public                | The only unauthenticated page. Password comparison happens here             |
-| `/`                     | Node                | session               | Dashboard: pending count, **oldest-pending age**, manual expiry button      |
-| `/bookings`             | Node                | session               | The list. All filter state in the URL                                       |
-| `/bookings/[id]`        | Node                | session               | Detail + payment proof. `export const dynamic = 'force-dynamic'`            |
-| `/blocks`               | Node                | session               | Phase 4. Behind the schema guard                                            |
-| `POST /api/auth/login`  | **Node** (explicit) | public                | Rate-limited. `export const runtime = 'nodejs'` — argon2 cannot run on Edge |
-| `POST /api/auth/logout` | Node                | session               | Clears the cookie                                                           |
-| `POST /api/jobs/expire` | Node                | Bearer **or** session | Bearer for the scheduler, session for the manual button                     |
-| `middleware.ts`         | **Edge**            | —                     | Verifies the JWT and nothing else                                           |
+| Route                   | Runtime             | Auth                  | Notes                                                                                                                                              |
+| ----------------------- | ------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`                | Node                | public                | The only unauthenticated page. Password comparison happens here                                                                                    |
+| `/`                     | Node                | session               | Dashboard: pending count, **oldest-pending age**, confirmed-today count (needs [002](schema-requests/002-booking-events.md)), manual expiry button |
+| `/bookings`             | Node                | session               | The list. All filter state in the URL                                                                                                              |
+| `/bookings/[id]`        | Node                | session               | Detail + payment proof. `export const dynamic = 'force-dynamic'`                                                                                   |
+| `/blocks`               | Node                | session               | Phase 4. Behind the schema guard                                                                                                                   |
+| `POST /api/auth/login`  | **Node** (explicit) | public                | Rate-limited. `export const runtime = 'nodejs'` — argon2 cannot run on Edge                                                                        |
+| `POST /api/auth/logout` | Node                | session               | Clears the cookie                                                                                                                                  |
+| `POST /api/jobs/expire` | Node                | Bearer **or** session | Bearer for the scheduler, session for the manual button                                                                                            |
+| `middleware.ts`         | **Edge**            | —                     | Verifies the JWT and nothing else                                                                                                                  |
 
 **Server Components by default.** The one client component in v1 is the proof-image reload button (see [The R2 read path](#the-r2-read-path)). No TanStack Query, no zustand, no axios: filters live in the URL, the server reads Neon, and a mutation is a Server Action followed by `revalidatePath`.
 
@@ -253,6 +253,18 @@ Four details in that statement are load-bearing:
 - **`count(*) over ()`** gives the page count in the same round trip. A second `count(*)` would need a duplicated WHERE clause, which is a drift surface.
 - **`order by time_slot` sorts correctly as plain text** because the canonical form is zero-padded 24-hour (`'06.00 - 08.00'` … `'22.00 - 24.00'`). That is a load-bearing property of the canonical string, not a coincidence, and it means the sort needs no lookup table. Do not add one.
 - **`$5 q_phone` is normalised in TypeScript, not in SQL.** Phones are stored `628xxxxxxxxx`. An admin typing `0812-3456-7890` yields digits `08123456789`, which does **not** substring-match `628123456789`. Run the query through `normalisePhone()` from `src/domain/phone.ts` first. This makes the admin the second real consumer of that module, which is exactly what put it in the byte-identical set.
+
+**The `ORDER BY` is parameterised, from an allow-list.** The queue's column headers are sortable — `booking_date`, `team_name`, `created_at` — so the clause above is the default, not the only one. The sort key arrives in the URL and is mapped through a literal object in TypeScript before it reaches SQL:
+
+```ts
+const SORTABLE = {
+  when: "b.booking_date, b.time_slot",
+  who: "b.team_name",
+  age: "b.created_at",
+} as const;
+```
+
+**Never interpolate the raw parameter.** A sort key is user input arriving from a query string, and `order by` cannot be a bind parameter — an allow-list lookup is the only safe construction, and a missing key falls back to the default rather than erroring. `age` sorts on `created_at` because the displayed age _is_ `now() - created_at`; there is no age column.
 
 ### Rendering rules
 
