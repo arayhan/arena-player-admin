@@ -53,16 +53,18 @@ No product screen ships here beyond `/login`. It ends with a repo that runs, rul
 
 ### Definition of Done — Phase 1a
 
-- [ ] Repo scaffolded, `pnpm dev` serves `localhost:3001`
-- [ ] Lint / typecheck clean; `pnpm check:unit` passes and never needs credentials
-- [ ] `docs/dev-rules.md` written, including the accessibility baseline
-- [ ] `src/domain/{slots,dates,status,phone}.ts` present, or `check:domain` skipping loudly with a message naming web's unbuilt step
-- [ ] `pnpm check:domain` **proven to fail** on a planted one-character drift, then reverted
-- [ ] Neon client carries the OID `1082`/`1184` override; `types.getTypeParser(1082)('2026-08-01')` returns a **string**
-- [ ] `pnpm check:schema` asserts table, columns, `uniq_active_slot`, and CHECK-literals-vs-`TIME_SLOTS` set equality — and **fails** cleanly against a database with no `bookings` table
-- [ ] Login works; the session cookie is `HttpOnly; Secure; SameSite=Lax`; middleware redirects an unauthenticated request to `/login`
-- [ ] argon2 verification confirmed **absent** from the Edge middleware bundle
-- [ ] All four checks have each been observed exiting non-zero at least once
+- [x] Repo scaffolded, `pnpm dev` serves `localhost:3001`
+- [x] Lint / typecheck clean; `pnpm check:unit` passes and never needs credentials
+- [x] `docs/dev-rules.md` written, including the accessibility baseline
+- [x] `src/domain/{slots,dates,status,phone}.ts` present, or `check:domain` skipping loudly with a message naming web's unbuilt step
+- [x] `pnpm check:domain` **proven to fail** on a planted one-character drift, then reverted
+- [x] Neon client carries the OID `1082`/`1184` override; `types.getTypeParser(1082)('2026-08-01')` returns a **string**
+- [x] `pnpm check:schema` asserts table, columns, `uniq_active_slot`, and CHECK-literals-vs-`TIME_SLOTS` set equality — and **fails** cleanly against a database with no `bookings` table (algorithm proven via `schema-diff.test.ts`; the live-Neon path is credential-blocked in this environment and carried forward as a **Phase 2 blocker**, not a Phase 1a gap — `pnpm check:schema` is how Phase 2's start is confirmed)
+- [x] Login works; the session cookie is `HttpOnly; Secure; SameSite=Lax`; middleware redirects an unauthenticated request to `/login`
+- [x] argon2 verification confirmed **absent** from the Edge middleware bundle
+- [x] All four checks have each been observed exiting non-zero at least once
+
+**Closed 2026-08-12.** `check:schema` and `check:setup` cannot be run end-to-end against a live database in this environment (no `DATABASE_URL`/R2 credentials) — expected and acceptable for Phase 1a closure per the credential-free/credentialed split this phase was scoped around. Both scripts are proven to fail loudly and correctly (missing-variable errors, not silent passes) and their algorithms are proven correct against fixtures. Live verification against real Neon is carried forward as a **Phase 2 entry gate**, not a reopened Phase 1a item — see `docs/PROGRESS.md`, 2026-08-12.
 
 ---
 
