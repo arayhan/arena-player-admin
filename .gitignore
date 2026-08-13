@@ -40,3 +40,11 @@ yarn.lock
 .claude/.session-head
 .claude/screenshots/
 .gstack/
+
+# impeccable live mode. config.json is portable project config and is kept so
+# the next session skips setup; roots.json and the session journal hold
+# absolute paths from whichever machine ran it, and must not travel.
+.impeccable/*
+!.impeccable/live/
+.impeccable/live/*
+!.impeccable/live/config.json
