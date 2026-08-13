@@ -262,9 +262,44 @@ const SORTABLE = {
   who: "b.team_name",
   age: "b.created_at",
 } as const;
+
+// Direction is user input too, and it reaches the same string. A ternary
+// concatenating "desc" is one refactor away from concatenating something
+// else; a map cannot be talked into a third value.
+const DIRECTION = { asc: "asc", desc: "desc" } as const;
 ```
 
 **Never interpolate the raw parameter.** A sort key is user input arriving from a query string, and `order by` cannot be a bind parameter — an allow-list lookup is the only safe construction, and a missing key falls back to the default rather than erroring. `age` sorts on `created_at` because the displayed age _is_ `now() - created_at`; there is no age column.
+
+**The full clause is always the lookup plus a stable tiebreaker**, `, b.created_at asc` when sorting by anything other than `age`. Without it two rows sharing a date and slot can swap places between page 1 and page 2 of the same `LIMIT`/`OFFSET` walk, and a booking silently never appears.
+
+### The detail read
+
+The list query answers the queue. `/bookings/[id]` needs one row and two things the list deliberately omits.
+
+```sql
+-- $1 id  uuid
+select
+  b.id,
+  b.booking_date::text as booking_date,
+  b.time_slot,
+  b.team_name,
+  b.phone,
+  b.notes,
+  b.proof_key,
+  b.status,
+  b.created_at::text   as created_at
+from bookings b
+where b.id = $1;
+```
+
+Three details are deliberate:
+
+- **`notes` appears here and nowhere else.** Up to 500 characters wrecks row height in the list; on the detail page it is often the reason the admin is looking.
+- **No status filter.** The detail page renders every state, including `expired` and `rejected` — the admin arrives here from a link or a stale tab as often as from the queue, and a 404 on a real booking is worse than showing a settled one.
+- **Zero rows is a 404, not an error.** An id that does not exist is a wrong URL. An id that exists but was actioned in another tab still returns its row; the mutation guards handle staleness, not this read.
+
+The same `::text` casts apply for the same reason as the list — belt and braces against the Neon DATE/TIMESTAMPTZ parsers, documented at the point of use.
 
 ### Rendering rules
 
