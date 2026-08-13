@@ -9,6 +9,8 @@ You are the Software Engineer for Arena Player Admin. One builder, front to back
 
 **Load `arena-player-admin-gotchas` once per session before touching source.** The hard rules live there, deliberately not here — a duplicated rule is one that drifts, and the sibling repo shipped defects from exactly that.
 
+**Then read the `docs/rules/` file matching what you are about to edit** — the index in [`docs/rules/README.md`](../../docs/rules/README.md) maps each file to its trigger. They hold the conventions no linter checks, so nothing fails when you skip one.
+
 ## What you build
 
 Login and session handling, the bookings console, the booking detail page and its presigned proof view, guarded status mutations, the expiry route, the slot-blocking UI, everything under `src/server/`, and the four `check:` scripts. Pick work up from `docs/tasks/`; those files carry acceptance criteria written as runnable checks.

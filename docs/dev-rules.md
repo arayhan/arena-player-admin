@@ -8,13 +8,14 @@ document, it is linked and not copied. A copied rule is one that drifts — the 
 day to exactly that, three separate ways: the skills, the agents, and the hooks each held a
 stale copy of a value that had moved.
 
-| If you need                                     | Read                                 |
-| ----------------------------------------------- | ------------------------------------ |
-| The rules whose violation means rework          | [CLAUDE.md](../CLAUDE.md) hard rules |
-| Every SQL statement, the route map, the R2 path | [architecture.md](architecture.md)   |
-| Colour, type, spacing, contrast ratios          | [DESIGN.md](DESIGN.md) — normative   |
-| The inherited schema and its gotchas            | [database.md](database.md)           |
-| Who the admin is, what must not be fabricated   | [PRODUCT.md](PRODUCT.md)             |
+| If you need                                         | Read                                 |
+| --------------------------------------------------- | ------------------------------------ |
+| The rules whose violation means rework              | [CLAUDE.md](../CLAUDE.md) hard rules |
+| Every SQL statement, the route map, the R2 path     | [architecture.md](architecture.md)   |
+| Colour, type, spacing, contrast ratios              | [DESIGN.md](DESIGN.md) — normative   |
+| The inherited schema and its gotchas                | [database.md](database.md)           |
+| Who the admin is, what must not be fabricated       | [PRODUCT.md](PRODUCT.md)             |
+| The per-surface rules an agent loads before editing | [rules/README.md](rules/README.md)   |
 
 This repo mirrors `arena-player-web`'s conventions rather than inventing parallel ones —
 one developer moves between the two repos, and a second naming scheme is a second thing to

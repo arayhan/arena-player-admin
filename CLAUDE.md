@@ -15,6 +15,7 @@ Back-office for the mini soccer field. The field admin logs in, works the pendin
 | [docs/DESIGN.md](docs/DESIGN.md)               | Token frontmatter + measured contrast. Same palette as web, none of the motion. **Normative**                          |
 | [docs/DESIGN.html](docs/DESIGN.html)           | Rendered specimens + the clickable `Alur` walkthrough. Reference only — if it disagrees with DESIGN.md, that file wins |
 | [docs/schema-requests/](docs/schema-requests/) | How a schema change gets from here into web's `db/migrations/`                                                         |
+| [docs/rules/](docs/rules/)                     | Coding rules, one file per surface. Load the one matching what you are about to edit — index in its README             |
 
 Source of truth for anything shared: the web repo's own docs. This repo points at them rather than restating them — a copied rule is a rule that drifts, and this project has already paid for that three times.
 
@@ -57,8 +58,9 @@ Schema changes are **requested here and applied in the web repo**, by hand, in t
 ```
 arena-player-admin/
 ├── CLAUDE.md
-├── docs/            # PRODUCT, PRD, architecture, database, DESIGN, PROGRESS.md, tasks/, schema-requests/
-├── .claude/         # agents, skills, settings
+├── docs/            # PRODUCT, PRD, architecture, database, DESIGN, dev-rules, PROGRESS.md,
+│                    # rules/ (coding rules), tasks/, schema-requests/
+├── .claude/         # agents, skills, commands/ (agent-only slash commands), settings
 ├── src/
 │   ├── app/         # App Router — login/, bookings/, blocks/, api/jobs/expire/
 │   ├── modules/     # named after SURFACES: bookings/, blocks/. Never import each other
@@ -83,7 +85,8 @@ Full detail: [docs/architecture.md](docs/architecture.md).
 - Conventional-Commits-flavored: `feat:`, `fix:`, `chore:`, `docs:`, `revert:`. Commit after each work step passes, not one giant commit.
 - pnpm only — never commit `package-lock.json` or `yarn.lock`. Never commit `.env.local`.
 - **Start Claude sessions inside `arena-player-admin/`** — hooks and settings load from session root.
-- Nothing under `src/` imports from `src/app/`, and feature modules never import each other. `src/domain/` imports its own siblings **relatively** (`./slots`) so the byte-identical copy resolves the same in both repos. Parallel sessions: `claude --worktree <branch-name>`.
+- Nothing under `src/` imports from `src/app/`, and feature modules never import each other. `src/domain/` imports its own siblings **relatively** (`./slots`) so the byte-identical copy resolves the same in both repos. Parallel sessions get their own worktree under `.worktrees/`, one writing session each — [docs/rules/worktrees.md](docs/rules/worktrees.md) carries the setup, including the `ARENA_WEB_PATH` a worktree needs before `check:domain` proves anything.
+- **Tooling splits by who runs it.** `scripts/` is for what a human or CI runs and is wired into `package.json`. A helper only an agent will ever run is a slash command in `.claude/commands/` and gets no `package.json` entry — a `pnpm run` script is a public interface, and an agent-only helper has none of that contract. See [docs/rules/tooling-placement.md](docs/rules/tooling-placement.md).
 - No attribution trailers on commits. Questions to the user go through `AskUserQuestion`.
 
 ## Hard rules (violations = rework)
