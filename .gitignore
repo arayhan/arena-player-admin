@@ -35,6 +35,9 @@ yarn-error.log*
 package-lock.json
 yarn.lock
 
+# parallel-feature checkouts — see docs/rules/worktrees.md
+.worktrees/
+
 # claude local
 .claude/settings.local.json
 .claude/.session-head

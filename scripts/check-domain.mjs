@@ -29,7 +29,10 @@ import { join, relative, sep } from "node:path";
 const ROOT = process.cwd();
 const SHARED = "src/domain";
 
-// A path, not a secret — see the comment in .env.local.example.
+// A path, not a secret. It is a real shell env var, not an .env.local entry —
+// this script is plain `node` and never loads that file. Mandatory when running
+// from a worktree, where `..` no longer reaches the sibling repo: see
+// docs/rules/worktrees.md.
 const SIBLING = process.env.ARENA_WEB_PATH ?? join(ROOT, "..", "arena-player-web");
 
 // Every package src/domain/ imports. Keep this list as short as it is: each
@@ -67,7 +70,7 @@ if (theirs === null) {
     `SKIPPED: could not find arena-player-web's src/domain/ — this check proved nothing.\n` +
       `         web's Phase 1a step 06 has landed, so this usually means the sibling checkout\n` +
       `         is missing, or ARENA_WEB_PATH points somewhere wrong (it is a path, not a flag\n` +
-      `         that says "web isn't ready yet" — see .env.local.example).\n` +
+      `         that says "web isn't ready yet" — see docs/rules/worktrees.md).\n` +
       `         Looked for it at: ${join(SIBLING, SHARED)}\n` +
       `         The ${mine?.length ?? 0} file(s) in this repo's ${SHARED}/ are UNGUARDED until then.`,
   );

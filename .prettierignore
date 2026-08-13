@@ -2,6 +2,12 @@
 node_modules/
 pnpm-lock.yaml
 
+# Parallel-feature checkouts — see docs/rules/worktrees.md. Every ignore in
+# this file is anchored at the repo root, so a worktree's copy of an ignored
+# path is not ignored: without this line `format:check` fails on
+# .worktrees/*/docs/DESIGN.html.
+.worktrees/
+
 # Reference artifact, hand-authored, not production. Reformatting it would
 # produce a large meaningless diff.
 docs/DESIGN.html

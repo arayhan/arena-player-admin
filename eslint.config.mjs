@@ -102,6 +102,11 @@ const eslintConfig = defineConfig([
     "build/**",
     "public/**",
     "next-env.d.ts",
+    // Parallel-feature checkouts (docs/rules/worktrees.md). ESLint walks into
+    // them otherwise and reports the same file twice — once for this tree and
+    // once for every worktree. `tsc` needs no equivalent: its wildcard include
+    // skips dot-directories, verified with `tsc --listFilesOnly`.
+    ".worktrees/**",
   ]),
 ]);
 
