@@ -1,6 +1,10 @@
-// Scaffold placeholder. Nothing product-shaped ships in step 02 — auth
-// (step 07) gates this route and the dashboard's real content (pending
-// count, oldest-pending age, manual expiry button) lands in Phase 2/3.
+import { Breadcrumbs } from "@/components/breadcrumbs";
+
+// Just enough to prove the shell renders around real page content. The
+// dashboard's actual content (pending count, oldest-pending age, manual
+// expiry button) lands in Phase 2/3, once there is a live Neon connection
+// and (for oldest-pending) schema-request 002 — see docs/architecture.md's
+// route map.
 //
 // `force-dynamic` explicitly, rather than relying on middleware's
 // Cache-Control header alone: this page has no `searchParams`, no cookies
@@ -13,11 +17,12 @@ export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
-    <main className="flex min-h-full flex-1 items-center justify-center p-8">
-      <div className="text-center">
-        <h1>Arena Player — Admin</h1>
-        <p className="mt-2 text-sm text-navy-400">Scaffold. Belum ada konten.</p>
-      </div>
-    </main>
+    <>
+      <Breadcrumbs items={[{ label: "Beranda" }]} />
+      <h1>Beranda</h1>
+      <p className="text-sm text-ink-muted">
+        Scaffold. Antrean booking, statistik, dan tombol ekspirasi manual menyusul di Fase 2/3.
+      </p>
+    </>
   );
 }

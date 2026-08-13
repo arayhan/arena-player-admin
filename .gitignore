@@ -39,3 +39,4 @@ yarn.lock
 .claude/settings.local.json
 .claude/.session-head
 .claude/screenshots/
+.gstack/
