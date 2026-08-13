@@ -21,7 +21,7 @@ The folder sorts into build order on its own, so no index needs maintaining, and
 
 **Step files land when their phase's build actually starts**, not during planning. Gates land as soon as the questions exist, because a gate whose questions are written late is a gate that gets held late — and here, three of the four gates are blocked on people outside the build (the client, the host, the other repo), which is the longest lead item in this project.
 
-That is why this folder currently holds eight Phase 1a steps and four gates, and no step file for Phases 2–5. Those phases are specified in [PRD.md](../PRD.md); their steps get written when their build starts.
+That is why this folder held eight Phase 1a steps and four gates for as long as Phase 1a was the current build, and no step file for Phases 2–5. **Phase 2's six steps and two gates landed on 2026-08-13**, when its build started. Phases 3–5 are still specified only in [PRD.md](../PRD.md); their steps get written when their build starts.
 
 ## Steps
 
