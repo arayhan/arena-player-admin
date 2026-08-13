@@ -65,63 +65,93 @@ spacing:
   8: 32px
   12: 48px
   16: 64px
+# Layer 2. The only tier that swaps between themes; see "Dark mode" below.
+# Components address THIS, never `colors` directly — that is what lets one
+# set of component rules serve both themes.
+semantic:
+  ground: { light: "{colors.grey-50}", dark: "#060D1F" }
+  surface: { light: "{colors.white}", dark: "#0C1830" }
+  sidebar: { light: "{colors.white}", dark: "#0A1428" }
+  ink: { light: "{colors.navy-900}", dark: "#EEF1F8" }
+  ink-muted: { light: "{colors.navy-400}", dark: "#9AA8C7" }
+  border: { light: "{colors.grey-200}", dark: "#1C2B4D" }
+  input-border: { light: "#7B8AA6", dark: "#5F6F99" }
+  accent: { light: "{colors.blue-600}", dark: "#5B8DEF" }
+  accent-hover: { light: "{colors.blue-700}", dark: "#7AA4F5" }
+  accent-ink: { light: "{colors.white}", dark: "#051029" }
+  scrim: { light: "rgb(1 26 67 / .55)", dark: "rgb(0 0 0 / .68)" }
+  amber-bg: { light: "{colors.amber-100}", dark: "#2C2110" }
+  amber-border: { light: "{colors.amber-700}", dark: "#D99A3D" }
+  amber-ink: { light: "{colors.amber-800}", dark: "#F0C37E" }
+  green-bg: { light: "{colors.green-100}", dark: "#0F2718" }
+  green-border: { light: "{colors.green-700}", dark: "#2FA460" }
+  green-ink: { light: "{colors.green-800}", dark: "#7FD9A4" }
+  red-bg: { light: "{colors.red-100}", dark: "#2C1414" }
+  red-border: { light: "{colors.red-600}", dark: "#E35B5B" }
+  red-ink: { light: "{colors.red-800}", dark: "#F2A3A3" }
+  grey-bg: { light: "{colors.grey-50}", dark: "#101C33" }
+  grey-border: { light: "{colors.navy-400}", dark: "#6B7BA3" }
+  grey-ink: { light: "{colors.navy-400}", dark: "#9AA8C7" }
 components:
   status-pending:
-    backgroundColor: "{colors.amber-100}"
-    borderColor: "{colors.amber-700}"
-    textColor: "{colors.amber-800}"
+    backgroundColor: "{semantic.amber-bg}"
+    borderColor: "{semantic.amber-border}"
+    textColor: "{semantic.amber-ink}"
     rounded: "{rounded.control}"
   status-confirmed:
-    backgroundColor: "{colors.green-100}"
-    borderColor: "{colors.green-700}"
-    textColor: "{colors.green-800}"
+    backgroundColor: "{semantic.green-bg}"
+    borderColor: "{semantic.green-border}"
+    textColor: "{semantic.green-ink}"
     rounded: "{rounded.control}"
   status-rejected:
-    backgroundColor: "{colors.red-100}"
-    borderColor: "{colors.red-600}"
-    textColor: "{colors.red-800}"
+    backgroundColor: "{semantic.red-bg}"
+    borderColor: "{semantic.red-border}"
+    textColor: "{semantic.red-ink}"
     rounded: "{rounded.control}"
   status-expired:
-    backgroundColor: "{colors.grey-50}"
-    borderColor: "{colors.navy-400}"
-    textColor: "{colors.navy-400}"
+    backgroundColor: "{semantic.grey-bg}"
+    borderColor: "{semantic.grey-border}"
+    textColor: "{semantic.grey-ink}"
     rounded: "{rounded.control}"
   row:
-    backgroundColor: "{colors.white}"
-    borderColor: "{colors.grey-200}"
-    textColor: "{colors.navy-900}"
+    backgroundColor: "{semantic.surface}"
+    borderColor: "{semantic.border}"
+    textColor: "{semantic.ink}"
     padding: 12px 16px
   row-hover:
-    backgroundColor: "{colors.grey-50}"
+    backgroundColor: "{semantic.ground}"
+  # Was navy-900. Measured 1.03 against the dark surface — a filled control
+  # that cannot be seen as a shape. The accent clears both themes: 5.17 light,
+  # 5.47 dark, with 5.17 / 5.84 for its ink. See "Dark mode".
   button-primary:
-    backgroundColor: "{colors.navy-900}"
-    textColor: "{colors.white}"
+    backgroundColor: "{semantic.accent}"
+    textColor: "{semantic.accent-ink}"
     rounded: "{rounded.control}"
     padding: 0 16px
     height: 40px
   button-primary-hover:
-    backgroundColor: "{colors.navy-700}"
+    backgroundColor: "{semantic.accent-hover}"
   button-danger:
-    backgroundColor: "{colors.white}"
-    borderColor: "{colors.red-600}"
-    textColor: "{colors.red-800}"
+    backgroundColor: "{semantic.surface}"
+    borderColor: "{semantic.red-border}"
+    textColor: "{semantic.red-ink}"
     rounded: "{rounded.control}"
     padding: 0 16px
     height: 40px
   button-disabled:
-    backgroundColor: "{colors.grey-200}"
-    textColor: "{colors.navy-400}"
+    backgroundColor: "{semantic.border}"
+    textColor: "{semantic.ink-muted}"
   input:
-    backgroundColor: "{colors.white}"
-    borderColor: "{colors.grey-200}"
-    textColor: "{colors.navy-900}"
+    backgroundColor: "{semantic.surface}"
+    borderColor: "{semantic.input-border}"
+    textColor: "{semantic.ink}"
     rounded: "{rounded.control}"
     padding: 0 12px
     height: 40px
   input-error:
-    backgroundColor: "{colors.red-100}"
-    borderColor: "{colors.red-600}"
-    textColor: "{colors.red-800}"
+    backgroundColor: "{semantic.red-bg}"
+    borderColor: "{semantic.red-border}"
+    textColor: "{semantic.red-ink}"
 ---
 
 # Design System: Arena Player Admin
