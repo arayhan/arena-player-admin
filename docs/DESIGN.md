@@ -192,6 +192,68 @@ Every figure below was computed against the sRGB formula at the time this file w
 
 **One deliberate exemption:** `grey-200` row dividers measure 1.24 on white. They separate rows; they carry no state and no information. 1.4.11 governs boundaries that _are_ the signal, and a table rule is not one. Noted so it does not read as the same oversight as the one above.
 
+## Dark mode
+
+Added 2026-08-13. Until then this file described a light surface only, and every figure above was computed against white — dark mode here was **un-designed, not merely un-implemented**.
+
+### The 18 brand primitives do not change
+
+Navy `#011A43` and blue `#2563EB` are sampled from the client's logo; the rest of the palette above is a brand commitment. **None of it swaps.** What swaps is a semantic tier sitting on top, and that split is what makes one set of component rules serve both themes without a `dark:` prefix on every element.
+
+| Semantic token | Light                | Dark               | What it is                       |
+| -------------- | -------------------- | ------------------ | -------------------------------- |
+| `ground`       | `#F4F6FA`            | `#060D1F`          | the page behind the panels       |
+| `surface`      | `#FFFFFF`            | `#0C1830`          | panels, rows, inputs             |
+| `sidebar`      | `#FFFFFF`            | `#0A1428`          | the nav column                   |
+| `ink`          | `navy-900 #011A43`   | `#EEF1F8`          | body text                        |
+| `ink-muted`    | `navy-400 #4A5A78`   | `#9AA8C7`          | secondary text                   |
+| `border`       | `grey-200 #E5E7EB`   | `#1C2B4D`          | dividers                         |
+| `input-border` | `#7B8AA6`            | `#5F6F99`          | the only border that is a signal |
+| `accent`       | `blue-600 #2563EB`   | `#5B8DEF`          | links, focus ring                |
+| `accent-ink`   | `#FFFFFF`            | `#051029`          | text on the accent               |
+| `scrim`        | `rgb(1 26 67 / .55)` | `rgb(0 0 0 / .68)` | overlay backdrop                 |
+
+Status triples swap as a set: pending `#2C2110` / `#D99A3D` / `#F0C37E`, confirmed `#0F2718` / `#2FA460` / `#7FD9A4`, rejected `#2C1414` / `#E35B5B` / `#F2A3A3`, expired `#101C33` / `#6B7BA3` / `#9AA8C7`.
+
+### Measured — dark
+
+Same sRGB formula, same discipline. Sixteen pairs, all computed rather than asserted.
+
+| Pair                                      | Ratio       | Needs |
+| ----------------------------------------- | ----------- | ----- |
+| `ink` on `surface` — body                 | 15.62       | 4.5   |
+| `ink` on `ground` — page                  | 17.12       | 4.5   |
+| `ink` on `sidebar`                        | 16.24       | 4.5   |
+| `ink-muted` on `surface`                  | 7.40        | 4.5   |
+| `ink-muted` on `ground`                   | 8.11        | 4.5   |
+| `accent` on `surface` — links             | 5.47        | 4.5   |
+| `accent-ink` on `accent` — primary button | 5.84        | 4.5   |
+| `amber-ink` on `amber-bg` — pending       | 9.62        | 4.5   |
+| `green-ink` on `green-bg` — confirmed     | 9.34        | 4.5   |
+| `red-ink` on `red-bg` — rejected          | 8.66        | 4.5   |
+| `grey-ink` on `grey-bg` — expired         | 7.12        | 4.5   |
+| `amber-border` vs surface / vs own fill   | 7.27 / 6.49 | 3.0   |
+| `green-border` vs surface / vs own fill   | 5.55 / 4.99 | 3.0   |
+| `red-border` vs surface / vs own fill     | 4.97 / 4.86 | 3.0   |
+| `grey-border` vs surface / vs own fill    | 4.19 / 4.04 | 3.0   |
+| `input-border` vs surface / vs ground     | 3.55 / 3.89 | 3.0   |
+
+Light `input-border` `#7B8AA6` measures **3.48** on white and **3.22** on ground.
+
+### One correction the measurement caught, in both themes
+
+The first draft of the dark palette carried `#334775` as the strong control border. It measures **1.93** against the dark surface, against a 3:1 requirement. Checking the same question in the light theme found `#C9D1E0` at **1.54** on white — so this had been under the line since the first mockup, and dark mode only made it visible.
+
+**Only the input border was raised.** On an empty input the border is the sole thing announcing a field exists, so it is a boundary that _is_ the signal and 1.4.11 applies in full — hence `#7B8AA6` / `#5F6F99`, each the lightest value clearing both its grounds so the visual weight barely moves.
+
+**Ghost buttons, menus and popovers keep the lighter border, deliberately.** Those controls are identified by their own text label; the border draws the shape but carries no information the label does not already give. Same reasoning as the row-divider exemption above, recorded here so it reads as a decision rather than the oversight it superficially resembles.
+
+The dark `border` divider measures **1.26** on surface — exempt for exactly the reason `grey-200` is exempt in light. Do not "fix" it.
+
+### Three states, not two
+
+`system` follows `prefers-color-scheme` and is the default; `light` and `dark` are explicit overrides the admin sets and that survive a reload. An explicit choice must beat the OS in **both** directions — a dark OS with `light` selected renders light. The field is outdoors in daylight as often as in a dim office, and the OS setting is frequently neither.
+
 ## Rules carried over unchanged
 
 - **Status is a surface + border + ink triple, never a single hue.** A status the admin misreads is a booking they action wrongly. This is the one visual rule in the system that is an accessibility requirement rather than a preference.

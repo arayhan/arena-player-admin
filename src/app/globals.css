@@ -63,12 +63,216 @@
   --spacing: 4px;
 }
 
+/* ============================================================
+ * TIER 2 — THE SEMANTIC LAYER, AND THE ONLY THING THAT SWAPS.
+ *
+ * The 18 primitives above are the client's brand and never change
+ * between themes. These do. Components address only this tier, which
+ * is why `bg-surface` / `text-ink` read correctly in both themes with
+ * no `dark:` prefix anywhere — DESIGN.md's "component CSS routes
+ * through a semantic tier" rule, made mechanical.
+ *
+ * THESE LIVE IN A PLAIN `:root`, NOT IN `@theme`, AND THAT IS LOAD-BEARING.
+ * When the underlying variable is itself a @theme entry, Tailwind's
+ * color-mix polyfill resolves it at BUILD time and bakes the light
+ * value into the non-@supports fallback of every /opacity utility —
+ * so `bg-surface/50` would be permanently light. Verified against the
+ * installed 4.3.3 compiler, not assumed.
+ *
+ * `color-scheme` rides along in the same rules so form controls,
+ * scrollbars and the browser's own canvas follow. These blocks land
+ * unlayered, after @layer utilities, so they win without specificity
+ * games and without a class on <html>.
+ * ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  --ground: #f4f6fa;
+  --surface: #ffffff;
+  --sidebar: #ffffff;
+  --ink: #011a43;
+  --ink-muted: #4a5a78;
+  --border: #e5e7eb;
+  /* The one control border that IS the signal: on an empty input it is
+   * the only thing announcing a field exists. 3.48 on white, 3.22 on
+   * ground. Ghost buttons and menus keep the lighter --border on
+   * purpose — they carry their own text label. See DESIGN.md. */
+  --input-border: #7b8aa6;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-ink: #ffffff;
+  --scrim: rgb(1 26 67 / 0.55);
+
+  --amber-bg: #fef3c7;
+  --amber-border: #b45309;
+  --amber-ink: #92400e;
+  --green-bg: #dcfce7;
+  --green-border: #15803d;
+  --green-ink: #166534;
+  --red-bg: #fee2e2;
+  --red-border: #dc2626;
+  --red-ink: #991b1b;
+  --grey-bg: #f9fafb;
+  --grey-border: #4a5a78;
+  --grey-ink: #4a5a78;
+}
+
+/* System preference. Excluded when the admin has explicitly chosen light,
+ * so an explicit choice beats the OS in BOTH directions. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ground: #060d1f;
+    --surface: #0c1830;
+    --sidebar: #0a1428;
+    --ink: #eef1f8;
+    --ink-muted: #9aa8c7;
+    --border: #1c2b4d;
+    --input-border: #5f6f99;
+    --accent: #5b8def;
+    --accent-hover: #7aa4f5;
+    --accent-ink: #051029;
+    --scrim: rgb(0 0 0 / 0.68);
+
+    --amber-bg: #2c2110;
+    --amber-border: #d99a3d;
+    --amber-ink: #f0c37e;
+    --green-bg: #0f2718;
+    --green-border: #2fa460;
+    --green-ink: #7fd9a4;
+    --red-bg: #2c1414;
+    --red-border: #e35b5b;
+    --red-ink: #f2a3a3;
+    --grey-bg: #101c33;
+    --grey-border: #6b7ba3;
+    --grey-ink: #9aa8c7;
+  }
+}
+
+/* Explicit dark, whatever the OS says. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ground: #060d1f;
+  --surface: #0c1830;
+  --sidebar: #0a1428;
+  --ink: #eef1f8;
+  --ink-muted: #9aa8c7;
+  --border: #1c2b4d;
+  --input-border: #5f6f99;
+  --accent: #5b8def;
+  --accent-hover: #7aa4f5;
+  --accent-ink: #051029;
+  --scrim: rgb(0 0 0 / 0.68);
+
+  --amber-bg: #2c2110;
+  --amber-border: #d99a3d;
+  --amber-ink: #f0c37e;
+  --green-bg: #0f2718;
+  --green-border: #2fa460;
+  --green-ink: #7fd9a4;
+  --red-bg: #2c1414;
+  --red-border: #e35b5b;
+  --red-ink: #f2a3a3;
+  --grey-bg: #101c33;
+  --grey-border: #6b7ba3;
+  --grey-ink: #9aa8c7;
+}
+
+/* Explicit light. The bare :root above already carries these values, but
+ * restating them is what lets the toggle win over a dark OS — without
+ * this block the media query would still apply. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --ground: #f4f6fa;
+  --surface: #ffffff;
+  --sidebar: #ffffff;
+  --ink: #011a43;
+  --ink-muted: #4a5a78;
+  --border: #e5e7eb;
+  --input-border: #7b8aa6;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-ink: #ffffff;
+  --scrim: rgb(1 26 67 / 0.55);
+
+  --amber-bg: #fef3c7;
+  --amber-border: #b45309;
+  --amber-ink: #92400e;
+  --green-bg: #dcfce7;
+  --green-border: #15803d;
+  --green-ink: #166534;
+  --red-bg: #fee2e2;
+  --red-border: #dc2626;
+  --red-ink: #991b1b;
+  --grey-bg: #f9fafb;
+  --grey-border: #4a5a78;
+  --grey-ink: #4a5a78;
+}
+
+/* `static` because these are read from JS: chart colours have to come from
+ * the same tokens the CSS uses, and a plain `inline` token is tree-shaken
+ * out of :root when no utility happens to reference it. */
+@theme static inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-sidebar: var(--sidebar);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-border: var(--border);
+  --color-input-border: var(--input-border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-scrim: var(--scrim);
+
+  --color-amber-bg: var(--amber-bg);
+  --color-amber-border: var(--amber-border);
+  --color-amber-ink: var(--amber-ink);
+  --color-green-bg: var(--green-bg);
+  --color-green-border: var(--green-border);
+  --color-green-ink: var(--green-ink);
+  --color-red-bg: var(--red-bg);
+  --color-red-border: var(--red-border);
+  --color-red-ink: var(--red-ink);
+  --color-grey-bg: var(--grey-bg);
+  --color-grey-border: var(--grey-border);
+  --color-grey-ink: var(--grey-ink);
+}
+
+/* The escape hatch for the ~5% that is not colour: opacity, blend modes,
+ * an image that needs inverting, a logo that swaps. Colour should go
+ * through the tokens above instead, so this stays rare.
+ *
+ * DO NOT USE `not-dark:` — with this block form it compiles to nothing
+ * at all, silently. Verified against 4.3.3. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme="light"], [data-theme="light"] *)) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+}
+
+/* The scanner's root is the process cwd, so without these it also walks
+ * docs/ and .claude/ — 85 files and ~4000 candidates today — and any
+ * class name written in a markdown example becomes real CSS in the
+ * bundle. Paths resolve against THIS file's directory, not cwd. */
+@source not "../../docs";
+@source not "../../.claude";
+
 body {
   font-family: var(--font-sans);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
-  color: var(--color-navy-900);
-  background: var(--color-white);
+  color: var(--ink);
+  background: var(--ground);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -88,6 +292,6 @@ h2 {
 
 /* Focus is restyled, never removed. */
 :focus-visible {
-  outline: 2px solid var(--color-blue-600);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
