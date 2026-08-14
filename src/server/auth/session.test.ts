@@ -68,3 +68,27 @@ describe("session (jose HS256)", () => {
     expect(SESSION_COOKIE_NAME).toBe("admin_session");
   });
 });
+
+/**
+ * `getSecret()` has a development-only fallback so `next dev` can mint a
+ * session with an empty `.env.local`. This suite is the fence around it.
+ *
+ * Vitest runs with `NODE_ENV=test`, so the fallback must not apply here — and
+ * it would apply if the gate were ever loosened from `=== "development"` to
+ * `!== "production"`, which is the exact mistake this catches.
+ */
+describe("session — the dev fallback secret is gated to `next dev`", () => {
+  const ORIGINAL = process.env.SESSION_SECRET;
+
+  afterEach(() => {
+    if (ORIGINAL === undefined) delete process.env.SESSION_SECRET;
+    else process.env.SESSION_SECRET = ORIGINAL;
+  });
+
+  it("still throws with SESSION_SECRET unset, because NODE_ENV is not development", async () => {
+    delete process.env.SESSION_SECRET;
+    expect(process.env.NODE_ENV).not.toBe("development");
+
+    await expect(signSession()).rejects.toThrow(/SESSION_SECRET is not set/);
+  });
+});

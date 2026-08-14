@@ -21,9 +21,38 @@ export interface SessionPayload extends JWTPayload {
   exp: number;
 }
 
+/**
+ * Not a credential. It exists so `next dev` can mint a session with an empty
+ * `.env.local`, which is what makes the dev login bypass in
+ * `src/app/api/auth/login/route.ts` usable at all — without it the bypass
+ * would 500 instead of logging anyone in. The name is deliberately not
+ * secret-shaped: anything signed with it is worthless.
+ */
+const DEV_FALLBACK_SECRET = "development-only-session-secret-not-a-real-key";
+
+let warnedAboutDevSecret = false;
+
+/**
+ * The dev fallback is gated on `NODE_ENV === "development"` — exactly
+ * `next dev`, never `next build`/`next start` (`production`) and never
+ * vitest (`test`). Next folds `process.env.NODE_ENV` at build time, so in a
+ * production bundle this comparison is `false` and the branch is eliminated
+ * from the output rather than merely unreached. `session.test.ts` asserts the
+ * throw still happens outside development, and fails if the gate is ever
+ * loosened to `!== "production"`.
+ */
 function getSecret(): Uint8Array {
   const secret = process.env.SESSION_SECRET;
   if (!secret) {
+    if (process.env.NODE_ENV === "development") {
+      if (!warnedAboutDevSecret) {
+        warnedAboutDevSecret = true;
+        console.warn(
+          "[dev] SESSION_SECRET is unset — signing sessions with the development fallback key. Never reachable outside `next dev`.",
+        );
+      }
+      return new TextEncoder().encode(DEV_FALLBACK_SECRET);
+    }
     throw new Error(
       "SESSION_SECRET is not set. Copy .env.local.example to .env.local and fill in >= 32 random bytes, base64 (docs/architecture.md).",
     );

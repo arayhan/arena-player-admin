@@ -28,6 +28,22 @@ const FALLBACK_HASH =
   "$argon2id$v=19$m=65536,t=3,p=1$AQEBAQEBAQEBAQEBAQEBAQ$Vc0T4HeLi1jJ4wIYOCfGofeE5jXn0TKV6rd5TvOLUL8";
 
 /**
+ * DEV ONLY. Accepts any password so `next dev` reaches the dashboard with an
+ * empty `.env.local`.
+ *
+ * The gate is `NODE_ENV === "development"` and nothing else: exactly
+ * `next dev`. `next build`/`next start` set `production`, vitest sets `test`.
+ * Next folds `process.env.NODE_ENV` at build time, so a production bundle
+ * evaluates this to `false` and drops the branch entirely — it is absent from
+ * the output, not merely unreachable.
+ *
+ * `route.test.ts` runs under `test` and therefore keeps asserting the real
+ * behaviour, including that an unset `ADMIN_PASSWORD_HASH` rejects every
+ * password. Those tests fail if this is ever loosened to `!== "production"`.
+ */
+const DEV_LOGIN_BYPASS = process.env.NODE_ENV === "development";
+
+/**
  * Takes the RIGHTMOST `X-Forwarded-For` entry, not the leftmost. Every hop
  * a request passes through APPENDS its own view of the client to this
  * header — the leftmost entry is whatever the original caller claimed to
@@ -102,7 +118,14 @@ export async function POST(request: NextRequest) {
   // argon2 cost is paid on every request so a misconfigured server and a
   // wrong password are not distinguishable by timing.
   const candidateMatchesHash = await verifyPassword(candidate, hashToCheck);
-  const valid = candidateMatchesHash && Boolean(configuredHash);
+  const realCredentialValid = candidateMatchesHash && Boolean(configuredHash);
+  const valid = DEV_LOGIN_BYPASS || realCredentialValid;
+
+  if (DEV_LOGIN_BYPASS && !realCredentialValid) {
+    console.warn(
+      "[dev] login bypass granted a session — any password is accepted under `next dev`. See DEV_LOGIN_BYPASS in this file.",
+    );
+  }
 
   if (!valid) {
     if (html) {

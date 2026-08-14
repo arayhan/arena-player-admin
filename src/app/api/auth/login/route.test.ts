@@ -105,6 +105,29 @@ describe("POST /api/auth/login — candidateMatchesHash && configuredHash wiring
   });
 });
 
+/**
+ * The route carries a development-only bypass (`DEV_LOGIN_BYPASS`) that
+ * accepts any password so `next dev` reaches the dashboard with an empty
+ * `.env.local`. This suite is the fence around it.
+ *
+ * Vitest runs with `NODE_ENV=test`, so the bypass must be inert here. It would
+ * NOT be inert if the gate were loosened from `=== "development"` to
+ * `!== "production"` — that is the mistake this catches, and every other test
+ * in this file would fail alongside it.
+ */
+describe("POST /api/auth/login — the dev bypass is gated to `next dev`", () => {
+  it("rejects an empty password against an unset hash, because NODE_ENV is not development", async () => {
+    delete process.env.ADMIN_PASSWORD_HASH;
+    process.env.SESSION_SECRET = "test-session-secret-at-least-32-bytes-long";
+    expect(process.env.NODE_ENV).not.toBe("development");
+
+    const response = await POST(makeRequest({ password: "", ip: "198.51.100.20" }));
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+});
+
 describe("POST /api/auth/login — wantsHtml negotiation", () => {
   beforeEach(() => {
     process.env.ADMIN_PASSWORD_HASH = REAL_HASH;

@@ -29,6 +29,10 @@ function errorMessage(error: string | undefined): string | null {
   return null;
 }
 
+// Mirrors DEV_LOGIN_BYPASS in src/app/api/auth/login/route.ts. The form must
+// not silently claim to want a password it will accept anything in place of.
+const DEV_LOGIN_BYPASS = process.env.NODE_ENV === "development";
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error } = await searchParams;
   const message = errorMessage(error);
@@ -45,14 +49,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           className="mt-6 flex flex-col gap-4"
           noValidate
         >
-          <Field label="Kata sandi" htmlFor="password">
+          <Field
+            label="Kata sandi"
+            htmlFor="password"
+            hint={
+              DEV_LOGIN_BYPASS
+                ? "Mode pengembangan: kata sandi apa pun diterima."
+                : "Kata sandi admin diberikan saat serah terima."
+            }
+          >
             <input
               id="password"
               name="password"
               type="password"
               required
               autoComplete="current-password"
-              aria-describedby={message ? "login-error" : undefined}
+              aria-describedby={message ? "password-hint login-error" : "password-hint"}
               aria-invalid={message ? true : undefined}
               className="h-10 rounded-control border border-input-border bg-surface px-3 text-body text-ink"
             />
