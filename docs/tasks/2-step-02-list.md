@@ -6,7 +6,7 @@
 
 ## Goal
 
-The screen the admin opens to do work. Server Component, live Neon, every piece of filter state in the URL, and the naked `/bookings` URL is **already** the pending-from-today queue.
+The screen the admin opens to do work. Server Component, live Supabase Postgres, every piece of filter state in the URL, and the naked `/bookings` URL is **already** the pending-from-today queue.
 
 The app shell, the primitives (`Button`, `StatusPill`, `Panel`, `Field`, `EmptyState`, `Breadcrumbs`) and the token layer all exist. This step builds the queue inside them and adds nothing to `src/components/`.
 
@@ -40,7 +40,7 @@ Deliverable: add both to architecture.md's **Deliberately absent** table with th
 ## Rules this screen must not break
 
 - **No `notes` in the list.** Up to 500 characters wrecks row height; detail page only. It is a DoD line and it is one careless `select *` away from being wrong.
-- **No proof column.** The mockup had a "Lihat bukti" button per row; that would mint fifty presigned bearer URLs — one per row, per render — to look at one. The row links to `/bookings/[id]`, where exactly one is minted. Record that reason in the component.
+- **No proof column.** The mockup had a "Lihat bukti" button per row; that would mint fifty signed bearer URLs — one per row, per render — to look at one. Under Supabase that is also fifty HTTP round-trips to the Storage API before the page can render, since `createSignedUrl` signs on the server rather than locally. The row links to `/bookings/[id]`, where exactly one is minted. Record that reason in the component.
 - **No `"use client"` in this step.** The filters are a GET form, the sort headers are links, the pager is links. If something here seems to need client state, it is a sign the state belongs in the URL.
 - **`phone` renders as a working `wa.me` link** — `https://wa.me/628…` from the stored normalised value, with an accessible label naming the person.
 - **Never `next/image`.** Nothing on this page is an image, and that is the point at which someone adds one.
@@ -87,6 +87,6 @@ pnpm check && pnpm build
 
 **Prove the empty states are reachable.** `?q=zzzzzzzz` gives "Tidak ada yang cocok"; the default view with no pending rows gives "Antrean kosong". If the database has no rows yet, the second one is the only state this screen renders — say so in the handoff rather than claiming the first was verified.
 
-**Not done until** the list has rendered **real rows from Neon** and both empty states have been seen. Reason: this repo has no mock layer on purpose, so a bookings list that has only ever rendered zero rows has never exercised the date casts, the status typing, `count(*) over ()`, or the phone link — the four things that go wrong quietly. If the table is still empty, [2-gate-migration](2-gate-migration.md) row 4 is the blocker, and it is named there.
+**Not done until** the list has rendered **real rows from Supabase** and both empty states have been seen. Reason: this repo has no mock layer on purpose, so a bookings list that has only ever rendered zero rows has never exercised the date casts, the status typing, `count(*) over ()`, or the phone link — the four things that go wrong quietly. If the table is still empty, [2-gate-migration](2-gate-migration.md) row 4 is the blocker, and it is named there.
 
 handoff: `software-engineer` for step 03

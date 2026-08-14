@@ -8,7 +8,7 @@ import prettier from "eslint-config-prettier";
 // extraction boundary — the relative-import half is check:docs there, which
 // this repo deliberately does not build; see docs/architecture.md ~L460).
 // Only the two rules that apply to THIS repo's structure are ported: no
-// SERVER_ONLY zone (Server Components read Neon directly here, there is no
+// SERVER_ONLY zone (Server Components read Supabase Postgres directly here, there is no
 // bundle-budget reason to confine src/server/ to route handlers), and none of
 // AXIOS / RHF / ZOD / GSAP / MOCKS (those packages are not installed here at
 // all — see the deliberately-absent table in docs/architecture.md).

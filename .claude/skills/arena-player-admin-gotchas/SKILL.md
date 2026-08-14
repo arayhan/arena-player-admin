@@ -11,11 +11,11 @@ Source of truth: [docs/PRD.md](../../../docs/PRD.md), [docs/architecture.md](../
 
 ## The one thing to know first
 
-**This repo is the inverse of `arena-player-web`.** Web built three phases of UI against an MSW mock before its backend existed. This app is useless without real data, it starts after web's Phase 4 lands the schema, and there is **no mock layer here**. Every screen reads live Neon from a Server Component. Any instinct carried over from the web repo about mocks, motion, or bundle budgets is wrong here.
+**This repo is the inverse of `arena-player-web`.** Web built three phases of UI against an MSW mock before its backend existed. This app is useless without real data, it starts after web's Phase 4 lands the schema, and there is **no mock layer here**. Every screen reads live Supabase Postgres from a Server Component. Any instinct carried over from the web repo about mocks, motion, or bundle budgets is wrong here.
 
 ## Scope traps
 
-- **This repo never owns a migration.** `db/migrations/` lives in `arena-player-web`. A schema change is authored as a request in `docs/schema-requests/`, transcribed verbatim into web's migrations folder, applied by hand in the Neon SQL editor. Two repos migrating one database is a conflict with no owner.
+- **This repo never owns a migration.** `db/migrations/` lives in `arena-player-web`. A schema change is authored as a request in `docs/schema-requests/`, transcribed verbatim into web's migrations folder, applied by hand in the Supabase SQL editor. Two repos migrating one database is a conflict with no owner.
 - **Never `create table if not exists`.** Fail loudly. Web's migration is wrapped in a transaction precisely so a half-failed paste cannot create `bookings` without `uniq_active_slot`; application-code DDL defeats that entirely and produces a table with no constraints and no error.
 - **Out of scope entirely**: the landing page, the booking form, `GET /api/availability`, any customer-facing copy, and **any price**. Those are `arena-player-web`.
 - **Descoped with reasons recorded** in the PRD, do not re-propose from scratch: runtime operating-hours config, un-expiring a booking, password reset / MFA / a second account, reporting.
@@ -50,15 +50,14 @@ Related, same class:
 - Presign TTL is **120 seconds**, not fifteen minutes. It is a bearer capability for a document carrying a name, an amount, and a bank transfer, and it leaks through browser history and the `Referer` header.
 - `export const dynamic = 'force-dynamic'` on the proof page; a cached RSC payload serves an expired URL.
 - `Cache-Control: private, no-store` on every admin response.
-- The R2 credential here is a **different, read-only token** from web's.
+- The proof credential here is the **anon** key, never `service_role`. A private bucket plus an RLS `select` policy on `storage.objects` scoped to it is what makes it read-only by construction.
 
 ## Database traps inherited with the connection
 
 Full detail in [docs/database.md](../../../docs/database.md).
 
-1. **Neon DATE/TIMESTAMPTZ parsers (BLOCKER-class).** Default parsers return JS `Date` for oids `1082`/`1184`, silently shifting `booking_date` back a day on Asia/Jakarta machines. Override both via `CustomTypesConfig`. Every query also casts `::text` — belt and braces, on purpose.
-2. **R2 checksums** must be `WHEN_REQUIRED` on **both** request and response. The response half is the read-side one, and this app only reads — leaving it default makes GETs fail in a way that looks like a credentials problem.
-3. **Pooled connection string**, `-pooler` in the host.
+1. **DATE/TIMESTAMPTZ parsers (BLOCKER-class).** postgres.js returns JS `Date` for oids `1082`/`1184`, silently shifting `booking_date` back a day on Asia/Jakarta machines. Override both via the client's `types` option. Every query also casts `::text` — belt and braces, on purpose. The trap is the driver's, not the provider's; it survived the move to Supabase unchanged.
+2. **Supabase's transaction pooler**, port 6543, host `…pooler.supabase.com` — and therefore `prepare: false`. pgbouncer in transaction mode hands a different backend connection to each statement, so a prepared statement created on one is not there for the next.
 
 ## Never mutate blind
 

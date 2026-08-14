@@ -10,7 +10,7 @@ Every field of one booking, including the two the list deliberately does not car
 
 ## Deliverables
 
-- **`src/app/(dashboard)/bookings/[id]/page.tsx`** — Server Component, `export const dynamic = "force-dynamic"` (architecture.md's route map states it; the reason is the presign at step 05, and it must be present before step 05 rather than added with it).
+- **`src/app/(dashboard)/bookings/[id]/page.tsx`** — Server Component, `export const dynamic = "force-dynamic"` (architecture.md's route map states it; the reason is the signed URL minted at step 05, and it must be present before step 05 rather than added with it).
   `params` is a **Promise in Next 16** and must be awaited.
 - **`src/modules/bookings/booking-detail.tsx`** — all nine columns:
 

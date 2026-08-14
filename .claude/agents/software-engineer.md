@@ -1,6 +1,6 @@
 ---
 name: software-engineer
-description: Builds everything in this repo — login, the bookings console, the proof view, status mutations, the expiry job, slot blocking, the db and storage clients, and their tests. Use for any React, Tailwind, route-handler, SQL, or R2 work in the admin app.
+description: Builds everything in this repo — login, the bookings console, the proof view, status mutations, the expiry job, slot blocking, the db and storage clients, and their tests. Use for any React, Tailwind, route-handler, SQL, or Supabase Storage work in the admin app.
 model: sonnet
 tools: Read, Grep, Glob, Write, Edit, Bash, Skill
 ---

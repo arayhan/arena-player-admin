@@ -54,7 +54,7 @@ It must be a shell variable. Putting it in `.env.local` does nothing — `check:
 
 `pnpm dev` and `pnpm start` pin port 3001 as a CLI flag, so `PORT` does not override them. A second `pnpm dev` fails with `EADDRINUSE`. Run `pnpm exec next dev -p 3002` in the worktree instead — **never edit `package.json` to work around it**, since that change would follow the branch into a merge.
 
-Both servers then point at **one** Neon database and **one** R2 bucket. Guarded status mutations and the 409 contract already cover two writers on the same row, and the expiry job is idempotent by construction — but two dev servers on live booking data is a decision, not a side effect. Know you are doing it.
+Both servers then point at **one** Supabase database and **one** Supabase Storage bucket. Guarded status mutations and the 409 contract already cover two writers on the same row, and the expiry job is idempotent by construction — but two dev servers on live booking data is a decision, not a side effect. Know you are doing it.
 
 ## Finishing
 

@@ -8,11 +8,11 @@ web, authenticated, single user
 
 ## Stack
 
-Next.js 16 (App Router) + TypeScript + Tailwind v4, deliberately the same as the web repo so one developer moves between them without re-learning anything. Neon Postgres and Cloudflare R2, both reachable only from the server.
+Next.js 16 (App Router) + TypeScript + Tailwind v4, deliberately the same as the web repo so one developer moves between them without re-learning anything. Supabase Postgres and Supabase Storage, both reachable only from the server.
 
-**What is deliberately absent, relative to web:** GSAP and ScrollTrigger, MSW, zustand, TanStack Query, axios, react-hook-form, react-icons. Server Components render from Neon directly, filters live in the URL, and the only client component in v1 is the button that re-mints an expired proof URL. Every one of those omissions is a smaller shared-dependency surface and one less thing the client inherits.
+**What is deliberately absent, relative to web:** GSAP and ScrollTrigger, MSW, zustand, TanStack Query, axios, react-hook-form, react-icons. Server Components render from Supabase directly, filters live in the URL, and the only client component in v1 is the button that re-mints an expired proof URL. Every one of those omissions is a smaller shared-dependency surface and one less thing the client inherits.
 
-**Added, with no web equivalent:** `jose` (session JWT), `hash-wasm` (argon2id), `@aws-sdk/s3-request-presigner`.
+**Added, with no web equivalent:** `jose` (session JWT), `hash-wasm` (argon2id), `@supabase/supabase-js` (signed proof URLs).
 
 ## Users
 
@@ -47,7 +47,7 @@ The public site's entire promise — availability that is trustworthy at the mom
 ## Capabilities and Constraints
 
 - **One admin account, own auth, no vendor.** Password hash in an env var, signed session cookie. No user table, no password reset flow, no MFA. Adding any of those means a schema change to a database this repo may not migrate — deliberately out of scope, and the mitigation is that credential rotation is a redeploy, documented at handover.
-- **The R2 bucket stays private forever.** Proofs render through a short-lived presigned GET this app mints per request. No public URL is ever created, by either repo.
+- **The proofs bucket stays private forever.** Proofs render through a short-lived presigned GET this app mints per request. No public URL is ever created, by either repo.
 - UI language is Indonesian. Code and comments English. The handover user guide is Indonesian.
 - **This repo never runs a migration.** Web owns `db/migrations/`.
 - Performance is not a constraint here in the way it is on the public site. One authenticated user, on wifi, who came to do a task. Correctness and density beat polish.
@@ -58,7 +58,7 @@ The public site's entire promise — availability that is trustworthy at the mom
 
 **Not yet supplied — must not be fabricated:** the admin's own account credentials, the bank account the DP lands in (this app displays no bank detail, but the user guide will reference it), the external scheduler account that will call the expiry job, and **the rate card** — `TODO(content)` in web, and shared: the admin quotes the DP amount over WhatsApp today, so this app depends on the same missing figure `/booking` does.
 
-**Not yet true, and the schedule depends on it:** the `bookings` table does not exist in Neon yet. Web's Phase 4 has not run. Everything in this repo is written against SQL text, not against a live database. `pnpm check:schema` exists specifically so that gap fails loudly on day one instead of surfacing as a confusing runtime error.
+**Not yet true, and the schedule depends on it:** the `bookings` table does not exist in Supabase yet. Web's Phase 4 has not run. Everything in this repo is written against SQL text, not against a live database. `pnpm check:schema` exists specifically so that gap fails loudly on day one instead of surfacing as a confusing runtime error.
 
 ## Open decisions
 

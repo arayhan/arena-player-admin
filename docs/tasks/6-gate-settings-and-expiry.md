@@ -58,7 +58,7 @@ Unsupplied since the beginning. It now gates more than it did: the admin's reven
 
 This one was not noticed until the admin app was checked against web's actual DDL.
 
-`bookings.proof_key` is **`NOT NULL`**, and web's documented flow uploads the transfer receipt to R2 **before** inserting the row. So a booking row cannot exist without a payment proof attached. Every `pending` booking in the queue is one where the customer has **already transferred a DP**.
+`bookings.proof_key` is **`NOT NULL`**, and web's documented flow uploads the transfer receipt to the proofs bucket **before** inserting the row. So a booking row cannot exist without a payment proof attached. Every `pending` booking in the queue is one where the customer has **already transferred a DP**.
 
 [PRODUCT.md](../PRODUCT.md) and [PRD.md](../PRD.md) describe expiry as freeing "abandoned" slots — a customer who started a booking and walked away. **With `proof_key NOT NULL` that customer cannot exist.** What the 24-hour job actually does is release the slot of someone who paid, because the admin did not action it in time.
 

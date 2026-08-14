@@ -8,7 +8,7 @@
 
 Confirm the route map, the server/client boundary, and the exact dependency set — then write anything this step _changes_ back into [architecture.md](../architecture.md). Nothing product-shaped ships here and no package is installed.
 
-**Most of this work is already written.** [architecture.md](../architecture.md) carries the route map, the auth split, every SQL statement, the R2 read path, and the cross-repo contracts. This step is a verification pass with one genuinely open decision in it, not a design exercise. Do not re-derive a decision that is already recorded — extend it or dispute it in writing.
+**Most of this work is already written.** [architecture.md](../architecture.md) carries the route map, the auth split, every SQL statement, the Supabase Storage read path, and the cross-repo contracts. This step is a verification pass with one genuinely open decision in it, not a design exercise. Do not re-derive a decision that is already recorded — extend it or dispute it in writing.
 
 ## Why it is first
 
@@ -22,7 +22,7 @@ Decide it here, write the answer into `architecture.md`, and say why. Do **not**
 
 ## Deliverables
 
-- **Route map confirmed** against `architecture.md` — including which routes need `export const runtime = 'nodejs'` (the login route, because argon2 cannot run on Edge) and which need `export const dynamic = 'force-dynamic'` (the booking detail page, because a cached RSC payload serves an expired presigned URL)
+- **Route map confirmed** against `architecture.md` — including which routes need `export const runtime = 'nodejs'` (the login route, because argon2 cannot run on Edge) and which need `export const dynamic = 'force-dynamic'` (the booking detail page, because a cached RSC payload serves an expired signed URL)
 - **Dependency list, resolved not recalled** — every package with the version it will actually install, split into: shared-with-web (must match majors), admin-only, and dev. Cross-check the shared half against `arena-player-web/package.json` line by line
 - **Server/client boundary written down** — Server Components by default; the only permitted client component in v1 is the proof-image reload button. Any second one needs a stated reason, because each is a decision the repo's "no client data-fetching" posture has to survive
 - **Confirmation that nothing web-shaped leaks in** — no GSAP, no MSW, no zustand, no TanStack Query, no axios, no react-hook-form, no `src/lib/motion.ts`, no `check:budget`. Each of those is absent for a reason recorded in `architecture.md`; adding one back is a decision, not an oversight
@@ -42,14 +42,14 @@ Shared with `arena-player-web`, majors must match:
 | `@date-fns/tz`                         | 1.5.0                      | Same                                                                       |
 | `zod`                                  | 4.4.3                      | Filter/param parsing. Cheap here — no route-split budget rule in this repo |
 | `vitest`                               | 4.1.10                     | `check:unit` and `check:schema`                                            |
-| `@neondatabase/serverless`             | _not yet installed in web_ | Resolve at install; note the version so web matches when its Phase 4 lands |
-| `@aws-sdk/client-s3`                   | _not yet installed in web_ | Same                                                                       |
+| `postgres`                             | _not yet installed in web_ | Resolve at install; note the version so web matches when its Phase 4 lands |
+| `@supabase/supabase-js`                | _not yet installed in web_ | Same — web needs it for the upload side of the same bucket                 |
 
-Admin-only, no web equivalent: `jose`, `hash-wasm`, `@aws-sdk/s3-request-presigner`.
+Admin-only, no web equivalent: `jose`, `hash-wasm`.
 
 **Correction from the step-01 pass:** `server-only` is **not** admin-only — web carries it at `0.0.1`, so it is a shared line whose version has to match like any other. Resolved list, with the two unpinned rows and web's dependencies/devDependencies placement, is now in [architecture.md](../architecture.md#dependencies).
 
-**Note the two "not yet installed in web" rows.** This repo will reach Neon and R2 before web does. Whatever version it resolves becomes the de-facto standard, so record it in `architecture.md` — otherwise web resolves independently later and the two clients diverge for no reason.
+**Note the two "not yet installed in web" rows.** This repo will reach Supabase Postgres and Supabase Storage before web does — web's `src/server/` is still empty and it has no database driver at all. Whatever version this repo resolves becomes the de-facto standard, so record it in `architecture.md` and carry it into [2-gate-web-supabase](2-gate-web-supabase.md) — otherwise web resolves independently later and the two clients diverge for no reason.
 
 ## Acceptance
 

@@ -1,6 +1,6 @@
 # 2 · step 01 — The data layer: `queries.ts` and the URL→SQL boundary
 
-**Depends**: [2-gate-migration](2-gate-migration.md) — every acceptance line below that touches Neon is unrunnable until it clears
+**Depends**: [2-gate-migration](2-gate-migration.md) — every acceptance line below that touches the database is unrunnable until it clears
 **Blocks**: 02, 03, 04, 05, 06 — every screen in Phase 2 reads through this file
 **Agent**: `software-engineer`
 

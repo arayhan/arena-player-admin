@@ -28,7 +28,7 @@ With an argument, run only that stage:
 | `unit`      | `pnpm check:unit`   |
 | `domain`    | `pnpm check:domain` |
 
-**Do not run `check:schema` or `check:setup` here.** Both hit live Neon and live R2 with real credentials. They are a separate class and the human asks for them explicitly.
+**Do not run `check:schema` or `check:setup` here.** Both hit live Supabase Postgres and live Supabase Storage with real credentials. They are a separate class and the human asks for them explicitly.
 
 ## How to report
 

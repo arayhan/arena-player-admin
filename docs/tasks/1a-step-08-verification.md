@@ -34,7 +34,8 @@ Four checks land in Phase 1a, and **three of them guard failures that raise noth
 | `check:domain` (skip)         | Web's `src/domain/` absent — must exit 0 **and say it proved nothing**   | 05          |
 | `check:schema`                | No `bookings` table in the target database                               | 06          |
 | `check:schema`                | A slot string in `src/domain/slots.ts` drifted from the CHECK constraint | 06          |
-| `check:setup`                 | Wrong R2 credential                                                      | 06          |
+| `check:setup`                 | Wrong Supabase Storage credential — the storage half only                | 06          |
+| `check:setup`                 | `DATABASE_URL` on the direct port instead of the pooler                  | 06          |
 | middleware                    | A forged session token                                                   | 07          |
 | middleware bundle             | argon2 reachable from the Edge bundle                                    | 07          |
 
@@ -54,8 +55,13 @@ mv .env.local.bak .env.local
 
 # 3. the secret boundary — nothing server-only reaches the client bundle
 pnpm build
-grep -rlE "DATABASE_URL|R2_SECRET_ACCESS_KEY|ADMIN_PASSWORD_HASH|SESSION_SECRET" .next/static/
-# expect: no match. `server-only` should make this impossible; confirm rather than trust
+grep -rlE "DATABASE_URL|SUPABASE_ANON_KEY|ADMIN_PASSWORD_HASH|SESSION_SECRET" .next/static/
+# expect: no match. `server-only` should make this impossible; confirm rather than trust.
+#
+# The anon key is included on purpose even though Supabase considers it publishable:
+# in this repo it has no client-side use at all, so its appearance in the bundle means
+# src/server/storage.ts was reached from a client component — which is the defect, not
+# the key's secrecy. Grep for the value's presence, not for its name alone.
 
 # 4. no NEXT_PUBLIC_ leak of anything sensitive
 grep -rn "NEXT_PUBLIC_" src/ 2>/dev/null

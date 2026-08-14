@@ -11,7 +11,7 @@ stale copy of a value that had moved.
 | If you need                                         | Read                                 |
 | --------------------------------------------------- | ------------------------------------ |
 | The rules whose violation means rework              | [CLAUDE.md](../CLAUDE.md) hard rules |
-| Every SQL statement, the route map, the R2 path     | [architecture.md](architecture.md)   |
+| Every SQL statement, the route map, the proof path  | [architecture.md](architecture.md)   |
 | Colour, type, spacing, contrast ratios              | [DESIGN.md](DESIGN.md) — normative   |
 | The inherited schema and its gotchas                | [database.md](database.md)           |
 | Who the admin is, what must not be fabricated       | [PRODUCT.md](PRODUCT.md)             |
@@ -109,7 +109,7 @@ browser event with no server equivalent.
 
 ```tsx
 // "use client": onError recovery for an expired 120s presigned URL. See architecture.md
-// "The R2 read path" — this is the one stated exception in v1.
+// "The proof read path" — this is the one stated exception in v1.
 "use client";
 ```
 
@@ -132,7 +132,7 @@ never invented in `queries.ts` directly.
 
 ## Data fetching and mutations
 
-Server Components read Neon directly, through `src/server/queries.ts`. No client-side fetch of
+Server Components read Supabase directly, through `src/server/queries.ts`. No client-side fetch of
 application data, no TanStack Query, no axios, no zustand — see architecture.md's dependency
 table for why each is absent.
 
@@ -204,7 +204,7 @@ never the root layout.
 another tab or the expiry job already acted on the row — the current state, re-rendered, is the
 correct response. See architecture.md's "Status mutations."
 
-**Never `next/image` on a payment proof** — CLAUDE.md hard rule 2 and architecture.md's "The R2
+**Never `next/image` on a payment proof** — CLAUDE.md hard rule 2 and architecture.md's "The proof
 read path" carry the full reasoning; this file only points at it.
 
 ---
@@ -229,7 +229,7 @@ Never claim something works without running the check and quoting the decisive l
 | `pnpm check:unit`   | logic gives the right answers — no credentials, ever                           |
 | `pnpm check:domain` | `src/domain/` has not drifted from the web repo's copy                         |
 | `pnpm check:schema` | the migration this feature needs is actually applied, live                     |
-| `pnpm check:setup`  | Neon reachable, R2 presign round-trips                                         |
+| `pnpm check:setup`  | Supabase Postgres reachable, proof URL signing round-trips                     |
 | `pnpm format:check` | formatting is settled, not argued                                              |
 
 **Every check must be proven to fail before it is trusted.** Plant a violation, watch it exit

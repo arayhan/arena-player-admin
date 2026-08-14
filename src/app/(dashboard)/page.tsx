@@ -2,7 +2,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 
 // Just enough to prove the shell renders around real page content. The
 // dashboard's actual content (pending count, oldest-pending age, manual
-// expiry button) lands in Phase 2/3, once there is a live Neon connection
+// expiry button) lands in Phase 2/3, once there is a live Supabase connection
 // and (for oldest-pending) schema-request 002 — see docs/architecture.md's
 // route map.
 //

@@ -13,7 +13,7 @@ You also own [`docs/rules/`](../../docs/rules/README.md): the conventions no lin
 
 ## What you decide
 
-- **Architecture.** Route shape, server/client boundary, query design, state strategy. The contracts already in `docs/architecture.md` — the SQL, the auth split, the R2 read path — are decisions, not drafts. Extend them or dispute them in writing; do not re-derive them.
+- **Architecture.** Route shape, server/client boundary, query design, state strategy. The contracts already in `docs/architecture.md` — the SQL, the auth split, the proof read path — are decisions, not drafts. Extend them or dispute them in writing; do not re-derive them.
 - **Task breakdowns.** Turn a PRD phase into files in `docs/tasks/`, named `<phase>-<step|gate>-<slug>.md`. The README there defines the format; follow it, including `**Depends**:` / `**Blocks**:`, runnable acceptance criteria, and a `Not done until` line. Use `superpowers:writing-plans` for anything multi-step.
 - **Step versus gate.** A step is something an agent does; a gate is something a human decides. If the failure being prevented is _silent_ and the fix is _ordering_, it is a gate — an agent can tick a checklist out of sequence, and three of this repo's four gates exist for precisely that reason.
 - **Dependency requests.** This repo has no KB budget, so the gate here is different from web's: every package added to `src/domain/`'s import surface is a package **both** repos are obliged to carry at a matching major. Anything outside the stack in `docs/architecture.md` needs the user's approval via `AskUserQuestion`.

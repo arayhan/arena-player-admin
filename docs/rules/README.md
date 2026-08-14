@@ -7,7 +7,7 @@ One file per surface. Load the one matching what you are about to edit; you are 
 | [code-style.md](code-style.md)               | Writing or editing any `.ts` / `.tsx` under `src/` or `scripts/`                                       |
 | [ui-and-design.md](ui-and-design.md)         | Writing `.tsx` that renders markup, or any rule in `src/app/globals.css`                               |
 | [api-conventions.md](api-conventions.md)     | Anything under `src/app/api/`, a `<module>.actions.ts`, or `src/middleware.ts`                         |
-| [sql-and-data.md](sql-and-data.md)           | A query, a screen that reads Neon, or `required-schema.ts` / `schema-guard.ts` / `schema-diff.ts`      |
+| [sql-and-data.md](sql-and-data.md)           | A query, a screen that reads Supabase, or `required-schema.ts` / `schema-guard.ts` / `schema-diff.ts`  |
 | [security.md](security.md)                   | Anything under `src/server/`, the login route, middleware, the proof view, or a file naming an env var |
 | [testing.md](testing.md)                     | Writing a test, adding a `check:` script, or reporting that a change is verified                       |
 | [git-workflow.md](git-workflow.md)           | Before `git add`, `git commit`, `git branch`, or any other write to git state                          |

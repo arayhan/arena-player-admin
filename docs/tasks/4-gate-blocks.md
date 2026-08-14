@@ -1,6 +1,6 @@
 # Cross-repo checkpoint — `slot_blocks` is live in both apps
 
-**Decided by:** the developer, with the user applying the migration by hand in the Neon SQL editor.
+**Decided by:** the developer, with the user applying the migration by hand in the Supabase SQL editor.
 **Blocks:** admin Phase 4 entirely — no blocking UI ships before this is signed off
 **Status:** not yet held
 **Format:** a sequence, verified at each step. Not a meeting.
@@ -19,7 +19,7 @@ The full request, DDL, and rationale: [../schema-requests/001-slot-blocks.md](..
 | #   | Step                                                                                                               | Who                         | Verified by                                                            |
 | --- | ------------------------------------------------------------------------------------------------------------------ | --------------------------- | ---------------------------------------------------------------------- |
 | 1   | DDL transcribed **verbatim** into `arena-player-web/db/migrations/<ts>_create_slot_blocks.sql` and committed there | developer, in a web session | the file exists in web's repo, comments intact                         |
-| 2   | Migration applied by hand in the Neon SQL editor                                                                   | the user                    | `slot_blocks` and `uniq_slot_block` both present                       |
+| 2   | Migration applied by hand in the Supabase SQL editor, in the project **both** apps point at                        | the user                    | `slot_blocks` and `uniq_slot_block` both present                       |
 | 3   | `src/server/required-schema.ts` extended here; `pnpm check:schema` green                                           | admin repo                  | the check passes, including CHECK literals vs `TIME_SLOTS`             |
 | 4   | Web's availability read **unions** `slot_blocks`, and its booking insert carries the `not exists` guard            | developer, in a web session | both statements in web's code                                          |
 | 5   | **Web is deployed** with those two statements                                                                      | developer                   | a blocked slot inserted by hand reads `booked` on the live public site |
@@ -80,7 +80,7 @@ Not a code review. Performed against the deployed public site.
 | Row                              | Done | Evidence |
 | -------------------------------- | ---- | -------- |
 | 1 — DDL in web's migrations      | ☐    | _____    |
-| 2 — applied in Neon              | ☐    | _____    |
+| 2 — applied in Supabase          | ☐    | _____    |
 | 3 — `check:schema` green         | ☐    | _____    |
 | 4 — web's two statements written | ☐    | _____    |
 | 5 — **web deployed and reading** | ☐    | _____    |

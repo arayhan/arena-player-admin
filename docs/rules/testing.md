@@ -38,7 +38,7 @@ How tests are run, located, and scoped here, and what an agent must do before cl
 
 ## The credentialed checks
 
-17. `check:schema` and `check:setup` are a different class: they hit live Neon and live R2 and fail without real credentials. They live outside the unit run by construction, not by an exclude someone has to remember to maintain.
+17. `check:schema` and `check:setup` are a different class: they hit live Supabase Postgres and live Supabase Storage and fail without real credentials. They live outside the unit run by construction, not by an exclude someone has to remember to maintain.
 18. Run them only when the task is actually about live infrastructure — verifying that a migration was applied by hand, or diagnosing a connection. They are not part of routine verification of a code change; see the Verification table.
 19. Both are read-only probes. Never extend either into something that writes, inserts, or migrates.
 20. `check:schema` asserts against the live database rather than a source file, which is the only way a hand-applied migration can be proven applied. Do not "speed it up" by comparing source to source; that check already exists separately.

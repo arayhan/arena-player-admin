@@ -10,14 +10,14 @@ This file exists for the half that is different here: what the admin is allowed 
 
 ## What this repo may do
 
-| Object                   | Admin's access                                                                         |
-| ------------------------ | -------------------------------------------------------------------------------------- |
-| `bookings` — rows        | `select` freely; `update status` under a guard; **never** `insert`, **never** `delete` |
-| `bookings` — schema      | none. No `create`, `alter`, or `drop`, ever                                            |
-| `slot_blocks` (Phase 4)  | `select`, `insert`, `delete`. Schema still owned by web                                |
-| R2 `arena-player-proofs` | `GetObject` only, via a read-only token. No write, no delete, no listing needed        |
+| Object                               | Admin's access                                                                                                                   |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `bookings` — rows                    | `select` freely; `update status` under a guard; **never** `insert`, **never** `delete`                                           |
+| `bookings` — schema                  | none. No `create`, `alter`, or `drop`, ever                                                                                      |
+| `slot_blocks` (Phase 4)              | `select`, `insert`, `delete`. Schema still owned by web                                                                          |
+| Storage bucket `arena-player-proofs` | **read only**, through an RLS `select` policy on `storage.objects` scoped to this bucket. No write, no delete, no listing needed |
 
-`DATABASE_URL` here cannot be a read-only role — this app writes `bookings.status`. The correct hardening is a separate Neon role scoped to `select, update(status) on bookings`, which costs one hand-run `GRANT`. Recorded as a handover nice-to-have in [PRD.md](PRD.md), not built in v1.
+`DATABASE_URL` here cannot be a read-only role — this app writes `bookings.status`. The correct hardening is a separate Postgres role in the Supabase project scoped to `select, update(status) on bookings`, which costs one hand-run `GRANT`. Recorded as a handover nice-to-have in [PRD.md](PRD.md), not built in v1.
 
 ## The columns this repo reads
 
@@ -31,7 +31,7 @@ Reference only — the source is web's `database.md`. Listed here because every 
 | `team_name`    | `text`        | Displayed, and one half of the search                                                                                |
 | `phone`        | `text`        | Stored normalised as `628xxxxxxxxx`, never as typed. Rendered as a `wa.me` link; searched through `normalisePhone()` |
 | `notes`        | `text`        | ≤500 chars. Detail page only — it wrecks list row height                                                             |
-| `proof_key`    | `text`        | An R2 object **key**, not a URL. There is no URL to store; the bucket has none                                       |
+| `proof_key`    | `text`        | A Storage object **key**, not a URL. There is no URL to store; the bucket is private and has none                    |
 | `status`       | `text`        | `pending` · `confirmed` · `rejected` · `expired`. The only column this app writes                                    |
 | `created_at`   | `timestamptz` | Drives the 24h expiry clock and the "age" column. **Cast `::text`**                                                  |
 
@@ -41,45 +41,46 @@ Reference only — the source is web's `database.md`. Listed here because every 
 
 ## Gotchas inherited with the connection
 
-These are not this repo's bugs. They arrive with Neon, with R2, and with the Asia/Jakarta timezone, and they will bite here exactly as they bit in the web repo.
+These are not this repo's bugs. They arrive with the driver, with Supabase's connection topology, and with the Asia/Jakarta timezone, and they will bite here exactly as they bit in the web repo.
 
-### 1. The Neon DATE/TIMESTAMPTZ parser — BLOCKER class
+### 1. The DATE/TIMESTAMPTZ parser — BLOCKER class
 
-`neon()`'s default pg-types parsers return JS `Date` objects for `DATE` (oid `1082`) and `TIMESTAMPTZ` (oid `1184`), not strings. On an Asia/Jakarta (UTC+7) machine this silently shifts `booking_date` back one day when serialized:
+`postgres.js` parses `DATE` (oid `1082`) and `TIMESTAMPTZ` (oid `1184`) into JS `Date` objects, not strings. On an Asia/Jakarta (UTC+7) machine this silently shifts `booking_date` back one day when serialized:
 
 ```
 '2026-08-01'  →  Date object  →  JSON.stringify  →  '2026-07-31T17:00:00.000Z'
 ```
 
-**Fix:** override both OID parsers via `CustomTypesConfig` when constructing the client, so they pass the raw string through:
+The driver changed; the trap did not. Every Postgres client for Node makes the same well-meant choice, so porting to a new one is never the fix — overriding it is.
+
+**Fix:** register a custom type in the `types` option when constructing the client, claiming both oids and passing the raw string through untouched:
 
 ```ts
-const customTypes: CustomTypesConfig = {
-  getTypeParser: (id, format) => {
-    if (id === 1082 || id === 1184) return (value: string) => value;
-    return types.getTypeParser(id, format);
+const sql = postgres(process.env.DATABASE_URL!, {
+  prepare: false, // see gotcha 2
+  types: {
+    // 1082 DATE, 1184 TIMESTAMPTZ — hand the wire string through as-is
+    date: {
+      to: 1184,
+      from: [1082, 1184],
+      serialize: (value: string) => value,
+      parse: (value: string) => value,
+    },
   },
-};
+});
 ```
 
-**Verify:** `types.getTypeParser(1082)('2026-08-01')` must return the **string**, not a `Date` instance. That assertion belongs in `src/server/db.test.ts` and runs under `check:unit` with no credentials.
+**Verify:** export the options object from `src/server/db.ts` and assert on it directly — `from` contains **both** `1082` and `1184`, and `parse('2026-08-01')` returns the **string** `'2026-08-01'`, not a `Date` instance. postgres.js resolves parsers per connection, so there is no static registry to interrogate; asserting the options is what keeps this check credential-free. It belongs in `src/server/db.test.ts` and runs under `check:unit`.
 
-Every query in [architecture.md](architecture.md) _also_ casts `::text` on both date columns. That is belt and braces on purpose: if the override is ever "simplified" away, the queries still return strings, and the cast documents why at the point of use.
+Every query in [architecture.md](architecture.md) _also_ casts `::text` on both date columns. That is belt and braces on purpose: if the override is ever "simplified" away, the queries still return strings, and the cast documents why at the point of use. Neither half substitutes for the other — a query added later without the cast is covered by the override, and an override lost in a driver upgrade is covered by the casts.
 
-### 2. R2 checksums — applies even though this app only reads
+### 2. `prepare: false` on the transaction pooler — mandatory, not tuning
 
-```ts
-requestChecksumCalculation: "WHEN_REQUIRED",
-responseChecksumValidation: "WHEN_REQUIRED",
-```
+`DATABASE_URL` points at Supabase's **transaction pooler** (port `6543`), not the direct database host (`5432`). The direct string exhausts connections fast under concurrent serverless invocations; one admin makes that less acute than on the public site, but the expiry cron and a page load overlap by construction, and there is no upside to the direct string.
 
-`responseChecksumValidation` is the read-side half. Leaving it at the SDK default makes GETs from R2 fail validation on some paths, in a way that looks like a credentials or network problem and is not. Set **both** flags identically to web's, so the two clients never diverge for a reason nobody can reconstruct later.
+The pooler is pgbouncer in **transaction** mode, which hands a different backend connection to each transaction and therefore cannot carry a named prepared statement across them. `postgres.js` prepares statements by default. Left on, the failure is not at startup — it is an intermittent `prepared statement "..." already exists` / `does not exist` under exactly the overlap the pooler was chosen for. Pass `prepare: false` at construction, once, in `src/server/db.ts`.
 
-### 3. Pooled connection string, not direct
-
-The host must contain `-pooler`. The direct string exhausts connections fast under concurrent invocations. One admin makes this less acute than on the public site, but the expiry cron and a page load can overlap, and there is no upside to the direct string.
-
-### 4. `isPastSlot` covers dates before today
+### 3. `isPastSlot` covers dates before today
 
 Not just "has today's slot start hour passed". This was a real bug in the web repo — without the date check, yesterday's slots were bookable. It arrives here inside the byte-identical `src/domain/dates.ts`, so it is already fixed; do not "simplify" it out while porting.
 
@@ -101,6 +102,8 @@ Application code must fail loudly when a table is missing, never quietly conjure
 3. `time_slot_canonical` exists, and — the assertion neither repo has today — its quoted literals, read out of `pg_get_constraintdef`, are **set-equal to `TIME_SLOTS`** from `src/domain/slots.ts`.
 4. From Phase 4: the same three checks for `slot_blocks` / `uniq_slot_block` / `slot_blocks_time_slot_canonical`.
 
+**This is why the database client is `postgres.js` and not `supabase-js`.** Every assertion above reads the Postgres catalog — `information_schema.columns`, `pg_indexes`, `pg_get_constraintdef(pg_constraint.oid)`. PostgREST exposes tables, views and functions in the exposed schemas; it does not expose the catalog, so a PostgREST client cannot answer "was this migration applied, and applied unedited?" at all. [PRODUCT.md](PRODUCT.md) principle 4 names _a migration that was never applied_ as one of three silent failures that each get a check, and this is that check. `supabase-js` is carried for Storage only ([architecture.md](architecture.md)); the SQL path is a real Postgres driver on a real connection.
+
 Assertion 3 is the point. `check:domain` guards source against source. Nothing in either repo guards source against the **database**, and the nine canonical strings live in three places already — `src/domain/slots.ts`, the CHECK constraint, and web's copy — becoming four once `slot_blocks` lands. A `DOMAIN` would deduplicate them and is the wrong answer: it needs `alter column type` on `bookings`, a hand-run destructive change to the one table the entire race guard sits on. Duplicate the literal; detect the drift.
 
 **`src/server/schema-guard.ts`** is the runtime half — per-feature, positive-cache-only, 503 on a mutating route, and never wrapped around the root layout. Full behaviour in [architecture.md](architecture.md).
@@ -118,20 +121,25 @@ SLOT_CONSTRAINT  = "uniq_active_slot"
 
 **This repo has no consumer for it in v1** — it never inserts into `bookings`, and its two status updates cannot collide with the partial index. It is documented here because the one feature that would need it, **un-expiring a booking**, is deliberately parked ([PRD.md](PRD.md)), and whoever un-parks it must reuse this contract rather than reinvent a bare `23505` check.
 
-## R2 key and privacy contract
+## The proof key and privacy contract
 
-- Bucket `arena-player-proofs` is **private**. No public URL, ever, from either repo.
+- Bucket `arena-player-proofs` is **private** — Supabase Storage's "public bucket" toggle stays off, and no public URL is ever created, from either repo.
 - `proof_key` stores the object **key** — `proofs/${bookingDate}/${uuid}.${ext}`. It was renamed from `proof_url` precisely because the old name invited someone to render it as an `<img src>`.
-- The admin mints a **presigned GET, 120s TTL**, per page render. Never `next/image` on it — the optimizer caches the decoded image at a stable path that outlives the presign, which copies a private payment document out of a private bucket. Hard rule 2 in [CLAUDE.md](../CLAUDE.md).
+- The admin mints a **signed URL, 120s TTL**, per page render, via `createSignedUrl(key, 120)`. Never `next/image` on it — the optimizer caches the decoded image at a stable path that outlives the signature, which copies a private payment document out of a private bucket. Hard rule 2 in [CLAUDE.md](../CLAUDE.md).
+- Read access is granted by an **RLS `select` policy on `storage.objects`** scoped to this bucket, and the admin signs with the **anon** key. Never `service_role`: it bypasses RLS entirely, which would hand this app write and delete on every bucket in the project without a single visible change in behaviour. Full reasoning in [architecture.md](architecture.md).
 
-## Orphaned R2 objects — visible to nobody, including this app
+## Orphaned storage objects — visible to nobody, including this app
 
-Web uploads the proof before the insert, so a process that dies in between leaves a file no row points at. **This app cannot detect it**: it queries the database, and the database has no record of the file. The intended fix is an R2 lifecycle rule on the `proofs/` prefix, configured in the Cloudflare dashboard — outside both repos, which makes it exactly the kind of thing that gets lost at handover. Noted here so the admin-side handover checklist can confirm it.
+Web uploads the proof before the insert, so a process that dies in between leaves a file no row points at. **This app cannot detect it**: it queries the database, and the database has no record of the file. The intended fix has always been a bucket-level expiry rule on the `proofs/` prefix, configured in the provider's dashboard rather than in code.
+
+**Open item — the Supabase equivalent is unverified.** Whether Supabase Storage offers a prefix/age expiry rule at all has not been confirmed here, and inventing one in this document would be worse than leaving the gap named. Someone must check it against the actual project before handover and write the answer down; if there is no built-in mechanism, the fallback is a periodic reconciliation the expiry job could carry (list the prefix, drop keys no `bookings` row references) — which is a Phase 3+ decision, not a hidden assumption. Either way the fix lives outside both repos, which is exactly the kind of thing that gets lost at handover. Noted here so the admin-side handover checklist can confirm it.
 
 ## Env vars
 
-Seven, documented with their reasoning in [`.env.local.example`](../.env.local.example). No values live in this document. The one worth repeating: **the R2 key here is a different, read-only token from web's.**
+Documented with their reasoning in [`.env.local.example`](../.env.local.example). No values live in this document. Shared with `arena-player-web`, because both apps must land on the **same Supabase project**: `DATABASE_URL` (the transaction-pooler string), `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_PROOFS_BUCKET`. This repo's own: `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`, `CRON_SECRET`.
+
+The one worth repeating: **what makes this app's storage access read-only is the RLS policy, not the key.** There is no separate credential to be careful with any more, so the care moves to the policy — see [architecture.md](architecture.md).
 
 ## No MCP for the database
 
-`.mcp.json` in this repo wires up no Neon server, matching the web repo's deliberate removal. An MCP that can execute SQL and apply migrations is exactly the capability the manual-migration rule forbids, and the failure it enables is silent. If it is ever added, it comes back read-only, with a written rule, in both repos at once.
+`.mcp.json` in this repo wires up no Supabase server, matching the web repo's deliberate removal of its own. The Supabase MCP ships `execute_sql` and `apply_migration` — precisely the capability the manual-migration rule forbids, now one tool call away rather than one dashboard login away, and the failure it enables is silent. If it is ever added, it comes back read-only, with a written rule, in both repos at once.

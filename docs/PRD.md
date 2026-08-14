@@ -1,8 +1,8 @@
 # Arena Player Admin — Product Requirements Document
 
-Back-office for the mini soccer field. The admin logs in, works the pending queue, opens the payment proof, and confirms or rejects. Shares the Neon database and the R2 bucket with [`arena-player-web`](../../arena-player-web/); shares no code except three byte-identical files.
+Back-office for the mini soccer field. The admin logs in, works the pending queue, opens the payment proof, and confirms or rejects. Shares the Supabase Postgres database and the Supabase Storage bucket with [`arena-player-web`](../../arena-player-web/); shares no code except three byte-identical files.
 
-Delivery is sequenced **backend-outward**, the opposite of the web repo. There is no mock and no design phase: the schema exists before this repo starts, and the visual language is inherited. Every phase from 2 onward talks to live Neon.
+Delivery is sequenced **backend-outward**, the opposite of the web repo. There is no mock and no design phase: the schema exists before this repo starts, and the visual language is inherited. Every phase from 2 onward talks to live Supabase.
 
 ---
 
@@ -11,7 +11,7 @@ Delivery is sequenced **backend-outward**, the opposite of the web repo. There i
 | Phase | Scope                                                                                          | Blockers                                                        |
 | ----- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | 1a    | Foundation — architecture, scaffold, DX, dev rules, shared copy, db client, auth, verification | None — start here                                               |
-| 2     | Bookings console — list + filters, detail, proof view, confirm / reject                        | 1a, **and web Phase 4 applied**                                 |
+| 2     | Bookings console — list + filters, detail, proof view, confirm / reject                        | 1a, web Phase 4 applied, **and `2-gate-web-supabase`**          |
 | 3     | Expiry job — `POST /api/jobs/expire`, external cron, staleness indicator                       | 2, and `3-gate-web-expiry`                                      |
 | 4     | Slot blocking — block/unblock a date+slot                                                      | `4-gate-blocks` (a migration web must own, apply, **and read**) |
 | 5     | Deploy + handover — `admin.arena-player.com`, user guide, credentials                          | `5-gate-subdomain`, `5-gate-cron-owner`                         |
@@ -39,7 +39,7 @@ No product screen ships here beyond `/login`. It ends with a repo that runs, rul
 | 3   | Developer experience  | Lint / typecheck, Vitest wired as `pnpm check:unit`, credential-free                                                                                                                              |
 | 4   | Development rules     | `docs/dev-rules.md` — naming, file layout, the accessibility baseline, what never goes in `src/app/`                                                                                              |
 | 5   | Shared copy           | Byte-identical `src/domain/{slots,dates,status,phone}.ts` and `pnpm check:domain`                                                                                                                 |
-| 6   | Database client       | Neon client with the OID `1082`/`1184` parser override, `src/server/required-schema.ts`, `pnpm check:schema`                                                                                      |
+| 6   | Database client       | postgres.js client with the OID `1082`/`1184` parser override, `src/server/required-schema.ts`, `pnpm check:schema`                                                                               |
 | 7   | Auth                  | argon2id via `hash-wasm`, `jose` HS256 session cookie, Edge middleware, `/login`, rate-limited login route on the Node runtime                                                                    |
 | 8   | Verification          | All four `check:` scripts run, and **each has been proven to fail**                                                                                                                               |
 
@@ -58,13 +58,13 @@ No product screen ships here beyond `/login`. It ends with a repo that runs, rul
 - [x] `docs/dev-rules.md` written, including the accessibility baseline
 - [x] `src/domain/{slots,dates,status,phone}.ts` present, or `check:domain` skipping loudly with a message naming web's unbuilt step
 - [x] `pnpm check:domain` **proven to fail** on a planted one-character drift, then reverted
-- [x] Neon client carries the OID `1082`/`1184` override; `types.getTypeParser(1082)('2026-08-01')` returns a **string**
-- [x] `pnpm check:schema` asserts table, columns, `uniq_active_slot`, and CHECK-literals-vs-`TIME_SLOTS` set equality — and **fails** cleanly against a database with no `bookings` table (algorithm proven via `schema-diff.test.ts`; the live-Neon path is credential-blocked in this environment and carried forward as a **Phase 2 blocker**, not a Phase 1a gap — `pnpm check:schema` is how Phase 2's start is confirmed)
+- [x] postgres.js client carries the OID `1082`/`1184` override; `types.getTypeParser(1082)('2026-08-01')` returns a **string**
+- [x] `pnpm check:schema` asserts table, columns, `uniq_active_slot`, and CHECK-literals-vs-`TIME_SLOTS` set equality — and **fails** cleanly against a database with no `bookings` table (algorithm proven via `schema-diff.test.ts`; the live-database path is credential-blocked in this environment and carried forward as a **Phase 2 blocker**, not a Phase 1a gap — `pnpm check:schema` is how Phase 2's start is confirmed)
 - [x] Login works; the session cookie is `HttpOnly; Secure; SameSite=Lax`; middleware redirects an unauthenticated request to `/login`
 - [x] argon2 verification confirmed **absent** from the Edge middleware bundle
 - [x] All four checks have each been observed exiting non-zero at least once
 
-**Closed 2026-08-12.** `check:schema` and `check:setup` cannot be run end-to-end against a live database in this environment (no `DATABASE_URL`/R2 credentials) — expected and acceptable for Phase 1a closure per the credential-free/credentialed split this phase was scoped around. Both scripts are proven to fail loudly and correctly (missing-variable errors, not silent passes) and their algorithms are proven correct against fixtures. Live verification against real Neon is carried forward as a **Phase 2 entry gate**, not a reopened Phase 1a item — see `docs/PROGRESS.md`, 2026-08-12.
+**Closed 2026-08-12.** `check:schema` and `check:setup` cannot be run end-to-end against a live database in this environment (no `DATABASE_URL` / Supabase credentials) — expected and acceptable for Phase 1a closure per the credential-free/credentialed split this phase was scoped around. Both scripts are proven to fail loudly and correctly (missing-variable errors, not silent passes) and their algorithms are proven correct against fixtures. Live verification against the real Supabase database is carried forward as a **Phase 2 entry gate**, not a reopened Phase 1a item — see `docs/PROGRESS.md`, 2026-08-12.
 
 ---
 
@@ -90,7 +90,7 @@ The product. Everything else in this repo supports it.
 
 ### Definition of Done — Phase 2
 
-- [ ] List renders live Neon data; filters, date range, search, and pagination all round-trip through the URL
+- [ ] List renders live Supabase data; filters, date range, search, and pagination all round-trip through the URL
 - [ ] Default view is the pending queue from today forward, and reaching it requires zero clicks
 - [ ] Phone renders as a working `wa.me` link; `notes` does **not** appear in the list, only on the detail page
 - [ ] Proof image renders via a presigned GET; the bucket has no public URL and none was created
@@ -150,7 +150,7 @@ So: a new additive table, `slot_blocks`. DDL and rationale in [schema-requests/0
 **The sequencing is the hard part, and it is a gate, not a step.** An admin-created block that the public site does not read is a **silent no-op** — the exact failure class this project exists to avoid. Hard order:
 
 ```
-migration written into web's db/migrations/  →  applied by hand in Neon
+migration written into web's db/migrations/  →  applied by hand in Supabase
   →  check:schema green here
   →  web's availability read unions slot_blocks AND IS DEPLOYED
   →  only then does the block UI ship here
@@ -174,7 +174,7 @@ Blocks map to the existing API status **`booked`**. No new API status; the FIRM 
 - HTTPS confirmed — the session cookie is `Secure` and will not be set over plain HTTP
 - External scheduler repointed from any staging URL to production
 - Indonesian **admin user guide**: how to log in, how to read the queue, what each status means, what confirm and reject do, what the oldest-pending indicator means and who to call when it goes red
-- Credential handover: admin password, `SESSION_SECRET`, the read-only R2 token, `CRON_SECRET`, and the scheduler account itself
+- Credential handover: admin password, `SESSION_SECRET`, the read-only Supabase anon key, `CRON_SECRET`, and the scheduler account itself
 
 ### Definition of Done — Phase 5
 
@@ -196,7 +196,7 @@ If a recurring closure ever becomes real ("we close Mondays"), the reshaped vers
 
 **Un-expiring a booking.** See Phase 2.
 
-**A read-only Neon role.** `DATABASE_URL` here cannot be read-only — this app writes `bookings.status`. A separate Neon role scoped to `select, update(status)` on `bookings` is the correct hardening and costs one hand-run `GRANT`. Noted as a handover nice-to-have rather than built in v1.
+**A read-only database role.** `DATABASE_URL` here cannot be read-only — this app writes `bookings.status`. A separate Postgres role scoped to `select, update(status)` on `bookings` is the correct hardening and costs one hand-run `GRANT`. Noted as a handover nice-to-have rather than built in v1.
 
 **Password reset, MFA, a second account, an audit log.** All require a schema change to a database this repo may not migrate, for a single-user app whose credential rotation is a redeploy. If an audit trail is ever wanted, it is a schema request, not a feature.
 

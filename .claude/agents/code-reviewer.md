@@ -27,10 +27,9 @@ Every item here is a regression that raises **nothing**. That is why they need a
 - **Reject still accepts `confirmed`.** Narrowing it to `pending` silently deletes the only cancellation mechanism in the system.
 - **`next/image` appears nowhere near a proof.** Grep for it. The optimizer caches a private payment document at a stable public path that outlives the presign.
 - **Presign TTL is still 120s**, and the proof page is still `force-dynamic`. Both drift upward under pressure from a "flaky image" bug report.
-- **The Neon OID `1082`/`1184` override is present and untouched**, and the queries still cast `::text`. The single easiest regression to reintroduce silently — it shifts `booking_date` back a day on Asia/Jakarta machines.
-- **R2 checksum settings are `WHEN_REQUIRED` on both request and response.** The response half is the one this repo actually needs and the one most likely to be dropped as unnecessary.
+- **The OID `1082`/`1184` override is present and untouched**, and the queries still cast `::text`. The single easiest regression to reintroduce silently — it shifts `booking_date` back a day on Asia/Jakarta machines.
 - **argon2 is absent from the Edge middleware bundle.** Grep the _build_, not the source — a barrel import satisfies a source grep and still fails at deploy.
-- **Secrets never reach the client bundle.** Grep `.next/static/` for `DATABASE_URL`, `R2_SECRET_ACCESS_KEY`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`. `server-only` should make this impossible — confirm rather than trust, and confirm every file in `src/server/` opens with it.
+- **Secrets never reach the client bundle.** Grep `.next/static/` for `DATABASE_URL`, `SUPABASE_ANON_KEY`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`. `server-only` should make this impossible — confirm rather than trust, and confirm every file in `src/server/` opens with it.
 - **No DDL in application code**, and no `db/migrations/` directory in this repo.
 - **The schema guard is per-feature, never in `src/app/layout.tsx`.** A global guard takes the bookings console down with the first missing Phase 4 table.
 - **`src/domain/` is unmodified.** Diff it against `../arena-player-web/src/domain/` yourself; do not take `check:domain` passing as proof it ran — whenever a side is absent it _skips_, and a skip that reads as a pass is the failure mode. Web's copy exists now, so a skip here means **this** repo has not made its copy yet. The diff covers the four test files as well as the four modules.

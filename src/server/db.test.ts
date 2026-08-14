@@ -3,35 +3,39 @@ import { describe, expect, it } from "vitest";
 import { customTypes } from "./db";
 
 /**
- * The trap this repo has already been bitten by once: Neon's default
- * DATE/TIMESTAMPTZ parsers return JS `Date` objects, which silently shift
- * `booking_date` back a day on an Asia/Jakarta machine. This test asserts the
- * override directly, with NO database connection and NO credentials — it
- * must keep passing even with `.env.local` moved away, per `check:unit`'s
- * own contract (docs/architecture.md).
+ * Credential-free. Asserts the one thing about the database client that has
+ * no runtime error to announce it when it breaks: postgres.js parses DATE
+ * (1082) and TIMESTAMPTZ (1184) into JS `Date` by default, and on an
+ * Asia/Jakarta (UTC+7) machine that shifts `booking_date` back a day the
+ * moment it is serialized. See the comment in db.ts.
  */
-describe("customTypes OID override", () => {
-  it("passes DATE (oid 1082) through as a string, not a Date", () => {
-    const parse = customTypes.getTypeParser(1082);
-    const result = parse("2026-08-01");
+describe("db — the DATE/TIMESTAMPTZ override", () => {
+  it("passes a DATE through as the raw string, never a Date object", () => {
+    const parsed = customTypes.date.parse("2026-08-01");
 
-    expect(result).toBe("2026-08-01");
-    expect(typeof result).toBe("string");
-    expect(result).not.toBeInstanceOf(Date);
+    expect(parsed).toBe("2026-08-01");
+    expect(parsed).not.toBeInstanceOf(Date);
   });
 
-  it("passes TIMESTAMPTZ (oid 1184) through as a string, not a Date", () => {
-    const parse = customTypes.getTypeParser(1184);
-    const result = parse("2026-08-01 10:00:00+00");
+  it("passes a TIMESTAMPTZ through as the raw string", () => {
+    const parsed = customTypes.date.parse("2026-08-01 09:30:00+07");
 
-    expect(result).toBe("2026-08-01 10:00:00+00");
-    expect(typeof result).toBe("string");
-    expect(result).not.toBeInstanceOf(Date);
+    expect(parsed).toBe("2026-08-01 09:30:00+07");
+    expect(parsed).not.toBeInstanceOf(Date);
   });
 
-  it("still delegates every other OID to the default pg-types parser", () => {
-    // oid 23 is int4 — must NOT be overridden, or every integer column breaks.
-    const parse = customTypes.getTypeParser(23);
-    expect(parse("42")).toBe(42);
+  it("covers exactly oid 1082 and 1184", () => {
+    expect([...customTypes.date.from]).toEqual([1082, 1184]);
+  });
+
+  /**
+   * The override is scoped, not global. Widening `from` is the realistic
+   * mistake — adding int4 (23) would turn every count and id in the app into
+   * a string, and nothing would throw. This asserts the boundary rather than
+   * the happy path.
+   */
+  it("does not claim any other oid", () => {
+    expect(customTypes.date.from).not.toContain(23);
+    expect(Object.keys(customTypes)).toEqual(["date"]);
   });
 });

@@ -12,7 +12,7 @@ Everything else in Phase 2 can be verified against this app alone. That line can
 
 ## The cross-repo proof
 
-Run `arena-player-web` locally on :3000 against **the same** `DATABASE_URL` this app uses ([2-gate-migration](2-gate-migration.md) question 1 is where that was confirmed; re-check it here rather than assume it held).
+Run `arena-player-web` locally on :3000 against **the same** `DATABASE_URL` this app uses — same Supabase project ref, both on the transaction pooler ([2-gate-migration](2-gate-migration.md) question 1 is where that was confirmed; re-check it here rather than assume it held).
 
 ```bash
 # 1. pick a booking_date + time_slot with a pending row in this app's queue
@@ -33,23 +33,23 @@ Also verify the reverse: **reject** a `confirmed` booking and watch the slot ret
 
 ## Where the test data comes from
 
-This repo may never `insert`. The cheapest source of a valid row is **a booking made on the public site running locally** — it produces a normalised `628…` phone, a `proof_key` pointing at a real R2 object, and it exercises web's insert path at the same time. It is also the only route that unblocks step 05's live half. See [2-gate-migration](2-gate-migration.md) row 4.
+This repo may never `insert`. The cheapest source of a valid row is **a booking made on the public site running locally** — it produces a normalised `628…` phone, a `proof_key` pointing at a real object in the Supabase proofs bucket, and it exercises web's insert path at the same time. It presumes web has already moved to Supabase — [2-gate-web-supabase](2-gate-web-supabase.md). It is also the only route that unblocks step 05's live half. See [2-gate-migration](2-gate-migration.md) row 4.
 
 ## The Definition of Done, line by line
 
 Run each, quote the decisive output line in the handoff, then tick it in [PRD.md](../PRD.md). No line is ticked from a step summary.
 
-| DoD line                                          | How it is proven                                                                      |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| List renders live Neon; filters round-trip in URL | Step 02's URL matrix, re-run, plus one shared link opened in a fresh window           |
-| Default view is the pending queue, zero clicks    | `curl` the naked `/bookings` and read the rendered filter state                       |
-| `wa.me` link works; `notes` only on detail        | Tap the link on a phone viewport; grep the list components for `notes`                |
-| Proof renders via presigned GET, no public URL    | Step 05 — **or** its three unproven items carried forward, in writing                 |
-| Expired URL shows "Muat ulang bukti"              | Seen in a browser, step 05                                                            |
-| Confirm and reject guarded, 409 on zero rows      | Step 04's two-tab procedure, re-run                                                   |
-| Reject works on a `confirmed` booking             | Run it, then read the row's status in the database                                    |
-| Usable at 375px                                   | Real viewport, `scrollWidth === clientWidth`, on `/bookings` **and** `/bookings/[id]` |
-| Cross-repo proof                                  | The sequence above                                                                    |
+| DoD line                                              | How it is proven                                                                      |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| List renders live Supabase; filters round-trip in URL | Step 02's URL matrix, re-run, plus one shared link opened in a fresh window           |
+| Default view is the pending queue, zero clicks        | `curl` the naked `/bookings` and read the rendered filter state                       |
+| `wa.me` link works; `notes` only on detail            | Tap the link on a phone viewport; grep the list components for `notes`                |
+| Proof renders via a signed URL, bucket still private  | Step 05 — **or** its three unproven items carried forward, in writing                 |
+| Expired URL shows "Muat ulang bukti"                  | Seen in a browser, step 05                                                            |
+| Confirm and reject guarded, 409 on zero rows          | Step 04's two-tab procedure, re-run                                                   |
+| Reject works on a `confirmed` booking                 | Run it, then read the row's status in the database                                    |
+| Usable at 375px                                       | Real viewport, `scrollWidth === clientWidth`, on `/bookings` **and** `/bookings/[id]` |
+| Cross-repo proof                                      | The sequence above                                                                    |
 
 ## Full sweep
 
@@ -57,7 +57,7 @@ Run each, quote the decisive output line in the handoff, then tick it in [PRD.md
 pnpm check                 # lint, typecheck, format:check, check:domain, check:unit
 pnpm build                 # route table: every route ƒ, none ○
 pnpm check:schema          # 10/10 against the live database
-pnpm check:setup           # Neon + R2; note WHICH half fails if the R2 token is still deferred
+pnpm check:setup           # database + storage; note WHICH half fails if the storage credential is still deferred
 
 # the four rules that fail silently, swept once more across the whole tree
 grep -rn "next/image" src/                                              # expect: no match

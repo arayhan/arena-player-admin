@@ -26,7 +26,7 @@ An append-only journal answers all three, and touches nothing that already works
 -- db/migrations/<timestamp>_create_booking_events.sql
 -- Requested by arena-player-admin (docs/schema-requests/002-booking-events.md).
 -- ADDITIVE ONLY: bookings, status_valid and uniq_active_slot are not touched.
--- Run manually in the Neon SQL editor. Never auto-applied.
+-- Run manually in the Supabase SQL editor. Never auto-applied.
 --
 -- Wrapped in a transaction for the same reason the bookings migration is: a paste
 -- that fails halfway must not leave the table created WITHOUT its indexes, which

@@ -6,11 +6,11 @@ How an agent handles secrets, credentials, and private payment documents while w
 
 **Authority elsewhere:**
 
-- [CLAUDE.md](../../CLAUDE.md) hard rule 3 — `DATABASE_URL` and the R2 secrets never reach the client; never `NEXT_PUBLIC_*`.
+- [CLAUDE.md](../../CLAUDE.md) hard rule 3 — `DATABASE_URL` and the Supabase keys never reach the client; never `NEXT_PUBLIC_*`.
 - [CLAUDE.md](../../CLAUDE.md) hard rule 2 — never `next/image` on a payment proof.
 - [CLAUDE.md](../../CLAUDE.md) hard rule 8 — argon2 cannot run on Edge; the password compare stays in the Node login route.
 - [docs/architecture.md](../architecture.md#auth) — the Edge/Node split, hashing, the session cookie, login rate limiting.
-- [docs/architecture.md](../architecture.md#the-r2-read-path) — why the R2 credential is separate and read-only, and why the presign TTL is what it is.
+- [docs/architecture.md](../architecture.md#the-proof-read-path) — why the proof credential is separate and read-only, and why the presign TTL is what it is.
 - [.env.local.example](../../.env.local.example) — the only place to learn which variables exist and what each one is for.
 
 The reasoning behind each pointer lives at the link. This file does not repeat it.
@@ -18,7 +18,7 @@ The reasoning behind each pointer lives at the link. This file does not repeat i
 ## Never surface a secret
 
 1. **Never read, open, or print `.env.local`.** It is deny-listed. When you need to know which variables exist or what one means, read `.env.local.example` instead.
-2. Treat all of these as secret: the connection string, the R2 access key and secret, the argon2id password hash, the session signing key, the cron bearer token, a session JWT, and a presigned URL.
+2. Treat all of these as secret: the connection string, the Supabase anon key, the argon2id password hash, the session signing key, the cron bearer token, a session JWT, and a presigned URL.
 3. Never write one into the transcript, a log line, a test fixture, a comment, a doc, a commit message, or a command you print. This includes partial values — a truncated key is still a key.
 4. Never run a command whose output would contain one: no dumping the environment, no echoing a variable, no printing a `set-cookie` header's value. Assert on a _property_ instead — a prefix, a flag, a length, a status code.
 5. Never put a real credential in an example file. `.env.local.example` carries empty values and comments; keep it that way.
@@ -50,5 +50,5 @@ The reasoning behind each pointer lives at the link. This file does not repeat i
 
 20. **Stop.** Do not commit, do not push, do not include the leaked value in your report or your next command.
 21. Tell the human immediately: what leaked and where it now lives (file and line, or "in the output of an earlier command"), without reprinting the value.
-22. Rotation is the human's call. Do not rotate, regenerate, or replace a credential on your own — rotating the session key logs the admin out, and rotating an R2 key can break the sibling app.
+22. Rotation is the human's call. Do not rotate, regenerate, or replace a credential on your own — rotating the session key logs the admin out, and rotating a Supabase key can break the sibling app.
 23. If it already reached a commit, say so plainly. Deleting it in a follow-up commit does not remove it from history, and the human needs to know that before deciding.

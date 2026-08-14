@@ -1,5 +1,5 @@
 /**
- * The declarative expectation `pnpm check:schema` asserts against live Neon.
+ * The declarative expectation `pnpm check:schema` asserts against live Supabase Postgres.
  *
  * This file is the ONLY place that expectation is written down. It is never
  * used to create anything — this repo may not run DDL (CLAUDE.md hard rule

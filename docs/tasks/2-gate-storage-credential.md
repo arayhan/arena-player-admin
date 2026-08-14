@@ -25,13 +25,13 @@ The boundary moved from the credential into the schema. That is the whole reason
 
 ## What must be true
 
-| Property           | Required value                                                                                                                           |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Project            | The **same** Supabase project as `arena-player-web` — same project ref                                                                   |
-| Bucket             | The proofs bucket, **private** (`public = false`)                                                                                        |
-| Key handed to this app | The project's **anon** key. **Never `service_role`**                                                                                 |
-| Authorisation      | One RLS policy on `storage.objects`: `select` only, `to anon`, `using (bucket_id = '<proofs bucket>')`. No `insert`, `update` or `delete` |
-| Env vars           | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_PROOFS_BUCKET` — see `.env.local.example`                                                 |
+| Property               | Required value                                                                                                                            |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Project                | The **same** Supabase project as `arena-player-web` — same project ref                                                                    |
+| Bucket                 | The proofs bucket, **private** (`public = false`)                                                                                         |
+| Key handed to this app | The project's **anon** key. **Never `service_role`**                                                                                      |
+| Authorisation          | One RLS policy on `storage.objects`: `select` only, `to anon`, `using (bucket_id = '<proofs bucket>')`. No `insert`, `update` or `delete` |
+| Env vars               | `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_PROOFS_BUCKET` — see `.env.local.example`                                                  |
 
 The bucket itself stays **private**. If it is ever flipped public, the entire signed-URL design becomes decoration — every proof becomes fetchable by anyone who can guess a key, the TTL stops meaning anything, and nothing in either app reports it. A public bucket is one toggle in the dashboard and produces no error anywhere.
 
@@ -72,7 +72,7 @@ Different bucket = every `proof_key` in `bookings` resolves to nothing, and the 
 
 Less than it was under R2, and the reason is a real behavioural difference that must not be papered over.
 
-**AWS presigning was a local HMAC.** `presignProofUrl` produced a well-formed URL from any syntactically valid credentials, contacted nothing, and validated nothing — so dummy values exercised the whole path and failed only at the browser's fetch. **Supabase's `createSignedUrl` is a server round-trip** to the Storage API, which means unauthorised or absent credentials fail at the _call_, not at the image load.
+**AWS presigning was a local HMAC.** The old signer produced a well-formed URL from any syntactically valid credentials, contacted nothing, and validated nothing — so dummy values exercised the whole path and failed only at the browser's fetch. **Supabase's `createSignedUrl` is a server round-trip** to the Storage API, which means unauthorised or absent credentials fail at the _call_, not at the image load.
 
 > **To verify against a real project before step 05's verification block is trusted:** whether `createSignedUrl` returns an error for a key that exists in the bucket but is unreadable under RLS, versus one that does not exist at all; and what HTTP status the signed URL itself returns once the token has expired. The recovery UI keys off the browser's failed image load either way, but the two failure modes reach it by different routes and the step file must describe the one that is real.
 
@@ -97,17 +97,17 @@ All three become one five-minute check the moment a real credential and one real
 
 ## Outcome — fill in during or immediately after
 
-| Item                                                     | Done | Evidence   |
-| -------------------------------------------------------- | ---- | ---------- |
-| Anon key confirmed, `service_role` never pasted          | ☐    | \_\_\_\_\_ |
-| RLS enabled on `storage.objects`                         | ☐    | \_\_\_\_\_ |
-| `select`-only policy, scoped to the proofs bucket alone  | ☐    | \_\_\_\_\_ |
-| No other `anon` policy widening it                       | ☐    | \_\_\_\_\_ |
-| Same project ref and same bucket as web                  | ☐    | \_\_\_\_\_ |
-| Bucket confirmed private                                 | ☐    | \_\_\_\_\_ |
-| `pnpm check:setup` — storage half signs a URL            | ☐    | \_\_\_\_\_ |
-| A write with this key **refused** (the negative proof)   | ☐    | \_\_\_\_\_ |
-| A real proof rendered in the browser                     | ☐    | \_\_\_\_\_ |
+| Item                                                    | Done | Evidence   |
+| ------------------------------------------------------- | ---- | ---------- |
+| Anon key confirmed, `service_role` never pasted         | ☐    | \_\_\_\_\_ |
+| RLS enabled on `storage.objects`                        | ☐    | \_\_\_\_\_ |
+| `select`-only policy, scoped to the proofs bucket alone | ☐    | \_\_\_\_\_ |
+| No other `anon` policy widening it                      | ☐    | \_\_\_\_\_ |
+| Same project ref and same bucket as web                 | ☐    | \_\_\_\_\_ |
+| Bucket confirmed private                                | ☐    | \_\_\_\_\_ |
+| `pnpm check:setup` — storage half signs a URL           | ☐    | \_\_\_\_\_ |
+| A write with this key **refused** (the negative proof)  | ☐    | \_\_\_\_\_ |
+| A real proof rendered in the browser                    | ☐    | \_\_\_\_\_ |
 
 ### Sign-off
 

@@ -2,7 +2,7 @@
  * Vitest — unlike `next dev` / `next build` — does not load `.env.local`
  * automatically; Next's env loading lives inside its own dev/build process,
  * which a bare `vitest` invocation never goes through. Without this,
- * `DATABASE_URL` and the R2 vars are always unset under `check:schema` /
+ * `DATABASE_URL` and the Supabase Storage vars are always unset under `check:schema` /
  * `check:setup`, even with a fully filled-in `.env.local` on disk — the
  * failure would look exactly like a credentials problem while actually
  * being a "nothing loaded them" problem.

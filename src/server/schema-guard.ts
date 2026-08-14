@@ -18,7 +18,7 @@ import { sql } from "./db";
 /**
  * Positive cache only. Once a table is confirmed present, that answer is
  * cached for the process lifetime — a table does not disappear at runtime.
- * A `false` result is NEVER cached, so applying the migration in the Neon
+ * A `false` result is NEVER cached, so applying the migration in the Supabase
  * SQL editor takes effect on this app's very next request, with no redeploy.
  */
 const knownPresent = new Set<string>();
@@ -47,7 +47,7 @@ export class MigrationMissingError extends Error {
     public readonly table: string,
   ) {
     super(
-      `Jalankan \`db/migrations/${migration}\` di Neon SQL editor — tabel \`${table}\` tidak ditemukan.`,
+      `Jalankan \`db/migrations/${migration}\` di Supabase SQL editor — tabel \`${table}\` tidak ditemukan.`,
     );
     this.name = "MigrationMissingError";
   }

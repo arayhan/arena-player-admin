@@ -18,7 +18,7 @@ Touching the partial unique index that is the only race guard in the system, in 
 -- db/migrations/<timestamp>_create_slot_blocks.sql
 -- Requested by arena-player-admin (docs/schema-requests/001-slot-blocks.md).
 -- ADDITIVE ONLY: bookings and uniq_active_slot are not touched.
--- Run manually in the Neon SQL editor. Never auto-applied.
+-- Run manually in the Supabase SQL editor. Never auto-applied.
 --
 -- Wrapped in a transaction for the same reason the bookings migration is: a paste
 -- that fails halfway must not leave the table created WITHOUT uniq_slot_block,
@@ -92,7 +92,7 @@ An admin blocking a slot in the same instant a customer submits a booking for it
 
 ```
 this DDL transcribed into web's db/migrations/
-  →  applied by hand in the Neon SQL editor
+  →  applied by hand in the Supabase SQL editor
   →  check:schema green in arena-player-admin
   →  web deploys BOTH statements above
   →  only then does the blocking UI ship here

@@ -29,7 +29,7 @@ Two tables: one key-value for the singular values, one ordinary table for the li
 -- db/migrations/<timestamp>_create_site_settings.sql
 -- Requested by arena-player-admin (docs/schema-requests/003-site-settings.md).
 -- ADDITIVE ONLY: bookings is not touched.
--- Run manually in the Neon SQL editor. Never auto-applied.
+-- Run manually in the Supabase SQL editor. Never auto-applied.
 --
 -- Wrapped in a transaction so a half-failed paste cannot leave site_settings
 -- created without bank_accounts. The booking page reads both; having one

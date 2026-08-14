@@ -11,7 +11,7 @@ This repo needs schema changes it is not allowed to make. This folder is the pro
 | Where does the SQL live                    | `arena-player-web/db/migrations/<timestamp>_<slug>.sql`. One location, no exceptions                                                                                                              |
 | Who writes it                              | This repo _authors_ it as a request file here — the exact DDL, the feature it unblocks, and what changes in web                                                                                   |
 | How does it get there                      | A human transcribes it **verbatim** into web's `db/migrations/`, commits it there, and comes back to annotate this file `LANDED AS db/migrations/<file>`                                          |
-| Who applies it                             | The user, by hand, in the Neon SQL editor. No agent, no boot-time DDL, no MCP                                                                                                                     |
+| Who applies it                             | The user, by hand, in the Supabase SQL editor, in the project **both** apps connect to. No agent, no boot-time DDL, no MCP, no CLI                                                                |
 | How does this repo know it landed          | `pnpm check:schema`. Not a conversation, not a checkbox                                                                                                                                           |
 | What happens at runtime if it did not land | The feature's page renders a loud error naming the exact file; its mutating routes return 503. The bookings console is unaffected — see the schema guard in [architecture.md](../architecture.md) |
 
@@ -60,9 +60,14 @@ Once a request is annotated `LANDED`, it is historical. Nothing in this repo rea
 
 ## Current requests
 
-| #                         | Title                                      | Status              |
-| ------------------------- | ------------------------------------------ | ------------------- |
-| [001](001-slot-blocks.md) | `slot_blocks` — one-off date+slot blocking | requested (Phase 4) |
+| #                                  | Title                                                       | Status              |
+| ---------------------------------- | ----------------------------------------------------------- | ------------------- |
+| [001](001-slot-blocks.md)          | `slot_blocks` — one-off date+slot blocking                  | requested (Phase 4) |
+| [002](002-booking-events.md)       | `booking_events` — the activity rail and log export         | requested (Phase 2) |
+| [003](003-site-settings.md)        | `site_settings` and `bank_accounts` — the Pengaturan screen | requested (Phase 2) |
+| [004](004-bookings-on-supabase.md) | `bookings` — web's existing migration, applied on Supabase  | requested (Phase 2) |
+
+**004 authors no DDL.** It records that web's already-written `bookings` migration has to be applied verbatim in the Supabase SQL editor now that the project has moved off Neon, and that both repos must point at the same Supabase project. A provider move is not a schema change, but "who applies the unapplied migration, and where" is exactly the question this folder exists to keep from falling between two repos.
 
 ## Sketched, not requested
 

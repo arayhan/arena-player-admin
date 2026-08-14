@@ -1,8 +1,8 @@
 # Arena Player — Admin
 
-Back-office for the mini soccer field. The field admin logs in, works the pending queue, opens the payment proof, and confirms or rejects. Same Neon database and same R2 bucket as [`arena-player-web`](../arena-player-web/); different repo, different deploy, different rules. Paid freelance project, tight budget — ship the current phase's Definition of Done, don't explore alternatives.
+Back-office for the mini soccer field. The field admin logs in, works the pending queue, opens the payment proof, and confirms or rejects. Same Supabase Postgres database and same Supabase Storage bucket as [`arena-player-web`](../arena-player-web/); different repo, different deploy, different rules. Paid freelance project, tight budget — ship the current phase's Definition of Done, don't explore alternatives.
 
-**The structural difference from the web repo, stated first because it changes every instinct carried over:** web built three phases of UI against an MSW mock before its backend existed. This repo is the inverse. It is useless without real data, it starts after web's Phase 4 has landed the schema, and **there is no mock layer here**. Every screen reads live Neon from a Server Component.
+**The structural difference from the web repo, stated first because it changes every instinct carried over:** web built three phases of UI against an MSW mock before its backend existed. This repo is the inverse. It is useless without real data, it starts after web's Phase 4 has landed the schema, and **there is no mock layer here**. Every screen reads live Supabase Postgres from a Server Component.
 
 ## Docs (read in this order)
 
@@ -10,7 +10,7 @@ Back-office for the mini soccer field. The field admin logs in, works the pendin
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | [docs/PRODUCT.md](docs/PRODUCT.md)             | Who the admin is, the job to be done, what must not be fabricated, open client decisions                               |
 | [docs/PRD.md](docs/PRD.md)                     | Phases, screens, Definition of Done, what was descoped and why                                                         |
-| [docs/architecture.md](docs/architecture.md)   | Route map, auth, every SQL contract, the R2 read path, cross-repo contracts                                            |
+| [docs/architecture.md](docs/architecture.md)   | Route map, auth, every SQL contract, the proof read path, cross-repo contracts                                         |
 | [docs/database.md](docs/database.md)           | The **inherited** schema and the gotchas that arrive with it. This repo reads; it never migrates                       |
 | [docs/DESIGN.md](docs/DESIGN.md)               | Token frontmatter + measured contrast. Same palette as web, none of the motion. **Normative**                          |
 | [docs/DESIGN.html](docs/DESIGN.html)           | Rendered specimens + the clickable `Alur` walkthrough. Reference only — if it disagrees with DESIGN.md, that file wins |
@@ -45,13 +45,13 @@ This file is **what an agent must know before touching code and cannot discover 
 
 ```bash
 pnpm install
-cp .env.local.example .env.local   # 7 vars — see the file's comments, especially the R2 key
+cp .env.local.example .env.local   # 7 vars — see the file's comments, especially the anon key
 pnpm dev                           # http://localhost:3001
 ```
 
 Port **3001**, not 3000, so both repos run side by side during development.
 
-Schema changes are **requested here and applied in the web repo**, by hand, in the Neon SQL editor. Never assume a migration is applied — `pnpm check:schema` is how you find out.
+Schema changes are **requested here and applied in the web repo**, by hand, in the Supabase SQL editor. Never assume a migration is applied — `pnpm check:schema` is how you find out.
 
 ## Folder structure
 
@@ -67,8 +67,8 @@ arena-player-admin/
 │   ├── domain/      # BYTE-IDENTICAL copy from arena-player-web, at the SAME PATH there —
 │   │                # slots, dates, status, phone. Read-only in this repo
 │   ├── server/      # import "server-only" — auth.ts (jose + argon2id, Node runtime only),
-│   │                # db.ts (Neon + OID override), required-schema.ts, schema-guard.ts,
-│   │                # storage.ts (R2 S3Client + presigned GET)
+│   │                # db.ts (postgres.js + OID override), required-schema.ts, schema-guard.ts,
+│   │                # storage.ts (Supabase Storage client + signed GET)
 │   ├── components/  # cross-module UI primitives only
 │   ├── hooks/       # cross-module React hooks, use-<thing>.ts. Same one-consumer rule as
 │   │                # components/. A module's own hooks stay there as *.queries.ts
@@ -91,9 +91,9 @@ Full detail: [docs/architecture.md](docs/architecture.md).
 
 ## Hard rules (violations = rework)
 
-1. **This repo never owns a migration.** `db/migrations/` lives in `arena-player-web` and nowhere else. A schema change is written as a request in `docs/schema-requests/`, transcribed verbatim into web's migrations folder, and applied by hand in the Neon SQL editor. Two repos migrating one database is a conflict with no owner to resolve it.
+1. **This repo never owns a migration.** `db/migrations/` lives in `arena-player-web` and nowhere else. A schema change is written as a request in `docs/schema-requests/`, transcribed verbatim into web's migrations folder, and applied by hand in the Supabase SQL editor. Two repos migrating one database is a conflict with no owner to resolve it.
 2. **Never `next/image` on a payment proof.** Next's optimizer caches the decoded image at a stable `/_next/image?url=…` path with a long TTL — that copies a private payment document out of a private bucket and outlives the presigned URL entirely. Plain `<img>`. This is the single worst mistake available in this repo.
-3. **`DATABASE_URL` and the R2 secrets never reach the client.** Never `NEXT_PUBLIC_*`. `import "server-only"` at the top of every file in `src/server/` so the build fails instead of the review catching it.
+3. **`DATABASE_URL` and the Supabase keys never reach the client.** Never `NEXT_PUBLIC_*`. `import "server-only"` at the top of every file in `src/server/` so the build fails instead of the review catching it.
 4. **`src/domain/**` is byte-identical with the web repo and read-only here.** `uniq_active_slot` compares `time_slot` as text, so a one-character drift in `TIME_SLOTS` means this app writes rows the site cannot match and anti-double-booking silently stops working **for both**. Nothing throws. Fix drift by fixing the web repo, then re-copying.
 5. **Never blind-update a booking by id.** Every status mutation carries its own `where status in (…)` guard and returns 409 on zero rows — the row may have been actioned in another tab, or flipped by the expiry job between render and click.
 6. **A missing migration fails loudly and _scoped_.** The schema guard gates the one feature that needs the table; it never wraps the root layout. The bookings console needs zero new migrations and must keep working when a Phase 4 table is absent. Never `create table if not exists`.

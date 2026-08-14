@@ -21,7 +21,7 @@ The folder sorts into build order on its own, so no index needs maintaining, and
 
 **Step files land when their phase's build actually starts**, not during planning. Gates land as soon as the questions exist, because a gate whose questions are written late is a gate that gets held late — and here, three of the four gates are blocked on people outside the build (the client, the host, the other repo), which is the longest lead item in this project.
 
-That is why this folder held eight Phase 1a steps and four gates for as long as Phase 1a was the current build, and no step file for Phases 2–5. **Phase 2's six steps and two gates landed on 2026-08-13**, when its build started. Phases 3–5 are still specified only in [PRD.md](../PRD.md); their steps get written when their build starts.
+That is why this folder held eight Phase 1a steps and four gates for as long as Phase 1a was the current build, and no step file for Phases 2–5. **Phase 2's six steps and two gates landed on 2026-08-13**, when its build started; a **third** Phase 2 gate — [2-gate-web-supabase](2-gate-web-supabase.md) — landed with the move from Neon/R2 to Supabase, because that move reached this repo and not the sibling one. Phases 3–5 are still specified only in [PRD.md](../PRD.md); their steps get written when their build starts.
 
 ## Steps
 
@@ -41,8 +41,9 @@ Fill a gate in **during or immediately after** the decision, not from memory aft
 
 ### Gates in this repo are unusually load-bearing
 
-In the web repo a gate is mostly a client conversation. Here, three of the four gate a **silent failure** rather than a preference:
+In the web repo a gate is mostly a client conversation. Here, most of them gate a **silent failure** rather than a preference:
 
+- `2-gate-web-supabase` — until web moves to the same Supabase project and bucket, the two apps are configured for two different infrastructures and each works perfectly against a backend the other cannot see.
 - `3-gate-web-expiry` — until it is applied, two repos hold contradictory descriptions of where expiry runs, and a future agent will build against whichever it reads first.
 - `4-gate-blocks` — shipping the block UI before web reads `slot_blocks` produces a feature that appears to work and does nothing.
 - `5-gate-cron-owner` — a scheduler nobody owns is a scheduler that stops firing and is noticed by a customer.

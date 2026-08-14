@@ -2,7 +2,7 @@
 
 Where SQL is allowed to live, how a new query gets written, and how this repo finds out whether the schema it reads actually exists.
 
-**Load when:** writing or changing a query, adding a screen that reads Neon, or touching `src/server/required-schema.ts`, `src/server/schema-guard.ts`, or `src/server/schema-diff.ts`.
+**Load when:** writing or changing a query, adding a screen that reads Supabase, or touching `src/server/required-schema.ts`, `src/server/schema-guard.ts`, or `src/server/schema-diff.ts`.
 
 **Authority elsewhere:**
 
@@ -30,7 +30,7 @@ Where SQL is allowed to live, how a new query gets written, and how this repo fi
 ## Migrations and schema requests
 
 - This repo never owns a migration — hard rule 1.
-- The flow: author `docs/schema-requests/NNN-<slug>.md`; a human transcribes the DDL verbatim into `arena-player-web/db/migrations/` and applies it by hand in the Neon SQL editor. Protocol, file format, and the DDL rules are in [schema-requests/README.md](../schema-requests/README.md).
+- The flow: author `docs/schema-requests/NNN-<slug>.md`; a human transcribes the DDL verbatim into `arena-player-web/db/migrations/` and applies it by hand in the Supabase SQL editor. Protocol, file format, and the DDL rules are in [schema-requests/README.md](../schema-requests/README.md).
 - Never `create table if not exists` in application code — hard rule 6. Application code fails loudly instead.
 
 ## The schema guard

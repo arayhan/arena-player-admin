@@ -1,6 +1,6 @@
 # Arena Player Admin — Architecture
 
-System design for the back-office. Product scope is [PRD.md](PRD.md); the inherited database contract is [database.md](database.md). This document holds the decisions: routes, auth, every SQL statement this app issues, the R2 read path, and the contracts that bind it to `arena-player-web`.
+System design for the back-office. Product scope is [PRD.md](PRD.md); the inherited database contract is [database.md](database.md). This document holds the decisions: routes, auth, every SQL statement this app issues, the proof read path, and the contracts that bind it to `arena-player-web`.
 
 Where a decision was already made in the web repo, this file points at it rather than restating it. A copied rule is a rule that drifts.
 
@@ -20,13 +20,14 @@ Where a decision was already made in the web repo, this file points at it rather
    every 15 min                  │
                                  │
                     ┌────────────┴─────────────┐
+                    │   one Supabase project   │
                     │                          │
-             ┌──────▼──────┐          ┌────────▼────────┐
-             │ Neon Postgres│          │ Cloudflare R2   │
-             │  bookings    │          │ private bucket  │
-             │  (shared)    │          │ (shared)        │
-             └──────▲──────┘          └────────▲────────┘
-                    │                          │  presigned GET, 120s
+             ┌──────▼───────┐         ┌────────▼─────────┐
+             │ Postgres     │         │ Supabase Storage │
+             │  bookings    │         │ private bucket   │
+             │  (shared)    │         │ (shared)         │
+             │  pooler:6543 │         │ signed URL, 120s │
+             └──────▲───────┘         └────────▲─────────┘
                     │                          │  browser fetches directly
         ┌───────────┴──────────┐               │
         │ arena-player-web     │               │
@@ -35,6 +36,8 @@ Where a decision was already made in the web repo, this file points at it rather
 ```
 
 Two apps, one database, one bucket, no shared runtime. They communicate exclusively through the `bookings` table. There is no HTTP call between them in either direction, and adding one would be a new coupling to justify rather than a convenience.
+
+**The database and the bucket are now two halves of one Supabase project, and both apps must point at the same one.** That is a tighter binding than two independent vendors were: a second project would give each app a schema that migrates on its own and a bucket the other cannot read, and the split-brain arrives as "the proof is missing" long before anyone suspects the wiring. Same failure as before, one fewer place to notice it.
 
 ## Route map
 
@@ -50,16 +53,16 @@ Two apps, one database, one bucket, no shared runtime. They communicate exclusiv
 | `POST /api/jobs/expire` | Node                | Bearer **or** session | Bearer for the scheduler, session for the manual button                                                                                            |
 | `middleware.ts`         | **Edge**            | —                     | Verifies the JWT and nothing else                                                                                                                  |
 
-**Server Components by default.** The one client component in v1 is the proof-image reload button (see [The R2 read path](#the-r2-read-path)). No TanStack Query, no zustand, no axios: filters live in the URL, the server reads Neon, and a mutation is a Server Action followed by `revalidatePath`.
+**Server Components by default.** The one client component in v1 is the proof-image reload button (see [The proof read path](#the-proof-read-path)). No TanStack Query, no zustand, no axios: filters live in the URL, the server reads Postgres, and a mutation is a Server Action followed by `revalidatePath`.
 
-**Every admin response carries `Cache-Control: private, no-store`.** A cached RSC payload serves an expired presigned URL, and a cached bookings list serves a status the admin already changed.
+**Every admin response carries `Cache-Control: private, no-store`.** A cached RSC payload serves an expired signed URL, and a cached bookings list serves a status the admin already changed.
 
 ### The server/client boundary
 
 Stated as a rule rather than a habit, because every exception to it is load-bearing:
 
 1. **Every file under `src/app/` and `src/modules/` is a Server Component unless it carries `"use client"`.** Data is read in the component that renders it. There is no fetch layer, no client cache, no loading state to keep in sync — the page either rendered with the row or it did not.
-2. **`"use client"` appears exactly once in v1**: the proof-image reload button. It exists because a 120-second presign expires on a page left open, and recovering from that needs an `onError` handler, which is a browser event.
+2. **`"use client"` appears exactly once in v1**: the proof-image reload button. It exists because a 120-second signed URL expires on a page left open, and recovering from that needs an `onError` handler, which is a browser event.
 3. **A second client component is a decision, not a detail.** It needs a written reason here, because each one is a place the "no client data-fetching" posture can quietly stop being true — a `"use client"` boundary is where somebody eventually adds a `useEffect` that fetches.
 4. **Mutations are Server Actions**, followed by `revalidatePath`. Not route handlers called by `fetch` from a client component; the guarded `update … where status in (…)` and its 409 live server-side, and the answer the admin needs is the re-rendered row.
 5. **Filters are URL state.** `searchParams` in, SQL parameters out. Shareable link, working back button, no store.
@@ -69,7 +72,7 @@ Stated as a rule rather than a habit, because every exception to it is load-bear
 
 ## Dependencies
 
-Resolved **2026-08-11**, and resolved rather than recalled: the shared half is quoted from `arena-player-web/package.json` as read on that date, the two clients web does not yet have are quoted from the npm registry. Step 02 installs this set and nothing outside it.
+Resolved **2026-08-11**, and resolved rather than recalled: the shared half is quoted from `arena-player-web/package.json` as read on that date. The two clients web does not yet have were **re-resolved 2026-08-14**, when the project moved to Supabase, and their cells are quoted from this repo's `package.json` as installed. Step 02 installs this set and nothing outside it.
 
 The reason this is exact rather than approximate: `pnpm check:domain` compares the **version range of every shared peer dependency** in both `package.json` files as well as the file bytes. `src/domain/dates.ts` imports `date-fns` and `@date-fns/tz`, whose v3 and v4 differ in the timezone API it relies on — so two repos on different majors produce a byte-identical file computing different dates, and nothing throws.
 
@@ -94,22 +97,25 @@ The reason this is exact rather than approximate: `pnpm check:domain` compares t
 
 ### Shared in waiting — this repo resolves them first
 
-Neither is installed in web today. This repo reaches Neon and R2 before web does, so **whatever it pins becomes the standard web adopts** when its own Phase 4 needs them. Recorded here for that reason: otherwise web resolves independently later and the two clients diverge for no reason anyone can reconstruct.
+Neither is installed in web today. This repo reaches Postgres and Supabase Storage before web does, so **whatever it pins becomes the standard web adopts** when its own Phase 4 needs them. Recorded here for that reason: otherwise web resolves independently later and the two clients diverge for no reason anyone can reconstruct.
 
-| Package                    | Version      | Note                                                                                                 |
-| -------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- |
-| `@neondatabase/serverless` | **1.1.0**    | Web: absent. Carries the `CustomTypesConfig` OID 1082/1184 override — see [database.md](database.md) |
-| `@aws-sdk/client-s3`       | **3.1106.0** | Web: absent. Both checksum flags set to `WHEN_REQUIRED`, identically to web's future client          |
+| Package                 | Version     | Note                                                                                                                               |
+| ----------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `postgres`              | **3.4.9**   | Web: absent. The SQL path. Carries the `types` DATE/TIMESTAMPTZ override **and** `prepare: false` — see [database.md](database.md) |
+| `@supabase/supabase-js` | **2.112.3** | Web: absent. **Storage only** — `createSignedUrl`. Nothing in this repo reads or writes `bookings` through it                      |
 
-**Revised from `3.1107.0` at install time (step 02).** `3.1107.0` was published 2026-08-10T18:55Z, inside pnpm's `minimumReleaseAge` cutoff at install — the exact trap `arena-player-web`'s own step 02 hit on `react-hook-form` (`docs/PROGRESS.md`, 2026-08-08). Same resolution: take the next-older already-aged version rather than relax the policy, `3.1106.0` (2026-08-07T18:58Z for `client-s3`, 2026-08-07T18:57Z for `s3-request-presigner` — still lockstep). Editing `package.json` alone was not enough; the stale resolution had to be cleared with `pnpm clean --lockfile` before reinstalling.
+**Two clients, one project, and the split is deliberate.** `supabase-js` can reach the database through PostgREST, and it must not: `pnpm check:schema` reads `information_schema.columns`, `pg_indexes` and `pg_get_constraintdef(pg_constraint.oid)`, and PostgREST cannot read the catalog at all. That check is the only thing that proves a migration was applied **and unedited** — [PRODUCT.md](PRODUCT.md) principle 4's second silent failure. Losing it to save a dependency is trading the check for the convenience it exists to replace. So: `postgres.js` for SQL, `supabase-js` for Storage, and no exceptions in either direction.
+
+**Both are exact pins**, matching every shared line above. `pnpm add` writes a caret range by default; it was normalised by hand here, because "whatever this repo pins becomes web's standard" only binds if it is a pin. A caret that drifts on web's install is the divergence this table exists to prevent.
+
+**pnpm's `minimumReleaseAge` still applies to whatever lands here.** A version published inside the cutoff fails at install, and the resolution is to take the next-older already-aged version rather than relax the policy — the trap `arena-player-web`'s step 02 hit on `react-hook-form` and this repo's step 02 hit again (`docs/PROGRESS.md`). Editing `package.json` alone is not enough when it strikes: the stale resolution has to be cleared with `pnpm clean --lockfile` before reinstalling.
 
 ### Admin-only — no web equivalent, and none expected
 
-| Package                         | Version  | Why                                                                                                                                                                                     |
-| ------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `jose`                          | 6.2.8    | HS256 sign/verify. The half of auth that runs on **Edge**                                                                                                                               |
-| `hash-wasm`                     | 4.12.0   | argon2id, pure WASM, no native binding — the Sumopod reason is above                                                                                                                    |
-| `@aws-sdk/s3-request-presigner` | 3.1106.0 | Presigned GET. **Pinned to the same version as `@aws-sdk/client-s3`**; the AWS SDK v3 packages release in lockstep and mixing minors across them is a class of bug with no useful error |
+| Package     | Version | Why                                                                  |
+| ----------- | ------- | -------------------------------------------------------------------- |
+| `jose`      | 6.2.8   | HS256 sign/verify. The half of auth that runs on **Edge**            |
+| `hash-wasm` | 4.12.0  | argon2id, pure WASM, no native binding — the Sumopod reason is above |
 
 ### Dev-only
 
@@ -122,7 +128,7 @@ Each of these is in web and is **not** an oversight here. Adding one back is a d
 | Not installed                 | Why not                                                                                                                                                                                                                                                    |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `gsap`, `@gsap/react`         | No motion layer and no `src/lib/motion.ts`. Hard rule 7 — DESIGN.md here is web's palette with none of its motion                                                                                                                                          |
-| `msw`                         | **No mock layer, by design.** This app is useless without real data; every screen reads live Neon from a Server Component. A mock here buys screens that pass with no database, which is the failure mode this repo exists downstream of                   |
+| `msw`                         | **No mock layer, by design.** This app is useless without real data; every screen reads live Postgres from a Server Component. A mock here buys screens that pass with no database, which is the failure mode this repo exists downstream of               |
 | `zustand`                     | No client state to hold. Filters are URL state                                                                                                                                                                                                             |
 | `@tanstack/react-query`       | No client data-fetching. Server Components read, Server Actions write, `revalidatePath` refreshes                                                                                                                                                          |
 | `axios`                       | No HTTP client. There is no call between the two apps in either direction, and adding one is a new coupling to justify                                                                                                                                     |
@@ -249,7 +255,7 @@ limit $6 offset $7;
 
 Four details in that statement are load-bearing:
 
-- **`::text` on both date columns.** Belt and braces alongside the `CustomTypesConfig` OID override in `src/server/db.ts`. If anyone ever "simplifies" the Neon client, this query still returns strings — and it documents why at the point of use.
+- **`::text` on both date columns.** Belt and braces alongside the OID 1082/1184 `types` override in `src/server/db.ts`. If anyone ever "simplifies" the client construction, or the driver is swapped again, this query still returns strings — and it documents why at the point of use.
 - **`count(*) over ()`** gives the page count in the same round trip. A second `count(*)` would need a duplicated WHERE clause, which is a drift surface.
 - **`order by time_slot` sorts correctly as plain text** because the canonical form is zero-padded 24-hour (`'06.00 - 08.00'` … `'22.00 - 24.00'`). That is a load-bearing property of the canonical string, not a coincidence, and it means the sort needs no lookup table. Do not add one.
 - **`$5 q_phone` is normalised in TypeScript, not in SQL.** Phones are stored `628xxxxxxxxx`. An admin typing `0812-3456-7890` yields digits `08123456789`, which does **not** substring-match `628123456789`. Run the query through `normalisePhone()` from `src/domain/phone.ts` first. This makes the admin the second real consumer of that module, which is exactly what put it in the byte-identical set.
@@ -299,7 +305,7 @@ Three details are deliberate:
 - **No status filter.** The detail page renders every state, including `expired` and `rejected` — the admin arrives here from a link or a stale tab as often as from the queue, and a 404 on a real booking is worse than showing a settled one.
 - **Zero rows is a 404, not an error.** An id that does not exist is a wrong URL. An id that exists but was actioned in another tab still returns its row; the mutation guards handle staleness, not this read.
 
-The same `::text` casts apply for the same reason as the list — belt and braces against the Neon DATE/TIMESTAMPTZ parsers, documented at the point of use.
+The same `::text` casts apply for the same reason as the list — belt and braces against the driver's DATE/TIMESTAMPTZ parsers, documented at the point of use.
 
 ### Rendering rules
 
@@ -356,35 +362,53 @@ This decision resolves an `UNRESOLVED` block in the other repo, so the other rep
 
 ---
 
-## The R2 read path
+## The proof read path
 
-The bucket is private and no public URL is ever created, by either repo. The admin renders each proof through a short-lived presigned GET it mints itself.
+The bucket is private and no public URL is ever created, by either repo. The admin renders each proof through a short-lived signed URL it mints itself:
 
-### Its own credential
+```ts
+const { data, error } = await supabase.storage
+  .from(process.env.SUPABASE_PROOFS_BUCKET!)
+  .createSignedUrl(proofKey, 120);
+```
 
-A **second** R2 API token, scoped **Object Read only** on `arena-player-proofs` alone. Three reasons, any one sufficient: an admin-side compromise then cannot delete or overwrite payment evidence; web's key is handed to the client at handover, so one shared key means one rotation breaks two apps; and this app has no legitimate reason to ever write.
+**The contract is the `key`, not a URL.** `bookings.proof_key` stores `proofs/${bookingDate}/${uuid}.${ext}` and nothing else; the URL is minted per render, never cached, never stored, never written back to a row. Storing a key rather than a URL is what makes the storage provider an implementation detail of `src/server/storage.ts`: a provider change rewrites one file and touches no row, which is the whole reason `proof_url` was renamed before any of this.
+
+### Read-only by policy, not by key
+
+The bucket is **private**, and this app reads it through an RLS `select` policy on `storage.objects` scoped to the proofs bucket, signing with the **anon** key. **Never `service_role`.**
+
+That rule carries three reasons, any one sufficient, and `service_role` throws away all three at once because it bypasses RLS entirely:
+
+1. **An admin-side compromise must not be able to destroy payment evidence.** No `insert`, no `update`, no `delete` policy exists for this app's role, so there is no code path — intended or injected — that can overwrite or remove a proof.
+2. **Web's credential reaches the client at handover.** Its uploader runs where the customer's browser can see it. One shared all-powerful key across both apps means one rotation breaks two apps, and it means the key that must never leave a server sits in the same project as one that must.
+3. **This app has no legitimate reason to ever write.** It reads proofs and updates `bookings.status`. Nothing else.
+
+The trap is that `service_role` **works**. Swap it in and every screen renders exactly as before; the only observable difference is that the three properties above are now false. That is why this is written as a rule and not as configuration advice.
+
+> **ASSUMPTION FLAGGED FOR PHASE 5:** the anon key is publishable by design — it is the key a browser client would hold — so the read-only property is enforced by the policy, and the policy alone. What has **not** been verified here is how narrowly that policy can be scoped while `createSignedUrl` still succeeds, and therefore what a leaked anon key would let a holder do against the proofs bucket. The mitigation already in place is that `proof_key` embeds a v4 UUID, so keys are not enumerable by guessing — but "not guessable" is not "not listable". Whoever wires the project must confirm the policy grants `select` on this bucket only, must confirm no `objects`-listing path is open to the same role, and must write the confirmed policy SQL into [schema-requests/](schema-requests/) so it is reproducible rather than a click someone once made.
 
 ### TTL: 120 seconds
 
-Not fifteen minutes. The URL is minted per page render and the image loads immediately. A presigned GET is a **bearer capability for a payment document** carrying a name, an amount, and a bank transfer — and it leaks through browser history and the `Referer` header. Two minutes covers a slow Indonesian mobile connection pulling a 2MB image plus a brief tab-away.
+Not fifteen minutes. The URL is minted per page render and the image loads immediately. A signed URL is a **bearer capability for a payment document** carrying a name, an amount, and a bank transfer — and it leaks through browser history and the `Referer` header. Two minutes covers a slow Indonesian mobile connection pulling a 2MB image plus a brief tab-away.
 
 The consequence is handled rather than ignored: an expiring URL on a page left open renders a broken image. The proof `<img>` carries an `onError` that swaps in a **"Muat ulang bukti"** button which re-fetches a fresh URL. That button is the only client component in v1.
 
 ### Server Component, not a proxy route
 
-The Server Component mints the URL per request and hands it to a plain `<img>`. The browser fetches directly from R2.
+The Server Component mints the URL per request and hands it to a plain `<img>`. The browser fetches the bytes from Supabase directly.
 
-The alternative — a `/api/proof/[id]` route streaming R2 through the app — pushes 2MB through the same Node process that serves the bookings list and runs the expiry job, on a host where nothing about memory or bandwidth is generous. It also discards the reason R2 was chosen in the first place: zero egress fees.
+The alternative — a `/api/proof/[id]` route streaming the object through the app — pushes 2MB through the same Node process that serves the bookings list and runs the expiry job, on a host where nothing about memory or bandwidth is generous. Signed URLs exist so that the storage service serves the bytes; proxying them buys nothing and spends the one resource this deployment is actually short of.
 
-Trade-off, stated rather than hidden: the presigned URL is copyable and works for anyone who has it, for its TTL. The 120s window is the mitigation, and it is acceptable because the only person who ever sees that page is the authenticated admin.
+Trade-off, stated rather than hidden: the signed URL is copyable and works for anyone who has it, for its TTL. The 120s window is the mitigation, and it is acceptable because the only person who ever sees that page is the authenticated admin.
 
 ### Three implementation traps
 
-1. **The checksum gotcha applies even though this app only reads.** `responseChecksumValidation: "WHEN_REQUIRED"` is the read-side half. Set **both** flags identically to web's so the two clients never diverge for no reason. See [database.md](database.md).
-2. **Never `next/image` on a proof.** It proxies the presigned URL through Next's optimizer, which writes the optimized output to an on-disk cache keyed by URL and serves it from a stable `/_next/image?url=…` path with a long TTL — copying a private payment document out of the private bucket and outliving the presign entirely. Hard rule 2 in [CLAUDE.md](../CLAUDE.md).
+1. **`createSignedUrl` is a network call, not local signing.** It returns `{ data, error }` over HTTP and can fail at render time — Storage unreachable, key wrong, policy wrong. Handle the `error` branch explicitly and render the reload button in it; never `data!.signedUrl`, which turns a recoverable render into a crashed page. **ASSUMPTION FLAGGED:** what this call does for a key that does not exist — error, or a URL that 404s when fetched — has not been verified here, and the orphan case in [database.md](database.md) makes it reachable. Verify against the real project and record the answer; until then, both branches must be survivable.
+2. **Never `next/image` on a proof.** It proxies the signed URL through Next's optimizer, which writes the optimized output to an on-disk cache keyed by URL and serves it from a stable `/_next/image?url=…` path with a long TTL — copying a private payment document out of the private bucket and outliving the signature entirely. Hard rule 2 in [CLAUDE.md](../CLAUDE.md).
 3. **`export const dynamic = 'force-dynamic'`** on the detail page. A cached RSC payload serves an expired URL.
 
-Packages: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`.
+Package: `@supabase/supabase-js`, in `src/server/storage.ts`, for Storage and nothing else. It never touches `bookings` — see [Shared in waiting](#shared-in-waiting--this-repo-resolves-them-first).
 
 ---
 
@@ -396,7 +420,7 @@ This repo may not create tables, and application code must never `create table i
 
 - One `select to_regclass('public.<table>')` per feature table, memoised in module scope.
 - **Positive cache only.** Cache `true` for the process lifetime; re-check on `false`. Applying a migration must not require a redeploy.
-- Missing → the feature's page renders a loud error naming the exact file: _"Jalankan `db/migrations/0002_create_slot_blocks.sql` di Neon SQL editor"_. Every mutating route for that feature returns **503** `{"error":"migration_missing","migration":"0002_create_slot_blocks"}`.
+- Missing → the feature's page renders a loud error naming the exact file: _"Jalankan `db/migrations/0002_create_slot_blocks.sql` di Supabase SQL editor"_. Every mutating route for that feature returns **503** `{"error":"migration_missing","migration":"0002_create_slot_blocks"}`.
 - A Postgres `42P01` (undefined_table) escaping anywhere becomes a 503 — never caught-and-return-empty, which would render "no blocks" for "no table".
 
 **The guard never sits in front of the bookings console.** Phase 2 needs zero new migrations. A missing Phase 4 table degrades this app to its core function; it does not brick it. Someone will otherwise wrap the root layout in the guard, which is why this sentence is here.
@@ -425,7 +449,9 @@ Three bindings to `arena-player-web`. All three fail silently if broken, which i
 
 ### 2. Web owns `db/migrations/`
 
-This repo has no migrations directory and never will. A schema change is written as a request in [schema-requests/](schema-requests/), transcribed verbatim into `arena-player-web/db/migrations/`, and applied by hand in the Neon SQL editor. Two repos migrating one database is a conflict with no owner to resolve it.
+This repo has no migrations directory and never will. A schema change is written as a request in [schema-requests/](schema-requests/), transcribed verbatim into `arena-player-web/db/migrations/`, and applied by hand in the Supabase SQL editor. Two repos migrating one database is a conflict with no owner to resolve it.
+
+**The Supabase CLI and the Supabase MCP do not change this.** Both can apply a migration, which means both can apply one from the wrong repo, from a branch, or from an agent that never asked. The rule is about ownership, not about how hard the SQL is to run — see [database.md](database.md).
 
 **`pnpm check:schema`** is how this repo finds out whether that happened. It asserts the table, its columns, `uniq_active_slot`, and that the `time_slot_canonical` CHECK constraint's literals are **set-equal to `TIME_SLOTS`**.
 
@@ -443,12 +469,12 @@ A feature here that writes rows web does not read is a silent no-op. For `slot_b
 
 Four scripts. Each is a Vitest run or a Node script; none is a convention anyone has to remember.
 
-| Script              | What it proves                                                                            | Needs credentials |
-| ------------------- | ----------------------------------------------------------------------------------------- | ----------------- |
-| `pnpm check:unit`   | `vitest run src` — colocated `*.test.ts` beside each module                               | **No, ever**      |
-| `pnpm check:domain` | `src/domain/` byte-identity + shared peer-dep ranges                                      | No                |
-| `pnpm check:schema` | `vitest run scripts` — live Neon: table, columns, indexes, CHECK literals vs `TIME_SLOTS` | Yes               |
-| `pnpm check:setup`  | Live preflight: Neon reachable, R2 presign round-trips                                    | Yes               |
+| Script              | What it proves                                                                                    | Needs credentials |
+| ------------------- | ------------------------------------------------------------------------------------------------- | ----------------- |
+| `pnpm check:unit`   | `vitest run src` — colocated `*.test.ts` beside each module                                       | **No, ever**      |
+| `pnpm check:domain` | `src/domain/` byte-identity + shared peer-dep ranges                                              | No                |
+| `pnpm check:schema` | `vitest run scripts` — live catalog read: table, columns, indexes, CHECK literals vs `TIME_SLOTS` | Yes               |
+| `pnpm check:setup`  | Live preflight: the pooler connects, a Storage signed URL round-trips                             | Yes               |
 
 `check:unit` and `check:schema` are separate globs on purpose, so unit tests never require a database. The acceptance for that is literal: move `.env.local` aside and `check:unit` still exits 0.
 
@@ -493,11 +519,11 @@ arena-player-admin/
 │   ├── server/                # every file opens with import "server-only"
 │   │   ├── auth/session.ts    # jose sign/verify
 │   │   ├── auth/password.ts   # hash-wasm argon2id — Node only
-│   │   ├── db.ts              # Neon + OID 1082/1184 override
+│   │   ├── db.ts              # postgres.js — prepare: false + OID 1082/1184 override
 │   │   ├── queries.ts         # every SQL statement in this document
 │   │   ├── required-schema.ts # declarative expectations for check:schema
 │   │   ├── schema-guard.ts
-│   │   └── storage.ts         # R2 S3Client + presigned GET
+│   │   └── storage.ts         # supabase-js — createSignedUrl, Storage only
 │   ├── components/            # cross-module UI primitives only
 │   ├── hooks/                 # cross-module React hooks, use-<thing>.ts. Same one-consumer
 │   │                          # rule; a module's own hooks stay there as *.queries.ts

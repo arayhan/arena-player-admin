@@ -1,7 +1,7 @@
 # 1a · step 06 — Database client and `check:schema`
 
 **Depends**: 05 (`check:schema` asserts against `TIME_SLOTS`)
-**Blocks**: Phase 2 entirely — every screen reads Neon
+**Blocks**: Phase 2 entirely — every screen reads Supabase Postgres
 **Agent**: `software-engineer`
 
 ## Goal
@@ -12,13 +12,15 @@ No query from [architecture.md](../architecture.md) is implemented here. This st
 
 ## The trap that has already cost a day once
 
-`neon()`'s default pg-types parsers return JS `Date` objects for `DATE` (oid `1082`) and `TIMESTAMPTZ` (oid `1184`). On an Asia/Jakarta machine that silently shifts `booking_date` back one day the moment it is serialized:
+**This trap survived the move to Supabase intact.** It is the driver's, not the provider's: `postgres.js` parses `DATE` (oid `1082`) and `TIMESTAMPTZ` (oid `1184`) into JS `Date` objects by default, exactly as the previous client did. On an Asia/Jakarta machine that silently shifts `booking_date` back one day the moment it is serialized:
 
 ```
 '2026-08-01'  →  Date object  →  JSON.stringify  →  '2026-07-31T17:00:00.000Z'
 ```
 
-TypeScript cannot catch it — driver rows are cast, not validated. The fix is a `CustomTypesConfig` override passing both OIDs through as raw strings, and the verification is a one-line assertion that belongs in a test rather than a comment.
+TypeScript cannot catch it — driver rows are cast, not validated. Only the idiom for the fix changed: instead of a `CustomTypesConfig`, `postgres.js` takes a `types` option whose custom type declares `from: [1082, 1184]` and a `parse` that returns the raw string untouched. The verification is a one-line assertion that belongs in a test rather than a comment.
+
+**The failure mode to watch for is a widened `from` list.** It takes OIDs, not names, so adding `23` "for completeness" turns every count and id in the app into a string with nothing throwing. Two OIDs, listed explicitly, and a test that says so.
 
 Every query in `architecture.md` **also** casts `::text` on both date columns. That is belt and braces on purpose: if the override is ever "simplified" away, the queries still return strings.
 
@@ -34,15 +36,22 @@ So `check:schema` reads `pg_get_constraintdef`, extracts the quoted literals, an
 
 ## Deliverables
 
-- **`src/server/db.ts`** — Neon serverless client, pooled connection string, `CustomTypesConfig` overriding OIDs `1082` and `1184`, `import "server-only"` at the top. A colocated `db.test.ts` asserting `types.getTypeParser(1082)('2026-08-01')` returns a **string**, runnable with no credentials
+- **`src/server/db.ts`** — `postgres.js` client against Supabase's **transaction pooler** (port `6543`), with **`prepare: false`** and a `types` override covering OIDs `1082` and `1184`, `import "server-only"` at the top. Constructed **lazily**, so importing the module with no `.env.local` never throws. A colocated `db.test.ts` asserting the custom type's `parse('2026-08-01')` returns a **string** and that its `from` list is exactly `[1082, 1184]`, runnable with no credentials
+
+  **`prepare: false` is mandatory, not tuning.** pgbouncer in transaction mode hands a different backend connection to each statement, so a prepared statement created on one is not there for the next. Leaving it at the default surfaces as intermittent "prepared statement does not exist" errors under exactly the concurrency the pooler was chosen for — which is why it is asserted, not commented
+
 - **`src/server/required-schema.ts`** — declarative: tables, columns and types, indexes with their uniqueness and partial predicates, named constraints. Phase 4's `slot_blocks` entry is added there, not in the check
-- **`scripts/check-schema.test.ts`**, wired as `pnpm check:schema` → `vitest run scripts`, asserting against live Neon:
+- **`scripts/check-schema.test.ts`**, wired as `pnpm check:schema` → `vitest run scripts`, asserting against the live Supabase database. **This is why the driver is `postgres.js` and not `supabase-js`/PostgREST**: these four assertions read `information_schema.columns`, `pg_indexes` and `pg_get_constraintdef`, none of which PostgREST exposes. The check would have to be deleted to adopt the REST client, and it is the only thing in either repo that guards source against the database:
   1. `bookings` exists with the expected columns and types (`information_schema.columns`)
   2. `uniq_active_slot` exists, is **unique**, and carries the expected partial predicate (`pg_indexes`)
   3. `time_slot_canonical`'s literals, from `pg_get_constraintdef`, are **set-equal to `TIME_SLOTS`**
   4. `status_valid` allows exactly the four statuses this app knows about
 - **`src/server/schema-guard.ts`** — `select to_regclass('public.<table>')` per feature table, memoised, **positive cache only**: cache `true` for the process lifetime, re-check on `false`. Applying a migration must not require a redeploy
-- **`pnpm check:setup`** — the live preflight: Neon reachable on the pooled string, R2 credentials valid, a presigned GET round-trips. Same glob as `check:schema`, credentials required
+- **`src/server/storage.ts`** — `@supabase/supabase-js` client built from `SUPABASE_URL` + `SUPABASE_ANON_KEY`, exposing `PROOF_URL_TTL_SECONDS = 120` and one function that calls `createSignedUrl(key, PROOF_URL_TTL_SECONDS)` on `SUPABASE_PROOFS_BUCKET`. Lazily constructed for the same reason as `db.ts`, `import "server-only"` at the top. **No `@aws-sdk` packages and no checksum configuration** — the R2 flexible-checksum workaround belonged to the S3 client and is deleted, not ported
+
+  Unlike AWS presigning, this call is a **server round-trip**, so it can fail before a URL exists. That failure must be distinguishable from an expired one, because the recovery UI at step 05 is written for the second and would otherwise silently absorb the first
+
+- **`pnpm check:setup`** — the live preflight, in two named halves so a red exit says which: the database reachable on the pooler string, and the storage credential signing a URL for a real object. Same glob as `check:schema`, credentials required
 
 ## Two things the guard must not do
 
@@ -54,13 +63,18 @@ So `check:schema` reads `pg_get_constraintdef`, extracts the quoted literals, an
 
 ```bash
 # the OID override exists and is asserted, not just present
-grep -n "1082\|1184" src/server/db.ts           # expect: both
+grep -n "1082\|1184" src/server/db.ts           # expect: both, and NO other OID
+grep -n "prepare" src/server/db.ts              # expect: prepare: false — the pooler requires it
 pnpm check:unit                                # the parser assertion runs with NO credentials
+
+# the R2 client is gone, not merely unused
+grep -rn "aws-sdk\|S3Client\|getSignedUrl\|r2.cloudflarestorage\|R2_" src/ scripts/ package.json
+# expect: no match anywhere
 
 # secrets cannot reach the client bundle
 grep -n 'server-only' src/server/db.ts src/server/storage.ts   # expect: both files
 
-# --- against live Neon ---
+# --- against the live Supabase database ---
 pnpm check:schema ; echo "$?"
 # Before web's Phase 4 migration is applied, expect NON-ZERO with a message naming
 # the missing `bookings` table. That is the correct result today, not a failure of this step.

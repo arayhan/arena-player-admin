@@ -1,11 +1,11 @@
 /**
  * Pure comparison logic for `pnpm check:schema`, split out of
  * `scripts/check-schema.test.ts` specifically so it can be proven correct
- * with NO database connection. `check:schema` itself needs live Neon
+ * with NO database connection. `check:schema` itself needs live Supabase
  * credentials to fetch the actual `pg_get_constraintdef` text; this file is
  * what happens to that text once fetched, and it is exactly the part that
  * decides whether a slot-string drift is caught. See db.test.ts for the
- * same "credential-free proof" pattern applied to the Neon OID override.
+ * same "credential-free proof" pattern applied to the driver OID override.
  *
  * CLAUDE.md hard rule 3 states the `import "server-only"` requirement
  * absolutely, for every file in src/server/, with no carve-out — so this

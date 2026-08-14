@@ -1,6 +1,6 @@
 /**
  * `pnpm check:schema` — the check neither repo had before this file: nothing
- * guards source against the DATABASE. Runs against LIVE Neon, credentials
+ * guards source against the DATABASE. Runs against LIVE Supabase Postgres, credentials
  * required (`DATABASE_URL` in `.env.local`).
  *
  * Reads `REQUIRED_TABLES` from `src/server/required-schema.ts` and asserts,
@@ -90,7 +90,7 @@ describe.each(REQUIRED_TABLES)("check:schema — $name", (table: RequiredTable) 
     expect(
       columns.length > 0,
       `table "${table.name}" was not found in the public schema. ` +
-        `Has the migration for it been applied by hand in the Neon SQL editor? See docs/database.md.`,
+        `Has the migration for it been applied by hand in the Supabase SQL editor? See docs/database.md.`,
     ).toBe(true);
 
     for (const expectedColumn of table.columns) {

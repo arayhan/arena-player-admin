@@ -8,7 +8,7 @@ What tooling cannot check when writing TypeScript and React in this repo.
 
 - [CLAUDE.md](../../CLAUDE.md) — hard rules and folder structure
 - [docs/dev-rules.md](../dev-rules.md) — naming, where a thing goes, import zones, Server Component default, data fetching, accessibility, error handling
-- [docs/architecture.md](../architecture.md) — SQL contracts, the dependency decisions, the R2 read path
+- [docs/architecture.md](../architecture.md) — SQL contracts, the dependency decisions, the proof read path
 - [docs/DESIGN.md](../DESIGN.md) — normative colour, type, spacing, contrast
 
 ## Already enforced — do not re-argue it
@@ -23,7 +23,7 @@ Everything below is honour-system: no command fails when it is ignored.
 
 - **`type` by default; `interface` only when it extends something or describes a database row shape.** `SessionPayload extends JWTPayload`, the `Required*` shapes in `src/server/required-schema.ts`, and the row types in `scripts/check-schema.test.ts` are interfaces. Props, unions, and derived aliases are all `type`.
 - **Never `enum`.** There is not one in the repo. A closed set is a `const` array with `as const`, and its type is derived from it — see `src/domain/slots.ts` and `src/domain/status.ts`. This keeps the runtime list and the type from drifting apart.
-- **No `any`, anywhere.** There is none in `src/`. Type assertions are permitted but rare, always as narrow as possible, and always carry a comment saying what makes them safe — see the Neon proxy in `src/server/db.ts` and the row cast in `src/server/schema-guard.ts`.
+- **No `any`, anywhere.** There is none in `src/`. Type assertions are permitted but rare, always as narrow as possible, and always carry a comment saying what makes them safe — see the postgres.js proxy in `src/server/db.ts` and the row cast in `src/server/schema-guard.ts`.
 - **`satisfies` only to constrain a literal without widening it.** One use in the repo (`ACTIVE_STATUSES` in `src/domain/status.ts`). It is not a default habit.
 - **Function declarations, not arrow constants,** for components and module-level functions. There is no `export const Foo = () => …` in this codebase.
 - **Prefer an exhaustive lookup object to a conditional.** A `Record<Union, string>` keyed by a domain union makes a new member a compile error instead of an unstyled fallthrough — `src/components/status-pill.tsx` and `src/components/button.tsx` both do this, and architecture.md rejects `clsx`/`tailwind-merge` on the same grounds.

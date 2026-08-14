@@ -28,7 +28,7 @@ export default defineConfig({
     // the command line and Vitest only runs CLI-specified files that also
     // match `include`. `check:unit` passes `src` on the command line, which
     // narrows the match down to colocated tests — scripts/check-schema.test.ts
-    // and scripts/check-setup.test.ts (live Neon + R2 credentials) stay out
+    // and scripts/check-setup.test.ts (live Supabase Postgres + Storage credentials) stay out
     // of that run by construction, not by remembering to exclude them.
     include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,tsx}"],
     environment: "node",
