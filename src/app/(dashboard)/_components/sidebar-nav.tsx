@@ -39,8 +39,6 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Booking",
     href: "/bookings",
-    disabled: true,
-    badge: "Segera",
     icon: (
       <>
         <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.7" />
