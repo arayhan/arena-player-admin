@@ -14,7 +14,7 @@ Keep the skip-loudly behaviour regardless — it is what runs whenever a side is
 
 ## Why byte-identical, and why nothing catches this by itself
 
-`uniq_active_slot` compares `time_slot` as **text**. `'06.00 - 08.00'` and `'06.00-08.00'` are two different slots as far as the index is concerned. A one-character drift between the repos means this app writes rows the public site cannot match, and **anti-double-booking silently stops working for both**. Nothing throws. No test fails. The first symptom is two teams arriving at the same field.
+`uniq_active_slot` compares `time_slot` as **text**. `'06.00 - 07.00'` and `'06.00-07.00'` are two different slots as far as the index is concerned. A one-character drift between the repos means this app writes rows the public site cannot match, and **anti-double-booking silently stops working for both**. Nothing throws. No test fails. The first symptom is two teams arriving at the same field.
 
 The copy also carries its dependencies. `dates.ts` imports `date-fns` and `@date-fns/tz`, and v3 and v4 differ in exactly the timezone API it relies on — so two repos on different majors produce a **byte-identical file computing different dates**, which a naive byte diff would happily approve.
 

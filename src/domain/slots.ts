@@ -1,26 +1,40 @@
 /**
- * The nine bookable time slots, in canonical order and canonical string form.
+ * The eighteen bookable time slots, in canonical order and canonical string
+ * form — ONE HOUR EACH, 06.00 through 24.00. Nine 2-hour slots became eighteen
+ * 1-hour slots on 2026-08-15, so a visitor can book a single hour instead of
+ * being forced into a 2-hour block; every slot string changed, and every row
+ * already sold under the old strings does not match a new one (see
+ * db/migrations/ for the constraint that replaced the 2-hour list).
  *
  * BYTE-IDENTICAL WITH arena-player-admin at this same path. `uniq_active_slot`
- * compares `time_slot` as TEXT, so '06.00 - 08.00' and '06.00-08.00' are two
+ * compares `time_slot` as TEXT, so '06.00 - 07.00' and '06.00-07.00' are two
  * different slots to Postgres. One character of drift between the repos means
  * the admin writes rows this site cannot match and anti-double-booking silently
- * stops working for both. `pnpm check:shared` guards the copy; the
+ * stops working for both. `pnpm check:domain` guards the copy; the
  * `time_slot_canonical` constraint in db/migrations/ guards the format.
  *
  * No dependencies here, deliberately — importing TIME_SLOTS must not cost a
  * date library. See the shared-code contract in docs/architecture.md.
  */
 export const TIME_SLOTS = [
-  "06.00 - 08.00",
-  "08.00 - 10.00",
-  "10.00 - 12.00",
-  "12.00 - 14.00",
-  "14.00 - 16.00",
-  "16.00 - 18.00",
-  "18.00 - 20.00",
-  "20.00 - 22.00",
-  "22.00 - 24.00",
+  "06.00 - 07.00",
+  "07.00 - 08.00",
+  "08.00 - 09.00",
+  "09.00 - 10.00",
+  "10.00 - 11.00",
+  "11.00 - 12.00",
+  "12.00 - 13.00",
+  "13.00 - 14.00",
+  "14.00 - 15.00",
+  "15.00 - 16.00",
+  "16.00 - 17.00",
+  "17.00 - 18.00",
+  "18.00 - 19.00",
+  "19.00 - 20.00",
+  "20.00 - 21.00",
+  "21.00 - 22.00",
+  "22.00 - 23.00",
+  "23.00 - 24.00",
 ] as const;
 
 export type TimeSlot = (typeof TIME_SLOTS)[number];
@@ -51,7 +65,7 @@ export function canonicalSlot(input: string): TimeSlot | null {
   return isTimeSlot(candidate) ? candidate : null;
 }
 
-/** 6 for '06.00 - 08.00'. Used to derive elapsed slots. */
+/** 6 for '06.00 - 07.00'. Used to derive elapsed slots. */
 export function slotStartHour(slot: TimeSlot): number {
   return Number(slot.slice(0, 2));
 }

@@ -32,17 +32,20 @@ describe("todayAtField", () => {
 });
 
 describe("bookingWindow", () => {
-  it("is today plus the next 13 days, earliest first", () => {
+  it("is today plus the next 91 days, earliest first", () => {
+    // ~3 months — see the reasoning on BOOKING_WINDOW_DAYS in dates.ts.
     const window = bookingWindow(NOON_FIELD);
     expect(window).toHaveLength(BOOKING_WINDOW_DAYS);
+    expect(BOOKING_WINDOW_DAYS).toBe(92);
     expect(window[0]).toBe("2026-08-09");
-    expect(window[13]).toBe("2026-08-22");
+    expect(window[91]).toBe("2026-11-08");
   });
 
-  it("crosses a month boundary without repeating or skipping a date", () => {
+  it("crosses several month boundaries without repeating or skipping a date", () => {
     const window = bookingWindow(new Date("2026-08-25T04:00:00Z"));
     expect(window[0]).toBe("2026-08-25");
-    expect(window[13]).toBe("2026-09-07");
+    // Aug (6 days left) + Sep (30) + Oct (31) + 24 days into Nov = 91 days out.
+    expect(window[91]).toBe("2026-11-24");
     expect(new Set(window).size).toBe(BOOKING_WINDOW_DAYS);
   });
 });
@@ -69,8 +72,8 @@ describe("isWithinBookingWindow", () => {
   it("includes both ends and excludes the days either side", () => {
     expect(isWithinBookingWindow("2026-08-08", NOON_FIELD)).toBe(false);
     expect(isWithinBookingWindow("2026-08-09", NOON_FIELD)).toBe(true);
-    expect(isWithinBookingWindow("2026-08-22", NOON_FIELD)).toBe(true);
-    expect(isWithinBookingWindow("2026-08-23", NOON_FIELD)).toBe(false);
+    expect(isWithinBookingWindow("2026-11-08", NOON_FIELD)).toBe(true);
+    expect(isWithinBookingWindow("2026-11-09", NOON_FIELD)).toBe(false);
   });
 
   it("rejects a malformed date rather than throwing", () => {
@@ -83,36 +86,36 @@ describe("isPastSlot", () => {
     // The regression this project already shipped once. An hour-only check
     // leaves yesterday bookable, because at 12:00 today none of yesterday's
     // start hours look elapsed.
-    expect(isPastSlot("2026-08-08", "06.00 - 08.00", NOON_FIELD)).toBe(true);
-    expect(isPastSlot("2026-08-08", "22.00 - 24.00", NOON_FIELD)).toBe(true);
-    expect(isPastSlot("2020-01-01", "22.00 - 24.00", NOON_FIELD)).toBe(true);
+    expect(isPastSlot("2026-08-08", "06.00 - 07.00", NOON_FIELD)).toBe(true);
+    expect(isPastSlot("2026-08-08", "23.00 - 24.00", NOON_FIELD)).toBe(true);
+    expect(isPastSlot("2020-01-01", "23.00 - 24.00", NOON_FIELD)).toBe(true);
   });
 
   it("treats no slot of a future date as past", () => {
-    expect(isPastSlot("2026-08-10", "06.00 - 08.00", NOON_FIELD)).toBe(false);
+    expect(isPastSlot("2026-08-10", "06.00 - 07.00", NOON_FIELD)).toBe(false);
   });
 
   it("splits today at the current hour, counting a slot in progress as past", () => {
-    // 12:30 WITA: 10.00-12.00 is over, 12.00-14.00 is underway.
+    // 12:30 WITA: 11.00-12.00 is over, 12.00-13.00 is underway.
     const halfPastNoon = new Date("2026-08-09T04:30:00Z");
-    expect(isPastSlot("2026-08-09", "08.00 - 10.00", halfPastNoon)).toBe(true);
-    expect(isPastSlot("2026-08-09", "10.00 - 12.00", halfPastNoon)).toBe(true);
-    expect(isPastSlot("2026-08-09", "12.00 - 14.00", halfPastNoon)).toBe(true);
-    expect(isPastSlot("2026-08-09", "14.00 - 16.00", halfPastNoon)).toBe(false);
+    expect(isPastSlot("2026-08-09", "08.00 - 09.00", halfPastNoon)).toBe(true);
+    expect(isPastSlot("2026-08-09", "11.00 - 12.00", halfPastNoon)).toBe(true);
+    expect(isPastSlot("2026-08-09", "12.00 - 13.00", halfPastNoon)).toBe(true);
+    expect(isPastSlot("2026-08-09", "13.00 - 14.00", halfPastNoon)).toBe(false);
   });
 
   it("closes a slot the moment its start hour arrives, not after it ends", () => {
     // Found by this test failing on a wrong first assumption. At exactly 12:00
     // the 12.00 slot is starting NOW — offering it would sell a session the
     // team cannot arrive for. The boundary is deliberately inclusive.
-    expect(isPastSlot("2026-08-09", "12.00 - 14.00", NOON_FIELD)).toBe(true);
-    expect(isPastSlot("2026-08-09", "14.00 - 16.00", NOON_FIELD)).toBe(false);
+    expect(isPastSlot("2026-08-09", "12.00 - 13.00", NOON_FIELD)).toBe(true);
+    expect(isPastSlot("2026-08-09", "13.00 - 14.00", NOON_FIELD)).toBe(false);
   });
 
   it("rolls over at field midnight (WITA), not UTC or Jakarta midnight", () => {
     // 16:30Z: still the 9th in UTC AND in Jakarta, but 00:30 on the 10th in
     // WITA — so the 9th is fully past and the 10th is today, nothing elapsed.
-    expect(isPastSlot("2026-08-09", "22.00 - 24.00", LATE_EVENING)).toBe(true);
-    expect(isPastSlot("2026-08-10", "06.00 - 08.00", LATE_EVENING)).toBe(false);
+    expect(isPastSlot("2026-08-09", "23.00 - 24.00", LATE_EVENING)).toBe(true);
+    expect(isPastSlot("2026-08-10", "06.00 - 07.00", LATE_EVENING)).toBe(false);
   });
 });

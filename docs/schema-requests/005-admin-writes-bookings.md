@@ -121,7 +121,7 @@ alter table bookings
   drop constraint status_valid;
 
 -- The five literals are duplicated from src/domain/status.ts rather than
--- factored into a DOMAIN, for the same reason the nine slot strings are: a
+-- factored into a DOMAIN, for the same reason the eighteen slot strings are: a
 -- DOMAIN needs `alter column type` on bookings, by hand, on the race-guard
 -- table. Drift between the copies is caught by arena-player-admin's
 -- `pnpm check:schema`, which reads these out of pg_get_constraintdef and

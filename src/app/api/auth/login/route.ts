@@ -100,16 +100,35 @@ export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   const html = wantsHtml(request);
 
+  // Read once, up front: the empty check has to happen before the rate limiter
+  // and the password check happens after it, and cloning the request to read
+  // the body twice is a needless copy of a payload we already hold.
+  const formData = await request.formData().catch(() => null);
+  const rawPassword = formData?.get("password");
+  const candidate = typeof rawPassword === "string" ? rawPassword : "";
+
+  if (candidate.length === 0) {
+    // BEFORE the rate limiter, deliberately. An empty submit is a mis-tap, not
+    // a guess: there is one account and no password reset, so five mis-taps on
+    // a phone at the field used to lock the app for the whole window — and the
+    // message blamed a wrong password for a field that was never filled.
+    //
+    // This does not weaken the uniform-failure rule in docs/rules/security.md.
+    // It reveals only that the server can tell "you typed nothing", which is
+    // not a fact about the credential. Wrong-password and unknown-state stay
+    // identical to each other and both still pay the argon2 cost below.
+    if (html) {
+      return NextResponse.redirect(new URL("/login?error=empty", request.url), 303);
+    }
+    return NextResponse.json({ error: "empty_password" }, { status: 400 });
+  }
+
   if (checkRateLimit(ip) === "limited") {
     if (html) {
       return NextResponse.redirect(new URL("/login?error=rate_limited", request.url), 303);
     }
     return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
   }
-
-  const formData = await request.formData().catch(() => null);
-  const rawPassword = formData?.get("password");
-  const candidate = typeof rawPassword === "string" ? rawPassword : "";
 
   const configuredHash = process.env.ADMIN_PASSWORD_HASH;
   const hashToCheck = configuredHash && configuredHash.length > 0 ? configuredHash : FALLBACK_HASH;

@@ -113,10 +113,10 @@ create table site_rules (
 create unique index uniq_site_rule_order on site_rules (sort_order);
 
 -- THE RATE CARD. Keyed by slot AND day type, one price per combination.
--- At most 18 rows: nine slots by two day types.
+-- At most 36 rows: eighteen slots by two day types.
 --
 -- Peak / off-peak is NOT a column. It is a property of the slot, so the price
--- rows ARE the peak boundary — if 16.00 - 18.00 costs more than 14.00 - 16.00,
+-- rows ARE the peak boundary — if 16.00 - 17.00 costs more than 15.00 - 16.00,
 -- that is where prime time starts, and no constant in either repo says so.
 -- Moving the boundary is editing a price, not shipping a deploy.
 create table rate_card (
@@ -132,16 +132,18 @@ create table rate_card (
 
   updated_at   timestamptz not null default now(),
 
-  -- The same nine literals as bookings.time_slot_canonical and
-  -- src/domain/slots.ts. Deliberately duplicated rather than factored into a
+  -- The same eighteen literals as bookings.time_slot_canonical and
+  -- src/domain/slots.ts — the 1-hour set, after 20260815_alter_time_slot_1h.sql.
+  -- Deliberately duplicated rather than factored into a
   -- DOMAIN, for the reason 001 gives: a DOMAIN needs `alter column type` on
   -- bookings by hand, on the one table the race guard sits on. Drift between
   -- the copies is caught by arena-player-admin's `pnpm check:schema`, which
   -- reads these out of pg_get_constraintdef and asserts set equality with
   -- TIME_SLOTS.
   constraint rate_card_time_slot_canonical check (time_slot in (
-    '06.00 - 08.00','08.00 - 10.00','10.00 - 12.00','12.00 - 14.00','14.00 - 16.00',
-    '16.00 - 18.00','18.00 - 20.00','20.00 - 22.00','22.00 - 24.00'
+    '06.00 - 07.00','07.00 - 08.00','08.00 - 09.00','09.00 - 10.00','10.00 - 11.00','11.00 - 12.00',
+    '12.00 - 13.00','13.00 - 14.00','14.00 - 15.00','15.00 - 16.00','16.00 - 17.00','17.00 - 18.00',
+    '18.00 - 19.00','19.00 - 20.00','20.00 - 21.00','21.00 - 22.00','22.00 - 23.00','23.00 - 24.00'
   )),
 
   -- Which calendar days are 'weekend' is NOT decided here and is not derivable
@@ -234,7 +236,7 @@ Added to `src/server/required-schema.ts`, asserted by `pnpm check:schema`:
 - `site_rules` exists with columns `id`, `body`, `sort_order`, `updated_at`; `uniq_site_rule_order` exists and is **unique** on `(sort_order)`; `site_rules_body_length` exists
 - `rate_card` exists with columns `id`, `time_slot`, `day_type`, `price_rupiah`, `updated_at`
 - `uniq_rate_card_slot` exists and is **unique** on `(time_slot, day_type)`
-- `rate_card_time_slot_canonical` exists, and its literals read out of `pg_get_constraintdef` are **set-equal to `TIME_SLOTS`** from `src/domain/slots.ts` — the same assertion `bookings` and `slot_blocks` already carry, and the reason the nine strings are repeated rather than factored out
+- `rate_card_time_slot_canonical` exists, and its literals read out of `pg_get_constraintdef` are **set-equal to `TIME_SLOTS`** from `src/domain/slots.ts` — the same assertion `bookings` and `slot_blocks` already carry, and the reason the eighteen strings are repeated rather than factored out
 - `rate_card_day_type_valid` and `rate_card_price_positive` exist
 
 `check:schema` cannot assert that the table is **populated**, and must not try. An empty `rate_card` is a valid schema and a broken product; that gap is a gate ([6-gate-settings-and-expiry.md](../tasks/6-gate-settings-and-expiry.md)), not a check.
@@ -249,4 +251,4 @@ Runtime, before the migration lands: `src/server/schema-guard.ts` returns false;
 
 > **ASSUMPTION FLAGGED — "admin phone" and "WhatsApp number" are treated as one value.** `whatsapp_number` is stored in `wa.me` form (`628…`, no `+`, no punctuation) because that is what `wa.me` and the WhatsApp Business API expect, and because `src/domain/phone.ts` normalises visitor numbers into the same shape. If the field also has a voice number that is not on WhatsApp, that is a **second key**, not a rename of this one — a display number pushed through `wa.me` produces a link that opens a chat with nobody.
 
-> **ASSUMPTION FLAGGED — bulk pricing.** The per-slot table prices a four-hour booking as two slots summed. If the field gives a discount for consecutive slots, that is not expressible here and the schema would need a rule table, not another column. Ask before the first revenue figure is shown to the client, because a total that is 10% high is not visibly wrong.
+> **ASSUMPTION FLAGGED — bulk pricing, and the 1-hour split made it likelier to bite.** The per-slot table prices a four-hour booking as **four** slots summed. If the field gives a discount for consecutive slots, that is not expressible here and the schema would need a rule table, not another column. This mattered less when a slot was two hours and a long booking meant two rows; with eighteen 1-hour slots the ordinary two-hour game is now two rows and a four-hour block is four, so consecutive-slot bookings are the common case rather than the long tail. Ask before the first revenue figure is shown to the client, because a total that is 10% high is not visibly wrong.

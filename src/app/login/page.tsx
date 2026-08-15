@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { Button } from "@/components/button";
 import { Field } from "@/components/field";
+import { WINDOW_MINUTES } from "@/server/auth/rate-limit";
 
 // Server Component. No client-side JS: the form posts to
 // `/api/auth/login` as a plain HTML `<form>`, and a failed login redirects
@@ -21,7 +22,13 @@ type LoginPageProps = {
 
 function errorMessage(error: string | undefined): string | null {
   if (error === "rate_limited") {
-    return "Terlalu banyak percobaan masuk. Coba lagi dalam beberapa menit.";
+    // The wait is interpolated, never written as a literal: the admin is at
+    // the field with a customer waiting, and a wait stated wrongly is worse
+    // than one not stated at all.
+    return `Terlalu banyak percobaan masuk. Coba lagi dalam ${WINDOW_MINUTES} menit.`;
+  }
+  if (error === "empty") {
+    return "Kata sandi belum diisi.";
   }
   if (error === "invalid") {
     return "Kata sandi salah.";
@@ -43,12 +50,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <h1>Masuk</h1>
         <p className="mt-1 text-sm text-ink-muted">Arena Player — back office admin.</p>
 
-        <form
-          method="POST"
-          action="/api/auth/login"
-          className="mt-6 flex flex-col gap-4"
-          noValidate
-        >
+        {/* No `noValidate`: the input's `required` is the cheapest guard there
+            is. It stops an empty submit in the browser, before a request that
+            would otherwise have cost the admin one of their attempts. The
+            route still refuses an empty password on its own — this is the
+            first of two fences, not the only one. */}
+        <form method="POST" action="/api/auth/login" className="mt-6 flex flex-col gap-4">
           <Field
             label="Kata sandi"
             htmlFor="password"

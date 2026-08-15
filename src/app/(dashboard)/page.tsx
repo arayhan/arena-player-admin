@@ -20,8 +20,20 @@ export default function Home() {
     <>
       <Breadcrumbs items={[{ label: "Beranda" }]} />
       <h1>Beranda</h1>
+
+      {/* NOT the empty-queue success state, and it must not be "improved" into
+          one. There is no bookings table, no query and no data layer yet — so
+          this app cannot see the queue rather than having looked and found it
+          empty. "Antrean kosong" here would tell the admin nothing needs their
+          attention while the truth is that nothing can be read at all, which
+          is the reassuring lie PRODUCT.md principle 4 exists to prevent.
+
+          When the queue is live and genuinely empty, that is a different
+          state with different words and its own component — see
+          docs/tasks/6-step-01-direction.md. */}
       <p className="text-sm text-ink-muted">
-        Scaffold. Antrean booking, statistik, dan tombol ekspirasi manual menyusul di Fase 2/3.
+        Antrean belum tersambung ke database. Booking dari situs publik akan muncul di sini setelah
+        database siap — saat ini belum ada yang bisa diproses.
       </p>
     </>
   );

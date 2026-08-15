@@ -39,6 +39,8 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Booking",
     href: "/bookings",
+    disabled: true,
+    badge: "Segera",
     icon: (
       <>
         <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.7" />
@@ -55,6 +57,8 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Statistik",
     href: "/stats",
+    disabled: true,
+    badge: "Segera",
     icon: (
       <path
         d="M4 20V11M10 20V4M16 20V14M20 20V8"
@@ -78,7 +82,7 @@ const NAV_ITEMS: NavItem[] = [
       </>
     ),
     disabled: true,
-    badge: "Fase 4",
+    badge: "Segera",
   },
 ];
 
@@ -86,6 +90,8 @@ const SISTEM_ITEMS: NavItem[] = [
   {
     label: "Ekspor",
     href: "/export",
+    disabled: true,
+    badge: "Segera",
     icon: (
       <>
         <path
@@ -107,6 +113,8 @@ const SISTEM_ITEMS: NavItem[] = [
   {
     label: "Pengaturan",
     href: "/settings",
+    disabled: true,
+    badge: "Segera",
     icon: (
       <>
         <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
@@ -124,9 +132,21 @@ const SISTEM_ITEMS: NavItem[] = [
 function NavLink({ item }: { item: NavItem }) {
   if (item.disabled) {
     return (
+      // `role="link"` matters more than it looks: without it a screen reader
+      // announces this as plain text, not a disabled destination, so the
+      // admin is never told the item exists. Five of six items are disabled
+      // until their routes land, which makes this the dominant nav experience
+      // rather than an edge case.
+      //
+      // No `opacity` either. The previous `opacity-55` measured 2.50:1 in
+      // light and 3.16:1 in dark, under the 4.5 bar in both — and this app is
+      // read outdoors in daylight. `ink-muted` alone carries the muting at
+      // 6.94:1 light / 7.40:1 dark, with the badge doing the real work of
+      // saying why the item cannot be used.
       <span
+        role="link"
         aria-disabled="true"
-        className="flex cursor-not-allowed items-center gap-3 rounded-control p-2 text-sm font-medium text-ink-muted opacity-55"
+        className="flex cursor-not-allowed items-center gap-3 rounded-control p-2 text-sm font-medium text-ink-muted"
       >
         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 flex-none">
           {item.icon}
@@ -185,9 +205,16 @@ export function SidebarNav() {
         >
           A
         </span>
+        {/* No field name here on purpose. "Lapangan Lombok" used to sit under
+            "Admin" and appears in no product document — the only other mention
+            in the repo is PROGRESS.md recording that the MARKET narrowed to
+            Lombok, which is a timezone fact, not the field's name. A plausible
+            label rendered as fact is what PRODUCT.md's must-not-fabricate rule
+            guards, and a field manager who sees their own field named wrongly
+            stops trusting every figure this app will later show them.
+            Restore it when the client confirms the real name. */}
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-medium text-ink">Admin</span>
-          <span className="truncate text-xs text-ink-muted">Lapangan Lombok</span>
         </span>
         <ThemeToggle />
         <form method="POST" action="/api/auth/logout">

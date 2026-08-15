@@ -37,12 +37,12 @@ The file is opened by one person, in a spreadsheet, in Indonesia. Each of these 
 | **UTF-8 without a BOM**       | Excel reads the file as ANSI and mangles every accented or non-ASCII character | Emit a UTF-8 BOM                                                                                                              |
 | **Team names contain commas** | column shift, silently, for that row only                                      | RFC 4180 quoting, doubled `"` inside quoted fields                                                                            |
 | **`notes` contains newlines** | up to 500 characters, and a raw newline splits one row into two                | Quoted field, newlines preserved inside quotes or normalised — pick one and say which                                         |
-| **`time_slot` reformatted**   | the nine canonical strings are what `uniq_active_slot` compares as text        | Emit verbatim from the row. Never re-render from a Date                                                                       |
+| **`time_slot` reformatted**   | the eighteen canonical strings are what `uniq_active_slot` compares as text    | Emit verbatim from the row. Never re-render from a Date                                                                       |
 | **Dates re-formatted**        | a locale-formatted date is ambiguous and unsortable                            | `YYYY-MM-DD`, from the DATE value, no timezone arithmetic on the way out                                                      |
 
 **Never export `proof_key`, and never a signed URL.** The key is a path into a private bucket and a signed URL is a **bearer capability** — anyone holding it fetches a customer's payment document. A CSV is the single most forwardable artefact this app produces. Hard rule 2's family, one file further out.
 
-**Never silently truncate.** The queue is bounded at 126 active rows, but `rejected` and `expired` accumulate forever, so this is the one surface with an unbounded count. Set an explicit ceiling, and when a filter exceeds it **fail loudly with a message telling the admin to narrow the date range** — a file that is quietly short is worse than a file that was refused, because it is indistinguishable from a quiet period.
+**Never silently truncate.** The queue is bounded at 1,656 active rows (18 slots × 92 days, up from 126 before the 2026-08-15 slot split), but `rejected` and `expired` accumulate forever — now at twice the old rate — so this is the one surface with an unbounded count. Set an explicit ceiling, and when a filter exceeds it **fail loudly with a message telling the admin to narrow the date range** — a file that is quietly short is worse than a file that was refused, because it is indistinguishable from a quiet period.
 
 ## Acceptance
 

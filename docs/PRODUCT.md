@@ -49,7 +49,7 @@ Nothing here is differentiated in the market sense, and future work should not m
 ## Operating Context
 
 - **This app is a launch dependency of the public site**, which is not obvious and is easy to schedule wrongly. Expiry — pending older than 24h becomes `expired` and frees the slot — runs from a cron here. Until that ships and is scheduled, an abandoned booking holds its slot forever and the public site slowly fills with slots nobody can book. Order: web Phase 4 → admin 1a–3 → public launch → admin 4–5.
-- Single field, nine 2-hour slots, 06.00–24.00, Asia/Jakarta, booking window today + 13 days. Inherited, not decided here.
+- Single field, **eighteen 1-hour slots**, 06.00–24.00, Asia/Makassar (WITA), booking window today + 91 days (`BOOKING_WINDOW_DAYS = 92`, roughly three months). Inherited, not decided here. The slots were nine 2-hour blocks until 2026-08-15; web split them so a visitor can book a single hour instead of being forced into a 2-hour block, and every slot string changed with them.
 - **The admin is the bot, for now.** Until the WhatsApp bot ships, they paste the `/booking?date=&time=` link by hand. That is a web-repo concern, but it explains why the admin is already in WhatsApp when they reach this app.
 - Cancellation has no customer-facing route anywhere. The customer messages the admin; the admin rejects the booking here. That is why **reject must work on `confirmed` rows, not only `pending` ones** — it is the cancellation mechanism, and it is the one place the Ketentuan's 1×24h rule touches this repo.
 - Payment is a 50% DP by bank transfer, evidenced by an uploaded image. The admin quotes the amount over WhatsApp. **This app shows prices, as of 2026-08-15.** That reverses a standing rule and is recorded as a decision rather than left to contradict itself: the client is supplying a rate card, it varies by slot and day type, and it lands in `site_settings` ([003](schema-requests/003-site-settings.md)) rather than in code. Until those figures arrive, **no figure is invented** — a price-bearing surface renders a missing-rate-card state, never a placeholder number. Web's own rule forked at its 2026-08-11 checkpoint (`/` shows none, `/booking` renders one once the rate card lands), so the two apps are no longer symmetrical here and neither should be described as following the other.
@@ -76,7 +76,7 @@ The full token system, measured contrast, and the motion ceiling live in [DESIGN
 
 ## Evidence on Hand
 
-**Confirmed real:** the `bookings` schema (contract, written and reviewed), the four statuses and what each means, the nine canonical slot strings, the brand colours, the 1×24h cancellation rule, and that the admin confirms manually today.
+**Confirmed real:** the `bookings` schema (contract, written and reviewed), the four statuses and what each means, the eighteen canonical slot strings, the brand colours, the 1×24h cancellation rule, and that the admin confirms manually today.
 
 **Not yet supplied — must not be fabricated:** the admin's own account credentials, the bank account the DP lands in (this app displays no bank detail, but the user guide will reference it), the external scheduler account that will call the expiry job, and **the rate card** — `TODO(content)` in web, and shared: the admin quotes the DP amount over WhatsApp today, so this app depends on the same missing figure `/booking` does.
 

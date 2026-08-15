@@ -49,23 +49,31 @@ describe("diffSets — this is the assertion check:schema exists for", () => {
 
   /**
    * PLANTED VIOLATION, run in-process rather than against a live database
-   * (none is reachable in this environment — see PROGRESS.md). Mirrors the
-   * exact drift the step file's own acceptance script plants with `sed`:
-   * '22.00 - 24.00' -> '22.00 - 23.59'. This proves the comparison itself
-   * — the part `check:schema` delegates to `diffSets` — actually catches a
-   * one-character slot drift, which is the entire reason this check exists.
+   * (none is reachable in this environment — see PROGRESS.md). Proves the
+   * comparison itself — the part `check:schema` delegates to `diffSets` —
+   * actually catches a one-character slot drift, which is the entire reason
+   * this check exists.
+   *
+   * The canary slot is DERIVED from `TIME_SLOTS`, never written as a literal.
+   * An earlier version hardcoded '22.00 - 24.00'; when the slot set moved from
+   * nine 2-hour windows to eighteen 1-hour ones, that string stopped existing
+   * and this test failed for a reason that had nothing to do with what it
+   * proves. Which slot drifts is irrelevant to the assertion — only that one
+   * does.
    */
   it("catches a one-character slot-string drift, in both directions", () => {
-    const driftedSlots = TIME_SLOTS.map((slot) =>
-      slot === "22.00 - 24.00" ? "22.00 - 23.59" : slot,
-    );
+    const canary = TIME_SLOTS[TIME_SLOTS.length - 1]!;
+    const drifted = canary.replace("24.00", "23.59");
+    expect(drifted, "the canary must actually differ from the real slot").not.toBe(canary);
+
+    const driftedSlots = TIME_SLOTS.map((slot) => (slot === canary ? drifted : slot));
     const definition = timeSlotConstraintDef(driftedSlots);
 
     const diff = diffSets(extractLiterals(definition), TIME_SLOTS);
 
     expect(diff.equal).toBe(false);
-    expect(diff.missing).toEqual(["22.00 - 24.00"]);
-    expect(diff.extra).toEqual(["22.00 - 23.59"]);
+    expect(diff.missing).toEqual([canary]);
+    expect(diff.extra).toEqual([drifted]);
   });
 
   it("catches a missing status value (subset drift)", () => {

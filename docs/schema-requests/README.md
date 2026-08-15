@@ -55,7 +55,7 @@ Once a request is annotated `LANDED`, it is historical. Nothing in this repo rea
 - **Additive only, unless there is no alternative.** Never `alter` `bookings` casually. `uniq_active_slot` is the only race guard in the system; a migration that widens its predicate, or changes `time_slot`'s type, is a migration that can silently turn off anti-double-booking. [005](005-admin-writes-bookings.md) is the worked example of the exception: it alters `bookings` twice, in one transaction, and opens by arguing why each change had no additive form and why the guard's predicate stays exactly as it is.
 - **Wrap in `begin;` / `commit;`.** A paste that fails halfway must not leave a table created _without_ its unique index. This is the reason web's own migration is wrapped, and it applies to every request here.
 - **Name every constraint.** `check:schema` reads constraints by name; an anonymous constraint is one it cannot assert on.
-- **Repeat the nine canonical slot strings rather than factoring them out.** A Postgres `DOMAIN` would deduplicate them and needs `alter column type` on `bookings` — a hand-run destructive change to the one table the race guard sits on. Duplicate the literal and let `check:schema` detect the drift.
+- **Repeat the eighteen canonical slot strings in SQL rather than factoring them out — and import them in TypeScript, never retype them.** A Postgres `DOMAIN` would deduplicate the SQL side and needs `alter column type` on `bookings`, a hand-run destructive change to the one table the race guard sits on. Duplicate the literal and let `check:schema` detect the drift. **The 2026-08-15 slot change is this rule's receipt.** `TIME_SLOTS` went from nine 2-hour strings to eighteen 1-hour ones; every DDL in this folder needed hand-editing, and `src/server/required-schema.ts` needed **nothing**, because it passes the imported `TIME_SLOTS` straight into `expectedLiterals` instead of holding a second copy. `check:schema` started demanding eighteen literals on its own. Had those strings been retyped there, the check would have gone on cheerfully asserting the old nine against a database nobody had migrated — a green check proving the wrong thing, which is the only outcome worse than a red one.
 - **Say what web must read.** A table this repo writes and web never reads is a silent no-op, which is the failure class this project exists to avoid. If web must read it, the deployment ordering goes in a gate file, not a step.
 
 ## Current requests
@@ -67,13 +67,17 @@ Once a request is annotated `LANDED`, it is historical. Nothing in this repo rea
 | [003](003-site-settings.md)         | `site_settings`, `site_rules`, `rate_card`, `bank_accounts` — Pengaturan      | requested (Phase 2)              |
 | [004](004-bookings-on-supabase.md)  | `bookings` — web's existing migration, applied on Supabase                    | requested (Phase 2)              |
 | [005](005-admin-writes-bookings.md) | `bookings` — nullable `proof_key`, and a fifth status `deleted`               | requested (phase unassigned)     |
+| [006](006-time-slot-1h.md)          | `time_slot_canonical` — eighteen 1-hour slots replace nine 2-hour             | **LANDED in web, unapplied**     |
+
+**006 is the only entry already written in `db/migrations/`.** Web authored `20260815_alter_time_slot_1h.sql` itself on 2026-08-15 when `TIME_SLOTS` split into eighteen 1-hour slots, so it skipped the author-here-transcribe-there half of the protocol entirely and only the applying is owed. It **must be applied after 004's migration and before `check:schema` can go green** — it drops the constraint that file creates. Neither of them has been run against a live database yet.
 
 **004 authors no DDL.** It records that web's already-written `bookings` migration has to be applied verbatim in the Supabase SQL editor now that the project has moved off Neon, and that both repos must point at the same Supabase project. A provider move is not a schema change, but "who applies the unapplied migration, and where" is exactly the question this folder exists to keep from falling between two repos.
 
 **005 is the only request that alters `bookings`**, and the only one that is not additive. It carries its own argument for why the first DDL rule below permits it, why its two changes share one transaction, and why `uniq_active_slot` is not touched despite a fifth status arriving. Read that file before running it; do not treat it as ordinary.
 
-**Two orderings are not free choices:**
+**Three orderings are not free choices:**
 
+- **004 then 006, always.** 006 is `drop constraint` + `add constraint` against the table 004 creates. Run alone it errors; run before 004 it is simply not runnable. This is the only pair where the wrong order fails loudly rather than silently, which makes it the least dangerous of the three.
 - **002 and 005 both own the same status literals.** 005 adds `'deleted'` to `BOOKING_STATUSES`, and `check:schema` asserts `booking_events`' two status CHECKs set-equal to it. Land **005 first** and transcribe 002 with five literals; if 002 lands first, 005's migration gains four `alter table booking_events` statements, written out in its DDL section.
 - **003 is order-critical for two of its five values, and only two.** The WhatsApp number and the Ketentuan are hardcoded in `arena-player-web` today, so an admin editing them before web reads them produces a value that looks saved and is silently stale. The address, the Maps embed and the bank accounts are visible `menyusul` placeholders — a blank is safe, a confidently wrong value is not. The full table is in that file.
 
@@ -81,7 +85,7 @@ Once a request is annotated `LANDED`, it is historical. Nothing in this repo rea
 
 ## Sketched, not requested
 
-**`slot_closures`** — recurring weekly closures, keyed `(day_of_week, time_slot)` using only the existing nine canonical slots, where an empty table means fully open. It is the reshaped survivor of the descoped operating-hours config ([PRD.md](../PRD.md)), and it carries **no contract change**: the availability API still returns nine entries, some of them just come back `booked`.
+**`slot_closures`** — recurring weekly closures, keyed `(day_of_week, time_slot)` using only the existing eighteen canonical slots, where an empty table means fully open. It is the reshaped survivor of the descoped operating-hours config ([PRD.md](../PRD.md)), and it carries **no contract change**: the availability API still returns eighteen entries, some of them just come back `booked`.
 
 It is not requested because the client has confirmed 06.00–24.00 every day, so it would ship as an empty table behind a config screen with nothing to configure. Ask whether they ever close on a recurring basis first. If the answer is yes, the DDL is:
 
@@ -94,8 +98,9 @@ create table slot_closures (
   created_at  timestamptz not null default now(),
   constraint slot_closures_dow_valid check (day_of_week between 0 and 6),
   constraint slot_closures_time_slot_canonical check (time_slot in (
-    '06.00 - 08.00','08.00 - 10.00','10.00 - 12.00','12.00 - 14.00','14.00 - 16.00',
-    '16.00 - 18.00','18.00 - 20.00','20.00 - 22.00','22.00 - 24.00'
+    '06.00 - 07.00','07.00 - 08.00','08.00 - 09.00','09.00 - 10.00','10.00 - 11.00','11.00 - 12.00',
+    '12.00 - 13.00','13.00 - 14.00','14.00 - 15.00','15.00 - 16.00','16.00 - 17.00','17.00 - 18.00',
+    '18.00 - 19.00','19.00 - 20.00','20.00 - 21.00','21.00 - 22.00','22.00 - 23.00','23.00 - 24.00'
   ))
 );
 create unique index uniq_slot_closure on slot_closures (day_of_week, time_slot);

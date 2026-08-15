@@ -32,7 +32,8 @@ create table slot_blocks (
   reason     text,
   created_at timestamptz not null default now(),
 
-  -- The same nine literals as bookings.time_slot_canonical and src/domain/slots.ts.
+  -- The same eighteen literals as bookings.time_slot_canonical and
+  -- src/domain/slots.ts — the 1-hour set, after 20260815_alter_time_slot_1h.sql.
   -- Deliberately duplicated rather than factored into a DOMAIN: a DOMAIN would
   -- require altering bookings.time_slot's type by hand, which is a destructive
   -- change to the one table the entire race guard sits on. Drift between the
@@ -40,8 +41,9 @@ create table slot_blocks (
   -- this constraint's literals out of pg_get_constraintdef and asserts set
   -- equality with TIME_SLOTS.
   constraint slot_blocks_time_slot_canonical check (time_slot in (
-    '06.00 - 08.00','08.00 - 10.00','10.00 - 12.00','12.00 - 14.00','14.00 - 16.00',
-    '16.00 - 18.00','18.00 - 20.00','20.00 - 22.00','22.00 - 24.00'
+    '06.00 - 07.00','07.00 - 08.00','08.00 - 09.00','09.00 - 10.00','10.00 - 11.00','11.00 - 12.00',
+    '12.00 - 13.00','13.00 - 14.00','14.00 - 15.00','15.00 - 16.00','16.00 - 17.00','17.00 - 18.00',
+    '18.00 - 19.00','19.00 - 20.00','20.00 - 21.00','21.00 - 22.00','22.00 - 23.00','23.00 - 24.00'
   )),
 
   constraint slot_blocks_reason_length check (reason is null or length(reason) <= 200)
@@ -69,7 +71,7 @@ union
 select time_slot from slot_blocks where block_date = $1;
 ```
 
-Blocked slots map to the existing API status **`booked`**. No new API status, no new client-side rendering, and the FIRM "always nine entries, always canonical order" contract survives untouched.
+Blocked slots map to the existing API status **`booked`**. No new API status, no new client-side rendering, and the FIRM "always eighteen entries, always canonical order" contract survives untouched.
 
 ### 2. The booking insert gains a guard, inside the statement
 

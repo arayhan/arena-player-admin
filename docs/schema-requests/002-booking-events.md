@@ -76,7 +76,7 @@ create table booking_events (
 
   -- The same four literals as bookings.status_valid and src/domain/status.ts.
   -- Deliberately duplicated rather than factored into a DOMAIN, for the same
-  -- reason 001 duplicates the nine slot strings: a DOMAIN needs an ALTER on
+  -- reason 001 duplicates the eighteen slot strings: a DOMAIN needs an ALTER on
   -- bookings.status by hand. Drift between the copies is caught by
   -- arena-player-admin's `pnpm check:schema`, which reads these literals out of
   -- pg_get_constraintdef and asserts set equality with BOOKING_STATUSES.
@@ -178,7 +178,7 @@ The amount is not in this statement, on purpose. It comes from `rate_card` via t
 
 **Two properties of that query are load-bearing.** It reads `to_status = 'confirmed'` rather than `b.status = 'confirmed'`, so a booking confirmed in March and later refunded, rejected or soft-deleted still shows the March income it genuinely produced — the journal records what happened, the row records what is, and revenue is a question about what happened. And a booking confirmed twice cannot exist, because `booking_events_moved` rejects a no-op transition and the confirm mutation's own `where status = 'pending'` guard returns zero rows the second time.
 
-**No third index is added for this.** `booking_events_recent_idx` on `(created_at desc)` already covers a time window, and `architecture.md` settled the scale question at max 126 active rows — a few thousand journal rows a year does not earn a partial index on `to_status`, and one added "for the chart" is one nobody will ever measure.
+**No third index is added for this.** `booking_events_recent_idx` on `(created_at desc)` already covers a time window, and `architecture.md`'s scale question is now max **1,656** active rows (18 slots × 92 days, up from 126) — still a few thousand journal rows a year, which does not earn a partial index on `to_status`, and one added "for the chart" is one nobody will ever measure. Note that the 126 figure this reasoning was originally borrowed from has itself been reopened in `architecture.md`; the conclusion here survives the new number because journal volume is driven by admin actions, not by the active-row ceiling, but it is borrowed reasoning either way.
 
 ## Verification
 

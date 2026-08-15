@@ -116,15 +116,53 @@ describe("POST /api/auth/login — candidateMatchesHash && configuredHash wiring
  * in this file would fail alongside it.
  */
 describe("POST /api/auth/login — the dev bypass is gated to `next dev`", () => {
-  it("rejects an empty password against an unset hash, because NODE_ENV is not development", async () => {
+  // Deliberately a NON-empty password. An empty one is now refused at the
+  // top of the route, before the bypass is ever consulted, so it would pass
+  // this assertion while proving nothing about the gate.
+  it("rejects an arbitrary password against an unset hash, because NODE_ENV is not development", async () => {
     delete process.env.ADMIN_PASSWORD_HASH;
     process.env.SESSION_SECRET = "test-session-secret-at-least-32-bytes-long";
     expect(process.env.NODE_ENV).not.toBe("development");
 
-    const response = await POST(makeRequest({ password: "", ip: "198.51.100.20" }));
+    const response = await POST(makeRequest({ password: "anything at all", ip: "198.51.100.20" }));
 
     expect(response.status).toBe(401);
     expect(response.headers.get("set-cookie")).toBeNull();
+  });
+});
+
+/**
+ * An empty submit must not cost the admin an attempt.
+ *
+ * There is ONE account and no password reset — the password lives in a
+ * handover document. Five mis-taps on a phone at the field previously locked
+ * the app for fifteen minutes, and the message blamed a wrong password for a
+ * field that was never filled. These two cases are the fence around that.
+ */
+describe("POST /api/auth/login — an empty password is not a failed attempt", () => {
+  beforeEach(() => {
+    process.env.ADMIN_PASSWORD_HASH = REAL_HASH;
+    process.env.SESSION_SECRET = "test-session-secret-at-least-32-bytes-long";
+  });
+
+  it("answers `empty`, not `invalid_credentials`", async () => {
+    const response = await POST(makeRequest({ password: "", ip: "198.51.100.30" }));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "empty_password" });
+  });
+
+  it("does not consume a rate-limit attempt — MAX_ATTEMPTS+1 empties still leave the admin able to log in", async () => {
+    const ip = "198.51.100.31";
+
+    for (let i = 0; i < MAX_ATTEMPTS + 1; i++) {
+      const response = await POST(makeRequest({ password: "", ip }));
+      expect(response.status).toBe(400);
+    }
+
+    // The real password must still work. If empty submits counted, this is 429.
+    const response = await POST(makeRequest({ password: REAL_PASSWORD, ip }));
+    expect(response.status).toBe(200);
   });
 });
 

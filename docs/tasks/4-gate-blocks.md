@@ -31,7 +31,7 @@ The full request, DDL, and rationale: [../schema-requests/001-slot-blocks.md](..
 
 ### 1. Was the DDL transcribed verbatim? — **BLOCKS everything downstream**
 
-The comments in `001-slot-blocks.md` carry the reasoning for constraints that look redundant and are not — in particular why the nine slot literals are duplicated rather than factored into a `DOMAIN`. A "cleaned up" transcription loses that and invites the domain refactor later, which needs `alter column type` on `bookings`.
+The comments in `001-slot-blocks.md` carry the reasoning for constraints that look redundant and are not — in particular why the eighteen slot literals are duplicated rather than factored into a `DOMAIN`. A "cleaned up" transcription loses that and invites the domain refactor later, which needs `alter column type` on `bookings`.
 
 - Transcribed without edits, comments included? _____
 - If edited, what changed and why: _____

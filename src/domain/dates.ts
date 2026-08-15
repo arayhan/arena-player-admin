@@ -27,8 +27,18 @@ import { slotStartHour, type TimeSlot } from "./slots";
 const FIELD_TZ = tz("Asia/Makassar");
 const DATE_FORMAT = "yyyy-MM-dd";
 
-/** Today plus the next 13 days. 14 dates inclusive. */
-export const BOOKING_WINDOW_DAYS = 14;
+/**
+ * Today plus the next 91 days. 92 dates inclusive — roughly three months.
+ *
+ * 92, NOT A ROUND 90, because a calendar month varies (28-31 days) and this is
+ * a fixed day count rather than "three calendar months" arithmetic — the field
+ * runs on WITA and this file already carries enough timezone subtlety without
+ * adding month-boundary math. 92 is the longest span any three CONSECUTIVE
+ * calendar months can total (e.g. May-Jun-Jul or Dec-Jan-Feb across a leap
+ * February both sum to 92), so this window is never short of "three months
+ * ahead" no matter which month a visitor opens the site in.
+ */
+export const BOOKING_WINDOW_DAYS = 92;
 
 export function todayAtField(now: Date = new Date()): string {
   return format(now, DATE_FORMAT, { in: FIELD_TZ });

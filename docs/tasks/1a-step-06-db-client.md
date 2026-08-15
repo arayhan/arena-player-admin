@@ -28,7 +28,7 @@ Every query in `architecture.md` **also** casts `::text` on both date columns. T
 
 `check:domain` guards source against source. **Nothing in either repo guards source against the database.**
 
-The nine canonical slot strings currently live in three places — `src/domain/slots.ts`, the `time_slot_canonical` CHECK constraint, and web's copy — becoming four once `slot_blocks` lands. Any one of them can drift from the others with no error anywhere, and the consequence is the same silent anti-double-booking failure as a source drift.
+The eighteen canonical slot strings currently live in three places — `src/domain/slots.ts`, the `time_slot_canonical` CHECK constraint, and web's copy — becoming four once `slot_blocks` lands. Any one of them can drift from the others with no error anywhere, and the consequence is the same silent anti-double-booking failure as a source drift.
 
 So `check:schema` reads `pg_get_constraintdef`, extracts the quoted literals, and asserts **set equality** with `TIME_SLOTS`.
 

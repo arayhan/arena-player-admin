@@ -40,9 +40,12 @@ Supplied by the user 2026-08-12:
 
 Unsupplied since the beginning. It now gates more than it did: the admin's revenue estimate in Statistik and the "Rekap pendapatan" dataset in Ekspor both derive from it, and web's `/booking` is the one page allowed to render a rupiah figure.
 
-- Tarif normal (06.00–16.00), per 2-hour slot: \_\_\_\_\_
-- Tarif prime time (16.00–24.00), per 2-hour slot: \_\_\_\_\_
+**Ask for the per-HOUR rate, not the per-slot rate.** Slots became one hour each on 2026-08-15 (eighteen of them, 06.00–24.00), so a rate quoted "per slot" from an earlier conversation means two hours and would be charged as one. If the client answers with a 2-hour figure, halve it explicitly with them rather than in the schema — `rate_card` stores one price per slot and there is nowhere for the ambiguity to be caught later.
+
+- Tarif normal (06.00–16.00), **per 1-hour slot**: \_\_\_\_\_
+- Tarif prime time (16.00–24.00), **per 1-hour slot**: \_\_\_\_\_
 - Is prime time real, or is there one flat rate? \_\_\_\_\_
+- Does a multi-hour booking get a discount? \_\_\_\_\_ _(the per-slot table sums; a four-hour game is now four rows, not two — see the bulk-pricing flag in [../schema-requests/003-site-settings.md](../schema-requests/003-site-settings.md))_
 - DP percentage — the Ketentuan says 50%. Confirmed still 50%? \_\_\_\_\_
 
 **Until this is answered the revenue figures stay hidden**, not estimated against a guess. A number on a dashboard is read as a fact.

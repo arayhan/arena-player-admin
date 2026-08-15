@@ -19,7 +19,7 @@ Without a record, the failure is the ordinary one for this project: nobody is wr
 Three properties of that file are load-bearing and are the reason this is a signature and not a checklist tick:
 
 - **The `begin;` / `commit;` wrapper.** A paste that fails halfway must not leave `bookings` created _without_ `uniq_active_slot`. That partial unique index is the only anti-double-booking guard in the entire system. A table created without it works perfectly, throws nothing, passes every screen in the admin app, and lets the public site sell one slot twice — forever, silently. Pasting statement-by-statement, or dropping the wrapper because the editor complained, produces exactly that.
-- **The nine canonical slot literals in `time_slot_canonical`.** They are duplicated from `src/domain/slots.ts` on purpose rather than factored into a Postgres `DOMAIN`; the reasoning is in the migration's own comments. A "tidied" paste that reformats or reorders them breaks nothing visibly and breaks `uniq_active_slot`'s text comparison permanently, in both repos at once.
+- **The canonical slot literals in `time_slot_canonical`.** They are duplicated from `src/domain/slots.ts` on purpose rather than factored into a Postgres `DOMAIN`; the reasoning is in the migration's own comments. A "tidied" paste that reformats or reorders them breaks nothing visibly and breaks `uniq_active_slot`'s text comparison permanently, in both repos at once. **This file still carries the nine 2-hour literals and that is correct — do not edit it.** `TIME_SLOTS` became eighteen 1-hour strings on 2026-08-15, and the replacement constraint is a second migration, [006](006-time-slot-1h.md). Paste this one as written, then that one.
 - **`bookings_pending_expiry_idx`.** Phase 3's expiry `UPDATE` relies on it. Its absence is a performance problem that only appears once there are rows.
 
 Do not run it through the Supabase CLI, a migrations tool, or an MCP client. By hand, in the SQL editor, whole file, one execution — the same rule as every other request here.
@@ -36,6 +36,8 @@ Both are the subject of [../tasks/2-gate-web-supabase.md](../tasks/2-gate-web-su
 ## Verification
 
 `pnpm check:schema` — the same 10 assertions it already carries, against the Supabase connection. No new assertion is added by this request, which is the point: the expectation in `src/server/required-schema.ts` is provider-independent and stays untouched.
+
+**It will still be red after this file alone, on exactly one assertion.** `time_slot_canonical` is asserted set-equal to `TIME_SLOTS`, which is now eighteen 1-hour strings, and this migration writes the nine 2-hour ones. That is the check working, not a transcription error — it goes green only once [006](006-time-slot-1h.md) is applied on top. Apply both, in order, then read the output once.
 
 Read the output rather than inferring it from the table existing. The two assertions that matter here are `uniq_active_slot` being present **and unique** with its partial predicate intact, and the `time_slot_canonical` literals being **set-equal to `TIME_SLOTS`**. Both are green in a database where the paste half-succeeded and a human glanced at the table list.
 

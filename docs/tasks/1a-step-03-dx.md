@@ -24,7 +24,7 @@ The commands that let anyone — human or agent — prove a claim instead of ass
 
 **No `check:budget`, no `src/lib/motion.ts`.** One authenticated user on wifi. The KB and LCP contract has no consumer here.
 
-If a doc check ever earns its place in this repo, the candidate is a real one: assert that no file under `docs/` other than `schema-requests/` contains a full nine-element list of canonical slot strings. That is this repo's actual drift surface. Do not build it speculatively — build it the first time a copy appears.
+If a doc check ever earns its place in this repo, the candidate is a real one: assert that no file under `docs/` other than `schema-requests/` contains a full eighteen-element list of canonical slot strings. That is this repo's actual drift surface. Do not build it speculatively — build it the first time a copy appears.
 
 ## Acceptance
 

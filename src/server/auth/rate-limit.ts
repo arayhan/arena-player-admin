@@ -14,6 +14,16 @@ import "server-only";
 export const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 
+/**
+ * The lockout window, in whole minutes, for the message the admin reads.
+ *
+ * Derived rather than written twice: the login page tells them how long to
+ * wait, and a hardcoded "15" in that string is a value that drifts the moment
+ * someone tunes WINDOW_MS. The admin is standing at the field with a customer
+ * waiting — a wait that is stated wrongly is worse than one not stated.
+ */
+export const WINDOW_MINUTES = Math.round(WINDOW_MS / 60_000);
+
 interface Bucket {
   count: number;
   resetAt: number;

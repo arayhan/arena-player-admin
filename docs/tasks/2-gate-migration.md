@@ -8,7 +8,12 @@
 
 ## Where things actually stand
 
-`../arena-player-web/db/migrations/20260809_create_bookings.sql` **exists and has never been applied.** `DATABASE_URL` here reaches Supabase — the connection is fine, the credentials are fine, the database is empty of this table. The request record for this application is [../schema-requests/004-bookings-on-supabase.md](../schema-requests/004-bookings-on-supabase.md).
+**Two migrations exist in web and neither has ever been applied.** `DATABASE_URL` here reaches Supabase — the connection is fine, the credentials are fine, the database is empty of this table.
+
+1. `../arena-player-web/db/migrations/20260809_create_bookings.sql` — the table. Request record: [../schema-requests/004-bookings-on-supabase.md](../schema-requests/004-bookings-on-supabase.md).
+2. `../arena-player-web/db/migrations/20260815_alter_time_slot_1h.sql` — replaces `time_slot_canonical` with the eighteen 1-hour literals, after `TIME_SLOTS` split on 2026-08-15. Request record: [../schema-requests/006-time-slot-1h.md](../schema-requests/006-time-slot-1h.md).
+
+**Order is not optional and it is not a preference:** 2 drops the constraint 1 creates. Applied alone, or first, it errors. Applied in order, `check:schema` goes green; applied as 1 only, `check:schema` stays red on the literals assertion — correctly, because the constraint would then hold nine strings the app can no longer produce.
 
 [PRD.md](../PRD.md) names `check:schema` going green as the Phase 2 entry gate in as many words: _"Blocked on web Phase 4. Not on its UI — on the migration being applied. `check:schema` is how that is confirmed, not a conversation."_
 
@@ -64,12 +69,16 @@ A matching ref on the **wrong port** is a performance and prepared-statement pro
 - `uniq_active_slot` present **and unique**? \_\_\_\_\_ _(`check:schema` asserts this; read its output, do not infer it from the table existing)_
 - `bookings_pending_expiry_idx` present? \_\_\_\_\_ _(Phase 3's expiry UPDATE relies on it)_
 
-### 3. Were the nine slot literals edited? — **BLOCKS row 3**
+### 3. Was the second migration applied, and were the slot literals edited? — **BLOCKS row 3**
 
-The `time_slot_canonical` CHECK duplicates the nine canonical strings deliberately rather than factoring them into a Postgres `DOMAIN`; the reasoning is in the migration's own comments and in [architecture.md](../architecture.md). A "tidied" paste that reformats or reorders them breaks nothing visibly and breaks `uniq_active_slot`'s text comparison against `src/domain/slots.ts` permanently.
+The `time_slot_canonical` CHECK duplicates the canonical strings deliberately rather than factoring them into a Postgres `DOMAIN`; the reasoning is in the migration's own comments and in [architecture.md](../architecture.md). A "tidied" paste that reformats or reorders them breaks nothing visibly and breaks `uniq_active_slot`'s text comparison against `src/domain/slots.ts` permanently.
 
-- Transcribed without edits, comments included? \_\_\_\_\_
-- `check:schema`'s CHECK-literals-vs-`TIME_SLOTS` set equality assertion passes? \_\_\_\_\_
+The set that must end up in the database is the **eighteen** 1-hour strings. `20260809` writes the old nine; `20260815_alter_time_slot_1h.sql` replaces them. Do not resolve this by editing `20260809` — it is applied as written, and the second file is what corrects it, so the migration history stays a history.
+
+- `20260809_create_bookings.sql` transcribed without edits, comments included? \_\_\_\_\_
+- `20260815_alter_time_slot_1h.sql` then applied, whole, `begin;`…`commit;` in one execution? \_\_\_\_\_
+- Its `not valid` left in place? \_\_\_\_\_ _(it skips validating pre-existing rows; removing it can fail the migration on data that predates it)_
+- `check:schema`'s CHECK-literals-vs-`TIME_SLOTS` set equality assertion passes, showing eighteen? \_\_\_\_\_
 
 ### 4. Where does test data come from? — **BLOCKS row 4, and step 05's live half**
 
@@ -101,7 +110,7 @@ pnpm check:setup
 | Row                                          | Done | Evidence   |
 | -------------------------------------------- | ---- | ---------- |
 | 1 — same project ref, both on 6543           | ☐    | \_\_\_\_\_ |
-| 2 — migration applied whole                  | ☐    | \_\_\_\_\_ |
+| 2 — both migrations applied whole, in order  | ☐    | \_\_\_\_\_ |
 | 3 — `check:schema` green, 10/10              | ☐    | \_\_\_\_\_ |
 | 4 — at least one row, and where it came from | ☐    | \_\_\_\_\_ |
 
@@ -116,4 +125,4 @@ pnpm check:setup
 
 ## After this gate
 
-Append the outcome to `docs/PROGRESS.md` here **and** in `arena-player-web` — its own docs still describe this migration as unapplied, and its next session will read that. Annotate [../schema-requests/004-bookings-on-supabase.md](../schema-requests/004-bookings-on-supabase.md) as applied. Then [2-step-01-queries](2-step-01-queries.md) starts.
+Append the outcome to `docs/PROGRESS.md` here **and** in `arena-player-web` — its own docs still describe these migrations as unapplied, and its next session will read that. Annotate both [../schema-requests/004-bookings-on-supabase.md](../schema-requests/004-bookings-on-supabase.md) and [../schema-requests/006-time-slot-1h.md](../schema-requests/006-time-slot-1h.md) as applied. Then [2-step-01-queries](2-step-01-queries.md) starts.
