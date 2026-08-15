@@ -8,13 +8,14 @@ Delivery is sequenced **backend-outward**, the opposite of the web repo. There i
 
 ## Phase overview
 
-| Phase | Scope                                                                                          | Blockers                                                        |
-| ----- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 1a    | Foundation — architecture, scaffold, DX, dev rules, shared copy, db client, auth, verification | None — start here                                               |
-| 2     | Bookings console — list + filters, detail, proof view, confirm / reject                        | 1a, web Phase 4 applied, **and `2-gate-web-supabase`**          |
-| 3     | Expiry job — `POST /api/jobs/expire`, external cron, staleness indicator                       | 2, and `3-gate-web-expiry`                                      |
-| 4     | Slot blocking — block/unblock a date+slot                                                      | `4-gate-blocks` (a migration web must own, apply, **and read**) |
-| 5     | Deploy + handover — `admin.arena-player.com`, user guide, credentials                          | `5-gate-subdomain`, `5-gate-cron-owner`                         |
+| Phase | Scope                                                                                          | Blockers                                                                                |
+| ----- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 1a    | Foundation — architecture, scaffold, DX, dev rules, shared copy, db client, auth, verification | None — start here                                                                       |
+| 2     | Bookings console — list + filters, detail, proof view, confirm / reject                        | 1a, web Phase 4 applied, **and `2-gate-web-supabase`**                                  |
+| 3     | Expiry job — `POST /api/jobs/expire`, external cron, staleness indicator                       | 2, and `3-gate-web-expiry`                                                              |
+| 4     | Slot blocking — block/unblock a date+slot                                                      | `4-gate-blocks` (a migration web must own, apply, **and read**)                         |
+| 5     | Deploy + handover — `admin.arena-player.com`, user guide, credentials                          | `5-gate-subdomain`, `5-gate-cron-owner`                                                 |
+| 6     | Dashboard reset — CRUD + soft delete, export, settings, revenue                                | 2, schema requests 002 / 003 / 005, the rate card, and `6-gate-web-settings-and-status` |
 
 **This app is a launch dependency of the public site.** Phase 3 owns expiry. Until its cron is scheduled, a pending booking older than 24h is never released and the public site accumulates permanently-held slots. Launch order:
 
@@ -183,6 +184,35 @@ Blocks map to the existing API status **`booked`**. No new API status; the FIRM 
 - [ ] All seven env vars set in production; `check:schema` passes against the production database
 - [ ] Admin user guide written in Indonesian and walked through with the client once
 - [ ] Credentials handed over; rotation procedure documented (rotating `SESSION_SECRET` logs the admin out — that is intended)
+
+---
+
+## Phase 6 — Dashboard reset, CRUD, export, settings
+
+Added 2026-08-15, after Phases 1–5 were written. It is numbered last because it depends on Phase 2 shipping, **not** because it happens after handover — Phase 5 is still the end of the engagement.
+
+- **Dashboard reset.** Structural redesign of the shell, grid, nav, table, cards, density and type scale. The palette and the Indonesian copy are untouched: navy and blue are sampled from the client's logo and are not choices available to this project. Direction is recorded in `docs/tasks/6-step-01-direction.md`.
+- **Walk-in creation and soft delete.** The admin inserts a booking for someone who paid cash at the field, at status `confirmed`, with no proof image. Soft delete is a `deleted` status, never a row deletion.
+- **Export.** Bookings as CSV honouring the active filters. Activity log and settings export follow their migrations. PDF is undecided.
+- **Settings screen.** Location, Ketentuan, admin phone and bank account, edited here and read by the public site.
+- **Revenue.** DP collected — 50% of the client's rate card, confirmed bookings only.
+
+**Blocked on, and worth reading before scheduling this:** schema requests [002](schema-requests/002-booking-events.md), [003](schema-requests/003-site-settings.md) and [005](schema-requests/005-admin-writes-bookings.md), none applied; the client's rate card figures, not yet supplied; and `6-gate-web-settings-and-status`, which `arena-player-web` must sign off. Only the visual reset and the CSV export are buildable without any of that.
+
+### Definition of Done — Phase 6
+
+> **DRAFT — awaiting sign-off.** These lines are a contract once agreed, so they are proposed rather than adopted. Correct or approve them before any Phase 6 step file is executed.
+
+- [ ] `6-gate-web-settings-and-status` signed off, with web's reads deployed in the stated order
+- [ ] Dashboard, list, detail and settings all render at 375px with the queue above the fold — verified on a real viewport, not inferred from a breakpoint
+- [ ] Every nav item resolves to a real route returning 200 (three of six 404 today)
+- [ ] Walk-in creation respects `uniq_active_slot` — a conflicting slot surfaces as a visible conflict, never a silent overwrite
+- [ ] A walk-in renders as "no proof, created by admin", visibly distinct from a proof that failed to load
+- [ ] Soft delete frees the slot: delete a booking here, then read the public site's `/api/availability` and see the slot return to `available`
+- [ ] No `delete from bookings` anywhere in `src/` — grep, in the verification sweep
+- [ ] CSV export returns exactly the rows the active URL filters describe
+- [ ] Every money figure on screen traces to `site_settings`; with the rate card absent, price surfaces render a missing-rate-card state and **no number**
+- [ ] Contrast recomputed for any new or changed token pair, and written into DESIGN.md as measured figures
 
 ---
 

@@ -40,7 +40,9 @@ Compare the two connection strings before anything else. Two things must match, 
 
 A matching ref on the **wrong port** is a performance and prepared-statement problem. A mismatched **ref** is the silent no-op above. Check the ref first.
 
-**Row 4 is not optional and has a trap in it.** This repo may **never** `insert` (see [database.md](../database.md), "What this repo may do"), so it cannot create its own test data. Three ways to get a row, in descending order of usefulness:
+**Row 4 is not optional and has a trap in it.** This repo could **never** `insert` when this gate was written. That changed on 2026-08-15: walk-in creation ([005](../schema-requests/005-admin-writes-bookings.md)) gives it an insert, and [database.md](../database.md) "What this repo may do" now says so.
+
+**It does not rescue this gate**, for two reasons worth stating rather than leaving someone to rediscover. 005 has not landed, so the insert does not exist yet; and when it does, a walk-in row carries a **null `proof_key`** by design — so it can never be the test data that unblocks [2-step-05-proof](2-step-05-proof.md)'s live half, which is the whole point of row 4. Three ways to get a row, in descending order of usefulness:
 
 1. **Make a booking on the public site running locally.** Best by a distance: it exercises web's real insert path, produces a `phone` already normalised to `628…`, and — critically — uploads a real object to the Supabase proofs bucket, so `proof_key` points at something that actually exists. That is the only source of test data that also unblocks [2-step-05-proof](2-step-05-proof.md)'s live half. It presumes web has already moved to Supabase — see [2-gate-web-supabase](2-gate-web-supabase.md).
 2. Hand-written `insert` in the Supabase SQL editor by the user. Fast, but `proof_key` is `not null` and whatever string is put there points at no object, so the proof view fails for the whole of Phase 2.

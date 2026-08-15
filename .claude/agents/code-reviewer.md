@@ -36,7 +36,8 @@ Every item here is a regression that raises **nothing**. That is why they need a
 - **Component CSS routes through the semantic token tier.** A raw hex in a component file is a defect; the sibling repo's finish review caught seventeen as one P0.
 - **Status is a surface + border + ink triple**, never a single hue, and any contrast ratio quoted anywhere is recomputed rather than carried forward. Two overstated figures shipped once in the other repo.
 - **UI copy Indonesian, code and comments English** — including the 409 and migration-missing messages.
-- **No prices anywhere.** Same rule as the public site, same reason: no rate card is confirmed.
+- **No invented money figure.** Prices are shown as of 2026-08-15, and every one must trace to the client's rate card in `site_settings` — never a constant, an estimate, or a placeholder in a chart, a fixture or a test. Revenue is **DP collected**: 50% of the rate, confirmed bookings only. A plausible-looking number is the easiest kind not to check, which is exactly why it is a review item.
+- **No hard `delete` against `bookings`.** Soft delete is `status = 'deleted'` under the same `where status in (…)` guard as every other mutation. Grep for `delete from bookings` — the row is the only record a payment was received.
 
 ## On checks
 

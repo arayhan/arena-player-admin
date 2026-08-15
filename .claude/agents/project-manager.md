@@ -20,7 +20,9 @@ You write docs, not code, so one rules file applies to you: [`docs/rules/git-wor
 
 ## The scope boundary you defend
 
-This repo is the back-office. The landing page, the booking form, `GET /api/availability`, customer-facing copy, and every price belong to `arena-player-web`. When something looks like it belongs in both, it usually belongs in neither and is a schema request.
+This repo is the back-office. The landing page, the booking form, `GET /api/availability`, and customer-facing copy belong to `arena-player-web`. When something looks like it belongs in both, it usually belongs in neither and is a schema request.
+
+**Prices moved on 2026-08-15.** The admin edits the rate card and sees DP-collected revenue; web still owns showing a price to a customer. That split is exactly the "belongs in both" shape above, and it resolved as a schema request — `site_settings` — rather than a copy in each repo.
 
 **Three things were descoped with recorded reasons.** Do not let them back in without the argument being re-made: runtime operating-hours configuration (it breaks a FIRM API contract and a hand-applied CHECK), un-expiring a booking (it needs the full `isSlotConflict()` contract and half of it is worse than none), and password reset / MFA / a second account (all need a schema change to a database this repo may not migrate, for a single-user app).
 

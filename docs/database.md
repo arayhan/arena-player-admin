@@ -12,30 +12,42 @@ This file exists for the half that is different here: what the admin is allowed 
 
 | Object                               | Admin's access                                                                                                                   |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| `bookings` — rows                    | `select` freely; `update status` under a guard; **never** `insert`, **never** `delete`                                           |
+| `bookings` — rows                    | `select` freely; `update status` under a guard; `insert` a walk-in (see below); **never** `delete`                               |
 | `bookings` — schema                  | none. No `create`, `alter`, or `drop`, ever                                                                                      |
 | `slot_blocks` (Phase 4)              | `select`, `insert`, `delete`. Schema still owned by web                                                                          |
 | Storage bucket `arena-player-proofs` | **read only**, through an RLS `select` policy on `storage.objects` scoped to this bucket. No write, no delete, no listing needed |
 
-`DATABASE_URL` here cannot be a read-only role — this app writes `bookings.status`. The correct hardening is a separate Postgres role in the Supabase project scoped to `select, update(status) on bookings`, which costs one hand-run `GRANT`. Recorded as a handover nice-to-have in [PRD.md](PRD.md), not built in v1.
+### The insert, and why `delete` stays banned
+
+**Changed 2026-08-15.** The row-level rule was "never `insert`, never `delete`" for the whole of Phase 1a and 2's design. The admin now takes **walk-in bookings** — somebody who turns up at the field and pays cash — so this app inserts. Recorded as a decision rather than left to contradict the sentence above it.
+
+Three things about that insert are not negotiable:
+
+1. **It respects `uniq_active_slot` like any other writer.** The partial unique index is the only anti-double-booking guard in the system and it does not care who is inserting. A walk-in for a slot the public site already holds must fail on the constraint and surface as a real conflict, never as a silent overwrite.
+2. **`proof_key` is null for these rows**, which requires [005](schema-requests/005-admin-writes-bookings.md) and means "no proof" becomes a legitimate state rather than a failed image load. Every proof surface must tell the two apart.
+3. **`delete` is still banned, and soft delete is an `update`.** A `deleted` status value ([005](schema-requests/005-admin-writes-bookings.md)) leaves the row in place and drops it out of `ACTIVE_STATUSES`, which frees the slot automatically without touching the index predicate. A hard `delete` would destroy the only record that a payment was ever received — see the proof-key contract below.
+
+`DATABASE_URL` here cannot be a read-only role — this app writes `bookings.status` and now inserts. The correct hardening is a separate Postgres role in the Supabase project scoped to `select, insert, update(status) on bookings`, which costs one hand-run `GRANT`. Recorded as a handover nice-to-have in [PRD.md](PRD.md), not built in v1.
 
 ## The columns this repo reads
 
 Reference only — the source is web's `database.md`. Listed here because every query in [architecture.md](architecture.md) names these and an agent should not have to open the other repo to read a column list.
 
-| Column         | Type          | What the admin does with it                                                                                          |
-| -------------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `id`           | `uuid`        | The mutation key. Always paired with a status guard, never used alone                                                |
-| `booking_date` | `date`        | Displayed and sorted. **Always cast `::text` in the select** — see the OID trap below                                |
-| `time_slot`    | `text`        | One of nine canonical strings. Sorts correctly as plain text; see [architecture.md](architecture.md)                 |
-| `team_name`    | `text`        | Displayed, and one half of the search                                                                                |
-| `phone`        | `text`        | Stored normalised as `628xxxxxxxxx`, never as typed. Rendered as a `wa.me` link; searched through `normalisePhone()` |
-| `notes`        | `text`        | ≤500 chars. Detail page only — it wrecks list row height                                                             |
-| `proof_key`    | `text`        | A Storage object **key**, not a URL. There is no URL to store; the bucket is private and has none                    |
-| `status`       | `text`        | `pending` · `confirmed` · `rejected` · `expired`. The only column this app writes                                    |
-| `created_at`   | `timestamptz` | Drives the 24h expiry clock and the "age" column. **Cast `::text`**                                                  |
+| Column         | Type          | What the admin does with it                                                                                                                                     |
+| -------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `uuid`        | The mutation key. Always paired with a status guard, never used alone                                                                                           |
+| `booking_date` | `date`        | Displayed and sorted. **Always cast `::text` in the select** — see the OID trap below                                                                           |
+| `time_slot`    | `text`        | One of nine canonical strings. Sorts correctly as plain text; see [architecture.md](architecture.md)                                                            |
+| `team_name`    | `text`        | Displayed, and one half of the search                                                                                                                           |
+| `phone`        | `text`        | Stored normalised as `628xxxxxxxxx`, never as typed. Rendered as a `wa.me` link; searched through `normalisePhone()`                                            |
+| `notes`        | `text`        | ≤500 chars. Detail page only — it wrecks list row height                                                                                                        |
+| `proof_key`    | `text`        | A Storage object **key**, not a URL. There is no URL to store; the bucket is private and has none. **Null on a walk-in** the admin created — absent, not broken |
+| `status`       | `text`        | `pending` · `confirmed` · `rejected` · `expired` · `deleted`. The only column this app **updates**; a walk-in insert writes the rest once, at creation          |
+| `created_at`   | `timestamptz` | Drives the 24h expiry clock and the "age" column. **Cast `::text`**                                                                                             |
 
-**Four statuses, and this app is the only thing that can reach three of them.** Without it, every row stays `pending` forever. `rejected` doubles as the cancellation mechanism, since no customer-facing cancel route exists anywhere in the system.
+**Five statuses, and this app is the only thing that can reach four of them.** Without it, every row stays `pending` forever. `rejected` doubles as the cancellation mechanism, since no customer-facing cancel route exists anywhere in the system.
+
+`deleted` is the newest and the one most easily misread: it is **soft delete, not rejection**. Reject means the admin looked at a payment and refused it — a customer-facing outcome with a reason. Deleted means the row should not have existed at all, typically a mistyped walk-in. Both leave `ACTIVE_STATUSES` and so both free the slot, but collapsing them loses the distinction the moment anyone reads the history.
 
 ---
 

@@ -52,7 +52,7 @@ Once a request is annotated `LANDED`, it is historical. Nothing in this repo rea
 
 ## Rules for the DDL itself
 
-- **Additive only, unless there is no alternative.** Never `alter` `bookings` casually. `uniq_active_slot` is the only race guard in the system; a migration that widens its predicate, or changes `time_slot`'s type, is a migration that can silently turn off anti-double-booking.
+- **Additive only, unless there is no alternative.** Never `alter` `bookings` casually. `uniq_active_slot` is the only race guard in the system; a migration that widens its predicate, or changes `time_slot`'s type, is a migration that can silently turn off anti-double-booking. [005](005-admin-writes-bookings.md) is the worked example of the exception: it alters `bookings` twice, in one transaction, and opens by arguing why each change had no additive form and why the guard's predicate stays exactly as it is.
 - **Wrap in `begin;` / `commit;`.** A paste that fails halfway must not leave a table created _without_ its unique index. This is the reason web's own migration is wrapped, and it applies to every request here.
 - **Name every constraint.** `check:schema` reads constraints by name; an anonymous constraint is one it cannot assert on.
 - **Repeat the nine canonical slot strings rather than factoring them out.** A Postgres `DOMAIN` would deduplicate them and needs `alter column type` on `bookings` — a hand-run destructive change to the one table the race guard sits on. Duplicate the literal and let `check:schema` detect the drift.
@@ -60,14 +60,24 @@ Once a request is annotated `LANDED`, it is historical. Nothing in this repo rea
 
 ## Current requests
 
-| #                                  | Title                                                       | Status              |
-| ---------------------------------- | ----------------------------------------------------------- | ------------------- |
-| [001](001-slot-blocks.md)          | `slot_blocks` — one-off date+slot blocking                  | requested (Phase 4) |
-| [002](002-booking-events.md)       | `booking_events` — the activity rail and log export         | requested (Phase 2) |
-| [003](003-site-settings.md)        | `site_settings` and `bank_accounts` — the Pengaturan screen | requested (Phase 2) |
-| [004](004-bookings-on-supabase.md) | `bookings` — web's existing migration, applied on Supabase  | requested (Phase 2) |
+| #                                   | Title                                                                         | Status                           |
+| ----------------------------------- | ----------------------------------------------------------------------------- | -------------------------------- |
+| [001](001-slot-blocks.md)           | `slot_blocks` — one-off date+slot blocking                                    | requested (Phase 4)              |
+| [002](002-booking-events.md)        | `booking_events` — the activity rail, the log export, revenue by confirmation | requested (**Phase 2 blocking**) |
+| [003](003-site-settings.md)         | `site_settings`, `site_rules`, `rate_card`, `bank_accounts` — Pengaturan      | requested (Phase 2)              |
+| [004](004-bookings-on-supabase.md)  | `bookings` — web's existing migration, applied on Supabase                    | requested (Phase 2)              |
+| [005](005-admin-writes-bookings.md) | `bookings` — nullable `proof_key`, and a fifth status `deleted`               | requested (phase unassigned)     |
 
 **004 authors no DDL.** It records that web's already-written `bookings` migration has to be applied verbatim in the Supabase SQL editor now that the project has moved off Neon, and that both repos must point at the same Supabase project. A provider move is not a schema change, but "who applies the unapplied migration, and where" is exactly the question this folder exists to keep from falling between two repos.
+
+**005 is the only request that alters `bookings`**, and the only one that is not additive. It carries its own argument for why the first DDL rule below permits it, why its two changes share one transaction, and why `uniq_active_slot` is not touched despite a fifth status arriving. Read that file before running it; do not treat it as ordinary.
+
+**Two orderings are not free choices:**
+
+- **002 and 005 both own the same status literals.** 005 adds `'deleted'` to `BOOKING_STATUSES`, and `check:schema` asserts `booking_events`' two status CHECKs set-equal to it. Land **005 first** and transcribe 002 with five literals; if 002 lands first, 005's migration gains four `alter table booking_events` statements, written out in its DDL section.
+- **003 is order-critical for two of its five values, and only two.** The WhatsApp number and the Ketentuan are hardcoded in `arena-player-web` today, so an admin editing them before web reads them produces a value that looks saved and is silently stale. The address, the Maps embed and the bank accounts are visible `menyusul` placeholders — a blank is safe, a confidently wrong value is not. The full table is in that file.
+
+**002's "not deployment-order critical" was about web, not about the table.** `booking_events` cannot be backfilled — `bookings` holds no `confirmed_at` to reconstruct from — so every booking confirmed before that migration lands is permanently absent from the activity log and from revenue-by-confirmation-date. It moved to Phase-2 blocking for that reason, not because web's write became urgent.
 
 ## Sketched, not requested
 

@@ -23,6 +23,8 @@ The folder sorts into build order on its own, so no index needs maintaining, and
 
 That is why this folder held eight Phase 1a steps and four gates for as long as Phase 1a was the current build, and no step file for Phases 2–5. **Phase 2's six steps and two gates landed on 2026-08-13**, when its build started; a **third** Phase 2 gate — [2-gate-web-supabase](2-gate-web-supabase.md) — landed with the move from Neon/R2 to Supabase, because that move reached this repo and not the sibling one. Phases 3–5 are still specified only in [PRD.md](../PRD.md); their steps get written when their build starts.
 
+**Phase 6 — the dashboard reset — landed on 2026-08-15**: three steps and a second gate, alongside the [6-gate-settings-and-expiry](6-gate-settings-and-expiry.md) that was already here. Only its buildable-now half is written as steps; the create, soft-delete and settings flows are migration-blocked and are recorded as a phasing table in [6-step-01](6-step-01-direction.md) rather than as step files nobody can execute. **[PRD.md](../PRD.md) still has five phases and no Phase 6** — that is a mismatch for whoever owns the PRD to resolve, not for this folder to paper over.
+
 ## Steps
 
 State a goal, a concrete deliverables list, and **acceptance criteria written as runnable checks** — grep patterns, commands, assertions — not vague prose. Include `**Depends**:` / `**Blocks**:` lines and end with a `handoff:` line naming the next agent.

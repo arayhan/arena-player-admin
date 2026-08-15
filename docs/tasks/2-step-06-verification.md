@@ -33,7 +33,9 @@ Also verify the reverse: **reject** a `confirmed` booking and watch the slot ret
 
 ## Where the test data comes from
 
-This repo may never `insert`. The cheapest source of a valid row is **a booking made on the public site running locally** — it produces a normalised `628…` phone, a `proof_key` pointing at a real object in the Supabase proofs bucket, and it exercises web's insert path at the same time. It presumes web has already moved to Supabase — [2-gate-web-supabase](2-gate-web-supabase.md). It is also the only route that unblocks step 05's live half. See [2-gate-migration](2-gate-migration.md) row 4.
+**Amended 2026-08-15:** this repo gained a walk-in `insert` ([005](../schema-requests/005-admin-writes-bookings.md)), so "may never `insert`" is no longer true in general — but it is still true _for this verification_, and for a reason worth keeping. An admin-created walk-in has a **null `proof_key`**, so it cannot exercise step 05's proof path at all; it verifies the create flow and nothing else. Until 005 lands it is not available either way.
+
+The cheapest source of a valid row for this step is therefore still **a booking made on the public site running locally** — it produces a normalised `628…` phone, a `proof_key` pointing at a real object in the Supabase proofs bucket, and it exercises web's insert path at the same time. It presumes web has already moved to Supabase — [2-gate-web-supabase](2-gate-web-supabase.md). It is also the only route that unblocks step 05's live half. See [2-gate-migration](2-gate-migration.md) row 4.
 
 ## The Definition of Done, line by line
 

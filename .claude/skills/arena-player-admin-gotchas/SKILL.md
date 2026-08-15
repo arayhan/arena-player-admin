@@ -17,7 +17,8 @@ Source of truth: [docs/PRD.md](../../../docs/PRD.md), [docs/architecture.md](../
 
 - **This repo never owns a migration.** `db/migrations/` lives in `arena-player-web`. A schema change is authored as a request in `docs/schema-requests/`, transcribed verbatim into web's migrations folder, applied by hand in the Supabase SQL editor. Two repos migrating one database is a conflict with no owner.
 - **Never `create table if not exists`.** Fail loudly. Web's migration is wrapped in a transaction precisely so a half-failed paste cannot create `bookings` without `uniq_active_slot`; application-code DDL defeats that entirely and produces a table with no constraints and no error.
-- **Out of scope entirely**: the landing page, the booking form, `GET /api/availability`, any customer-facing copy, and **any price**. Those are `arena-player-web`.
+- **Out of scope entirely**: the landing page, the booking form, `GET /api/availability`, and any customer-facing copy. Those are `arena-player-web`.
+- **Prices changed sides on 2026-08-15.** The admin now edits the rate card (`site_settings`) and sees **DP collected** — 50% of the rate, confirmed bookings only. Displaying a price to a _customer_ is still web's. Never invent a figure: no constant, no estimate, no placeholder in a chart or fixture. Until the rate card lands, price surfaces render a missing-rate-card state.
 - **Descoped with reasons recorded** in the PRD, do not re-propose from scratch: runtime operating-hours config, un-expiring a booking, password reset / MFA / a second account, reporting.
 - **Phases 2 and 4 are blocked on the other repo**, not on effort. Phase 2 needs web's migration applied; Phase 4 needs web deployed and _reading_ `slot_blocks`. `pnpm check:schema` is how you find out, not a conversation.
 - **This app is a launch dependency of the public site.** Expiry runs from a cron here. Until Phase 3 ships and its scheduler is wired, abandoned slots on the public site are never freed.

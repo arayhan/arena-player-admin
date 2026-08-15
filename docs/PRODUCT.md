@@ -1,5 +1,7 @@
 # Product — Arena Player Admin
 
+<!-- impeccable:product-schema 1 -->
+
 Companion record to [`arena-player-web/docs/PRODUCT.md`](../../arena-player-web/docs/PRODUCT.md), which owns the product truth for the whole system. This file covers only what is different on the admin side. Where the two disagree, the web repo wins — it was written from the client conversation.
 
 ## Platform
@@ -36,13 +38,21 @@ The public site's entire promise — availability that is trustworthy at the mom
 
 **Success is that no booking sits unactioned long enough for the customer to notice.** Not throughput, not analytics, not reporting. A queue that is empty by the end of the day.
 
+## Positioning
+
+There is no market position to defend — one field, one admin, no competitor and no buyer to persuade. What is worth stating instead is the position **inside the system**, because it is the thing every future decision here is measured against:
+
+**This app is the only writer of `bookings.status` that a human controls.** The public site can create a `pending` row and nothing else; the expiry cron can only move `pending` to `expired`. Every other transition in the product exists because someone opened this app and decided. That is why "the queue is the product", why a status mutation is guarded rather than trusted, and why an admin action the public site cannot read is a defect rather than a missing feature.
+
+Nothing here is differentiated in the market sense, and future work should not manufacture a claim that it is.
+
 ## Operating Context
 
 - **This app is a launch dependency of the public site**, which is not obvious and is easy to schedule wrongly. Expiry — pending older than 24h becomes `expired` and frees the slot — runs from a cron here. Until that ships and is scheduled, an abandoned booking holds its slot forever and the public site slowly fills with slots nobody can book. Order: web Phase 4 → admin 1a–3 → public launch → admin 4–5.
 - Single field, nine 2-hour slots, 06.00–24.00, Asia/Jakarta, booking window today + 13 days. Inherited, not decided here.
 - **The admin is the bot, for now.** Until the WhatsApp bot ships, they paste the `/booking?date=&time=` link by hand. That is a web-repo concern, but it explains why the admin is already in WhatsApp when they reach this app.
 - Cancellation has no customer-facing route anywhere. The customer messages the admin; the admin rejects the booking here. That is why **reject must work on `confirmed` rows, not only `pending` ones** — it is the cancellation mechanism, and it is the one place the Ketentuan's 1×24h rule touches this repo.
-- Payment is a 50% DP by bank transfer, evidenced by an uploaded image. The admin quotes the amount over WhatsApp. **This app shows no prices.** Web's rule forked at its 2026-08-11 checkpoint — `/` still shows none, `/booking` now renders one once the rate card lands — so "same as the public site" is no longer accurate here; the real reason is unchanged underneath the fork: no rate card is confirmed, and this app's own quoting workflow needs it as much as `/booking` does.
+- Payment is a 50% DP by bank transfer, evidenced by an uploaded image. The admin quotes the amount over WhatsApp. **This app shows prices, as of 2026-08-15.** That reverses a standing rule and is recorded as a decision rather than left to contradict itself: the client is supplying a rate card, it varies by slot and day type, and it lands in `site_settings` ([003](schema-requests/003-site-settings.md)) rather than in code. Until those figures arrive, **no figure is invented** — a price-bearing surface renders a missing-rate-card state, never a placeholder number. Web's own rule forked at its 2026-08-11 checkpoint (`/` shows none, `/booking` renders one once the rate card lands), so the two apps are no longer symmetrical here and neither should be described as following the other.
 
 ## Capabilities and Constraints
 
@@ -51,6 +61,18 @@ The public site's entire promise — availability that is trustworthy at the mom
 - UI language is Indonesian. Code and comments English. The handover user guide is Indonesian.
 - **This repo never runs a migration.** Web owns `db/migrations/`.
 - Performance is not a constraint here in the way it is on the public site. One authenticated user, on wifi, who came to do a task. Correctness and density beat polish.
+
+## Brand Commitments
+
+Binding, and none of them is a choice available to future work. Recorded here rather than only in [DESIGN.md](DESIGN.md) so they survive a visual replacement — a redesign may change how they are used, never whether.
+
+- **Navy `#011A43` and blue `#2563EB`** are sampled from the client's own logo. They are the client's colours, not a palette decision this project made.
+- **`public/logo.jpeg`** is the supplied mark. It has no alpha channel and is painted on white by the asset itself, so it needs a light backing wherever it sits.
+- **UI copy is Indonesian; code and comments are English.** The handover user guide is Indonesian too. The reader of every string this app renders is the field admin, not a developer.
+- **Prices come from the client, never from us.** The rate card is a client-owned business fact stored in `site_settings`, not a constant in code and not a number anyone here estimates. Revenue shown on the dashboard is **DP actually collected** — 50% of the rate, confirmed bookings only — because that is the half this app has evidence for: an approved transfer screenshot. The other half is paid in cash at the field and this app never sees it. Inventing any of these figures is the fabrication this project most easily commits — see Evidence on Hand.
+- **Dense, boring, fast.** The admin is doing data entry under time pressure with a customer waiting on WhatsApp. Delight is a tax here, and that is a product position, not a visual preference.
+
+The full token system, measured contrast, and the motion ceiling live in [DESIGN.md](DESIGN.md), which is normative for anything visual.
 
 ## Evidence on Hand
 
@@ -76,3 +98,22 @@ Four, and none of them can be answered from inside this repo.
 3. **A payment proof is a payment document.** It carries a name, an amount, and a bank account. Short TTLs, no caching layers, no optimizer, no public URL, ever.
 4. **Silent failure is the enemy, and this repo has three sources of it** — a cron that stops firing, a migration that was never applied, and a shared file that drifted by one character. Each gets a check or a visible indicator. None gets a comment asking people to remember.
 5. **Boring on purpose.** Same palette as the public site, none of its motion. The admin is doing data entry under time pressure; delight is a tax here.
+
+## Accessibility & Inclusion
+
+**WCAG 2.2 AA is the bar.** Not aspiration — the repo already enforces most of it, and naming the standard is what makes the rest checkable rather than a habit somebody remembers.
+
+What is already true and must stay true:
+
+- **Contrast is computed, never asserted.** Body text 4.5:1, large text 3:1, and a border that carries state clears 3:1 against **both** the page and its own fill. Every figure in [DESIGN.md](DESIGN.md) was recomputed rather than carried forward — three overstated ratios have already shipped in this project, and a plausible number is the easiest kind not to check.
+- **Status is never colour alone.** Surface + border + ink, always. A status the admin misreads is a booking they action wrongly, which makes this the one visual rule here that is a requirement rather than a preference.
+- **Fully keyboard-operable.** The admin tabs through a queue; filters, pagination, confirm, reject and the proof reload are all reachable and activatable without a mouse. A `<div>` with an `onClick` is not a control.
+- **Focus is restyled, never removed.** `outline: none` with nothing put back is a defect.
+- **Errors are words.** Every field-level error is tied to its input with `aria-describedby`, the input carries `aria-invalid`, and the message says what is wrong. A colour change is not a message.
+- **Focus moves to the result after a mutation.** A confirm or reject that returns 409 moves focus to the "Booking ini sudah diproses" message — otherwise a screen-reader user sees a page that appears to have done nothing.
+- **375px and touch.** The admin is on a phone at the field at least as often as at a desk. Targets are at least 44px, and at that width the bookings list is a stack of cards, not a table with a horizontal scrollbar.
+- **`prefers-reduced-motion` is honoured**, though there is little to remove: the motion ceiling is `background-color` and `border-color` at ≤160ms.
+
+Two deliberate exemptions, recorded so neither reads as an oversight: **row dividers** (`grey-200` light, `#1C2B4D` dark) and the **border on controls that carry their own text label** — a ghost button, a menu, a popover. Both draw a shape; neither is the signal. WCAG 1.4.11 governs boundaries that _are_ the information, and a table rule is not one.
+
+No accessibility requirement has been stated by the client. This bar is the project's own, and it is not negotiable downward on the grounds that there is only one user — that user is doing time-pressured data entry on a phone, outdoors, in daylight.

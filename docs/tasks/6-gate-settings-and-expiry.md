@@ -58,13 +58,21 @@ Unsupplied since the beginning. It now gates more than it did: the admin's reven
 
 This one was not noticed until the admin app was checked against web's actual DDL.
 
-`bookings.proof_key` is **`NOT NULL`**, and web's documented flow uploads the transfer receipt to the proofs bucket **before** inserting the row. So a booking row cannot exist without a payment proof attached. Every `pending` booking in the queue is one where the customer has **already transferred a DP**.
+`bookings.proof_key` was **`NOT NULL`** when this was written, and web's documented flow uploads the transfer receipt to the proofs bucket **before** inserting the row. So a booking row could not exist without a payment proof attached, and every `pending` booking in the queue was one where the customer had **already transferred a DP**.
 
-[PRODUCT.md](../PRODUCT.md) and [PRD.md](../PRD.md) describe expiry as freeing "abandoned" slots — a customer who started a booking and walked away. **With `proof_key NOT NULL` that customer cannot exist.** What the 24-hour job actually does is release the slot of someone who paid, because the admin did not action it in time.
+[PRODUCT.md](../PRODUCT.md) and [PRD.md](../PRD.md) describe expiry as freeing "abandoned" slots — a customer who started a booking and walked away. **With `proof_key NOT NULL` that customer could not exist.** What the 24-hour job actually does is release the slot of someone who paid, because the admin did not action it in time.
 
-- Is that the intended behaviour? \_\_\_\_\_
+> **AMENDED 2026-08-15 — the premise weakened, the question got harder.** [005](../schema-requests/005-admin-writes-bookings.md) makes `proof_key` nullable so the admin can create walk-in bookings, and web had already turned its proof field off from its own side. So "every pending row carries a transferred DP" is no longer true, and **the row alone no longer says which kind it is**:
+>
+> - **(a)** online, DP transferred, proof attached — the case this question was written about;
+> - **(b)** walk-in, cash, no proof — new, and expiry would release a slot already paid for in full-view of the person who took the money.
+>
+> Case (b) is **largely defused** by the decision that a walk-in enters at `confirmed` ([005](../schema-requests/005-admin-writes-bookings.md)), since expiry only touches `pending`. It is not eliminated: any future path that creates a `pending` row without a proof reopens it, and nothing in the schema prevents one.
+
+- Is releasing a paid customer's slot the intended behaviour? \_\_\_\_\_
 - If not, which changes — the expiry rule, or the requirement to upload before booking? \_\_\_\_\_
 - If it stays: what happens to the DP of an expired booking, and who tells the customer? There is no customer-facing notification anywhere in the system. \_\_\_\_\_
+- Should expiry skip rows with a null `proof_key` outright? \_\_\_\_\_ _(cheap to implement, but it is a product rule and inventing it here is exactly what this gate exists to prevent)_
 
 **This is a product question, not an engineering one**, which is why it is a signature and not a ticket. Do not code around it: the expiry job in Phase 3 is already specified against the current reading, and changing the answer changes what that job is for.
 
