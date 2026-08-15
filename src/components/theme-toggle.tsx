@@ -110,7 +110,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={cycle}
-      className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-control border border-border text-ink-muted hover:border-input-border hover:text-ink [&_svg]:h-4 [&_svg]:w-4"
+      className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-control border border-border text-ink-muted hover:border-input-border hover:text-ink [&_svg]:h-4 [&_svg]:w-4"
       aria-label={`Tema: ${LABEL[theme]}. Klik untuk mengganti.`}
     >
       {ICON[theme]}

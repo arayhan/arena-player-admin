@@ -146,7 +146,7 @@ function NavLink({ item }: { item: NavItem }) {
       <span
         role="link"
         aria-disabled="true"
-        className="flex cursor-not-allowed items-center gap-3 rounded-control p-2 text-sm font-medium text-ink-muted"
+        className="flex cursor-not-allowed items-center gap-3 rounded-control px-2 py-3 text-sm font-medium text-ink-muted"
       >
         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 flex-none">
           {item.icon}
@@ -164,7 +164,7 @@ function NavLink({ item }: { item: NavItem }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-3 rounded-control p-2 text-sm font-medium text-ink-muted hover:bg-border hover:text-ink"
+      className="flex items-center gap-3 rounded-control px-2 py-3 text-sm font-medium text-ink-muted hover:bg-border hover:text-ink"
     >
       <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 flex-none">
         {item.icon}
@@ -198,6 +198,10 @@ export function SidebarNav() {
         </div>
       </nav>
 
+      {/* The two icon buttons in this row are 44px square rather than
+          32px — the sidebar is dense on purpose, but the drawer it lives in
+          only exists below 1000px, where every control in it is a thumb
+          target. The avatar stays 32px: it is aria-hidden decoration. */}
       <div className="flex items-center gap-2 border-t border-border p-1 pt-3">
         <span
           aria-hidden="true"
@@ -220,7 +224,7 @@ export function SidebarNav() {
         <form method="POST" action="/api/auth/logout">
           <button
             type="submit"
-            className="inline-flex h-8 w-8 flex-none items-center justify-center rounded-control border border-border text-ink-muted hover:border-input-border hover:text-ink"
+            className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-control border border-border text-ink-muted hover:border-input-border hover:text-ink"
           >
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
               <path

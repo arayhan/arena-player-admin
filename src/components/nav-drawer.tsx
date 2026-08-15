@@ -99,7 +99,7 @@ export function NavDrawer({ nav, topbarBrand, children }: NavDrawerProps) {
             onClick={() => setOpen(true)}
             aria-expanded={open}
             aria-controls={navId}
-            className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-control border border-border text-ink"
+            className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-control border border-border text-ink"
           >
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5">
               <path

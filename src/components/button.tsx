@@ -29,9 +29,15 @@ const VARIANT_CLASSES: Record<Variant, string> = {
   danger: "border border-red-border bg-surface text-red-ink hover:bg-red-bg",
 };
 
+// Heights are floored by the 44px touch target dev-rules.md asks for: the
+// admin works this app one-handed on a phone at the field, not at a desk.
+// `md` is the default and carries the login submit, so it is exactly 44px.
+// `sm` keeps a 36px ink box — the dense surfaces it is meant for cannot
+// afford a taller control — and reaches 44px with a transparent
+// pseudo-element that overflows the box without moving anything around it.
 const SIZE_CLASSES: Record<Size, string> = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
+  sm: "relative h-9 px-3 text-sm before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']",
+  md: "h-11 px-4 text-sm",
   lg: "h-12 px-6 text-body",
 };
 
