@@ -73,3 +73,12 @@ export async function rejectBookingAction(formData: FormData): Promise<void> {
   revalidatePath(`/bookings/${id}`);
   redirect(`/bookings/${id}?success=rejected`);
 }
+
+export async function triggerManualExpiryAction(): Promise<void> {
+  const { expireOldPendingBookings } = await import("@/server/queries");
+  const { expiredCount } = await expireOldPendingBookings();
+
+  revalidatePath("/");
+  revalidatePath("/bookings");
+  redirect(`/?expired=${expiredCount}`);
+}

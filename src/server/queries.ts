@@ -172,3 +172,43 @@ export async function rejectBooking(id: string): Promise<{ success: boolean; err
     return { success: false, error: "Gagal menolak booking." };
   }
 }
+
+export type ExpiredBookingRow = {
+  id: string;
+  booking_date: string;
+  time_slot: string;
+};
+
+export async function expireOldPendingBookings(): Promise<{
+  expiredCount: number;
+  rows: ExpiredBookingRow[];
+}> {
+  try {
+    // Statement from docs/architecture.md, "The expiry job":
+    // update bookings
+    //    set status = 'expired'
+    //  where status = 'pending'
+    //    and created_at < now() - interval '24 hours'
+    // returning id, booking_date, time_slot;
+    const rows = await sql<ExpiredBookingRow[]>`
+      update bookings
+      set status = 'expired'
+      where status = 'pending'
+        and created_at < now() - interval '24 hours'
+      returning
+        id,
+        booking_date::text as booking_date,
+        time_slot
+    `;
+    return {
+      expiredCount: rows.length,
+      rows,
+    };
+  } catch (error) {
+    console.error("[queries] expireOldPendingBookings failed:", error);
+    return {
+      expiredCount: 0,
+      rows: [],
+    };
+  }
+}

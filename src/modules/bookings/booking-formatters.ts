@@ -43,3 +43,12 @@ export function formatRelativeAge(createdAtStr: string, now: Date = new Date()):
     return createdAtStr;
   }
 }
+
+export function isOlderThan24Hours(createdAtStr: string, now: Date = new Date()): boolean {
+  try {
+    const created = new Date(createdAtStr);
+    return now.getTime() - created.getTime() > 24 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}

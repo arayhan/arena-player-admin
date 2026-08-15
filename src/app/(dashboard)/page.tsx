@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { formatRelativeAge } from "@/modules/bookings/booking-formatters";
+import { formatRelativeAge, isOlderThan24Hours } from "@/modules/bookings/booking-formatters";
+import { triggerManualExpiryAction } from "@/modules/bookings/bookings.actions";
 import { BookingCard } from "@/modules/bookings/booking-card";
 import { BookingsTable } from "@/modules/bookings/bookings-table";
 import { EmptyQueue } from "@/modules/bookings/empty-queue";
@@ -16,7 +17,14 @@ export const metadata: Metadata = {
   description: "Dashboard antrean booking dan status operasional lapangan.",
 };
 
-export default async function DashboardPage() {
+type Props = {
+  searchParams?: Promise<{ expired?: string }>;
+};
+
+export default async function DashboardPage({ searchParams }: Props) {
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  const expiredCount = resolvedParams?.expired ? Number(resolvedParams.expired) : null;
+
   const hasBookingsTable = await tableExists("bookings");
 
   if (!hasBookingsTable) {
@@ -51,6 +59,9 @@ export default async function DashboardPage() {
       : null;
   const oldestAge = oldestPending ? formatRelativeAge(oldestPending.created_at) : null;
 
+  // Dead-man's switch: is oldest pending > 24 hours?
+  const isOldestPast24h = oldestPending != null && isOlderThan24Hours(oldestPending.created_at);
+
   // Schema guards for Phase 4 / Phase 6 metrics (never fabricate values!)
   const hasEventsTable = await tableExists("booking_events");
   const hasSettingsTable = await tableExists("site_settings");
@@ -58,6 +69,51 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: "Beranda" }]} />
+
+      {/* Expiry feedback notification */}
+      {expiredCount != null && (
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-panel border border-green-border bg-green-bg p-4 text-sm font-medium text-green-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5 flex-none">
+            <path
+              d="M5 13l4 4L19 7"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>
+            {expiredCount > 0
+              ? `${expiredCount} booking yang melewati 24 jam berhasil dilepaskan.`
+              : "Tidak ada booking pending yang melewati batas 24 jam saat ini."}
+          </span>
+        </div>
+      )}
+
+      {/* Dead-man's switch alert */}
+      {isOldestPast24h && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-panel border border-amber-border bg-amber-bg p-4 text-sm font-medium text-amber-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5 flex-none">
+            <path
+              d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>
+            Perhatian: Terdapat booking pending yang tertahan lebih dari 24 jam ({oldestAge}).
+            Periksa scheduler cron atau jalankan auto-expire manual.
+          </span>
+        </div>
+      )}
 
       {/* 1. Queue Section (Queue First per 6-step-01) */}
       <section className="flex flex-col gap-4" aria-labelledby="queue-heading">
@@ -114,12 +170,33 @@ export default async function DashboardPage() {
 
       {/* 2. Supporting Band Underneath Queue (Yields to the queue per 6-step-01) */}
       <section
-        className="flex flex-col gap-3 border-t border-border pt-4"
+        className="flex flex-col gap-4 border-t border-border pt-4"
         aria-labelledby="metrics-heading"
       >
-        <h2 id="metrics-heading" className="text-sm font-semibold text-ink-muted">
-          Ringkasan Operasional
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="metrics-heading" className="text-sm font-semibold text-ink-muted">
+            Ringkasan Operasional
+          </h2>
+
+          {/* Manual Expiry Action */}
+          <form action={triggerManualExpiryAction}>
+            <button
+              type="submit"
+              className="inline-flex min-h-[36px] items-center gap-2 rounded-control border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-150 hover:bg-ground"
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-3.5 w-3.5">
+                <path
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Jalankan Auto-Expire Sekarang
+            </button>
+          </form>
+        </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Card 1: Pending Count */}
@@ -132,11 +209,21 @@ export default async function DashboardPage() {
           </div>
 
           {/* Card 2: Oldest Pending Age */}
-          <div className="flex flex-col gap-1 rounded-panel border border-border bg-surface p-4">
+          <div
+            className={`flex flex-col gap-1 rounded-panel border p-4 ${
+              isOldestPast24h
+                ? "border-amber-border bg-amber-bg/30 text-amber-ink"
+                : "border-border bg-surface text-ink"
+            }`}
+          >
             <span className="text-xs font-medium text-ink-muted">Antrean Tertua</span>
-            <span className="text-2xl font-bold text-ink">{oldestAge ?? "—"}</span>
+            <span className="text-2xl font-bold">{oldestAge ?? "—"}</span>
             <span className="text-xs text-ink-muted">
-              {oldestAge ? "Sejak pembuatan booking" : "Tidak ada antrean tertahan"}
+              {isOldestPast24h
+                ? "Melewati batas 24 jam!"
+                : oldestAge
+                  ? "Sejak pembuatan booking"
+                  : "Tidak ada antrean tertahan"}
             </span>
           </div>
 
