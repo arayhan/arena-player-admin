@@ -198,35 +198,39 @@ export function SidebarNav() {
         </div>
       </nav>
 
-      {/* The two icon buttons in this row are 44px square rather than
-          32px — the sidebar is dense on purpose, but the drawer it lives in
-          only exists below 1000px, where every control in it is a thumb
-          target. The avatar stays 32px: it is aria-hidden decoration. */}
-      <div className="flex items-center gap-2 border-t border-border p-1 pt-3">
-        <span
-          aria-hidden="true"
-          className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-ink"
-        >
-          A
-        </span>
-        {/* No field name here on purpose. "Lapangan Lombok" used to sit under
-            "Admin" and appears in no product document — the only other mention
-            in the repo is PROGRESS.md recording that the MARKET narrowed to
-            Lombok, which is a timezone fact, not the field's name. A plausible
-            label rendered as fact is what PRODUCT.md's must-not-fabricate rule
-            guards, and a field manager who sees their own field named wrongly
-            stops trusting every figure this app will later show them.
-            Restore it when the client confirms the real name. */}
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-medium text-ink">Admin</span>
-        </span>
-        <ThemeToggle />
-        <form method="POST" action="/api/auth/logout">
+      {/* Footer cluster: identity + theme toggle on the top row, and logout
+          as a dedicated, labelled full-width row below. Keeping logout separate
+          prevents the destructive session-ending action from being an accidental-tap
+          twin of the theme utility toggle. Both interactive targets meet the
+          44px floor (dev-rules.md). */}
+      <div className="flex flex-col gap-2 border-t border-border p-1 pt-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-ink"
+          >
+            A
+          </span>
+          {/* No field name here on purpose. "Lapangan Lombok" used to sit under
+              "Admin" and appears in no product document — the only other mention
+              in the repo is PROGRESS.md recording that the MARKET narrowed to
+              Lombok, which is a timezone fact, not the field's name. A plausible
+              label rendered as fact is what PRODUCT.md's must-not-fabricate rule
+              guards, and a field manager who sees their own field named wrongly
+              stops trusting every figure this app will later show them.
+              Restore it when the client confirms the real name. */}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm font-medium text-ink">Admin</span>
+          </span>
+          <ThemeToggle />
+        </div>
+
+        <form method="POST" action="/api/auth/logout" className="w-full">
           <button
             type="submit"
-            className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-control border border-border text-ink-muted hover:border-input-border hover:text-ink"
+            className="flex w-full items-center gap-3 rounded-control px-2 py-3 text-sm font-medium text-ink-muted hover:bg-border hover:text-ink"
           >
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4 flex-none">
               <path
                 d="M15 4H19C19.55 4 20 4.45 20 5V19C20 19.55 19.55 20 19 20H15"
                 stroke="currentColor"
@@ -242,7 +246,7 @@ export function SidebarNav() {
               />
               <path d="M14 12H4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
             </svg>
-            <span className="sr-only">Keluar</span>
+            Keluar
           </button>
         </form>
       </div>
