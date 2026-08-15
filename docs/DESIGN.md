@@ -69,7 +69,7 @@ spacing:
 # Components address THIS, never `colors` directly — that is what lets one
 # set of component rules serve both themes.
 semantic:
-  ground: { light: "{colors.grey-50}", dark: "#060D1F" }
+  ground: { light: "#F4F6FA", dark: "#060D1F" }
   surface: { light: "{colors.white}", dark: "#0C1830" }
   sidebar: { light: "{colors.white}", dark: "#0A1428" }
   ink: { light: "{colors.navy-900}", dark: "#EEF1F8" }

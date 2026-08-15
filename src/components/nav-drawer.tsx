@@ -66,17 +66,23 @@ export function NavDrawer({ nav, topbarBrand, children }: NavDrawerProps) {
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Scrim: a <button> rather than a clickable <div>, so it is a real
-          interactive element instead of a click handler bolted onto a
-          non-interactive one. aria-hidden + tabIndex={-1} because it is a
-          supplementary click-outside affordance — Escape and choosing a
-          nav item already cover keyboard closing. */}
+    <div className="flex min-h-screen min-h-dvh">
+      {/* Skip-to-content link for keyboard / assistive tech users. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-control focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-accent-ink"
+      >
+        Lewati ke konten utama
+      </a>
+
+      {/* Scrim: clickable backdrop button that closes the mobile drawer.
+          An accessible label is provided so screen readers and keyboard users
+          who encounter it understand its dismiss action. */}
       <button
         type="button"
-        aria-hidden="true"
         tabIndex={-1}
         onClick={close}
+        aria-label="Tutup menu navigasi"
         className={`${open ? "block" : "hidden"} fixed inset-0 z-[55] cursor-default border-0 bg-scrim p-0 min-[1001px]:hidden`}
       />
 
@@ -114,7 +120,13 @@ export function NavDrawer({ nav, topbarBrand, children }: NavDrawerProps) {
           {topbarBrand}
         </header>
 
-        <main className="flex flex-1 flex-col gap-4 p-6">{children}</main>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex flex-1 flex-col gap-4 p-6 outline-none"
+        >
+          <div className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col gap-4">{children}</div>
+        </main>
       </div>
     </div>
   );
