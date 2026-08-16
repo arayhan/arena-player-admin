@@ -33,7 +33,9 @@ export async function middleware(request: NextRequest) {
   const session = token ? await verifySession(token) : null;
 
   if (!session) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "";
     const redirect = NextResponse.redirect(loginUrl);
     redirect.headers.set("Cache-Control", NO_STORE);
     return redirect;
