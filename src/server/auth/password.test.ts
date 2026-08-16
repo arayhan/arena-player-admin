@@ -40,6 +40,24 @@ describe("verifyPassword", () => {
     await expect(verifyPassword("wrong password", hash)).resolves.toBe(false);
   });
 
+  it("accepts passwords when hash has backslash-escaped dollar signs or quotes", async () => {
+    const hash = await argon2id({
+      password: "AdminArena2026!",
+      salt: Buffer.alloc(16, 7),
+      parallelism: 1,
+      iterations: 3,
+      memorySize: 65536,
+      hashLength: 32,
+      outputType: "encoded",
+    });
+
+    const escaped = hash.replaceAll("$", "\\$");
+    const quoted = `"${escaped}"`;
+
+    await expect(verifyPassword("AdminArena2026!", escaped)).resolves.toBe(true);
+    await expect(verifyPassword("AdminArena2026!", quoted)).resolves.toBe(true);
+  });
+
   it("never throws on a malformed hash — returns false instead", async () => {
     await expect(verifyPassword("anything", "not-an-argon2-hash")).resolves.toBe(false);
     await expect(verifyPassword("anything", "")).resolves.toBe(false);

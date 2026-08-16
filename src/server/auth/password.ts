@@ -17,7 +17,11 @@ import { argon2Verify } from "hash-wasm";
  */
 export async function verifyPassword(plain: string, hash: string): Promise<boolean> {
   try {
-    return await argon2Verify({ password: plain, hash });
+    const normalized = hash
+      .trim()
+      .replace(/^["']|["']$/g, "")
+      .replace(/\\\$/g, "$");
+    return await argon2Verify({ password: plain, hash: normalized });
   } catch {
     // A malformed or empty hash throws inside hash-wasm rather than
     // returning false. Callers (the login route) must never see the
