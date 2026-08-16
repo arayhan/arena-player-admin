@@ -6,6 +6,17 @@
 
 > **Amended 2026-08-15.** The original request gave the rate card one home as a pair of `site_settings` keys, and covered the WhatsApp number, the Maps embed and the bank accounts. It now has to hold a **rate table keyed by slot and day type**, the **address**, and the **Ketentuan** — and the last of those changes the deployment story, because a value web currently hardcodes is a value that goes silently stale rather than visibly blank. Amended in place rather than superseded: nothing here has landed, so there is no history to preserve, and a second file would leave two descriptions of one Pengaturan screen.
 
+> **Amended again, 2026-08-17.** The client supplied a real pricelist — weekday tiers, and a
+> weekend tier that also covers public holidays. That answers the "which days are weekend" open
+> item below only halfway: Saturday/Sunday is confirmed, but "public holiday" is not a function of
+> a date alone, so a **new `public_holidays` table** is added — an admin-managed list, not a
+> hardcoded yearly calendar, because Indonesian national holidays shift and this project has
+> already paid once for a value that goes stale silently. `bank_accounts.is_active` is also
+> formalized here: it was added to the live table outside this document's own process (see
+> PROGRESS.md, 2026-08-17) and is already relied on by the shipped settings UI, so this
+> amendment catches the doc up to what shipped rather than fighting it. `site_rules` remains
+> requested-not-built and out of scope for this amendment — nobody has asked for it yet.
+
 ## Why
 
 Values shown to customers, owned by nobody:
@@ -66,7 +77,12 @@ create table site_settings (
     'dp_percent'         -- integer 1..100. THE ONLY PLACE THE NUMBER 50 IS STORED
   )),
 
-  constraint site_settings_value_length check (length(value) between 1 and 2000)
+  -- No lower bound: `maps_embed_url` is optional and the app writes an empty
+  -- string for "not configured yet", the same way `address` reads as empty
+  -- rather than a placeholder. A `between 1 and 2000` bound (this file's
+  -- original figure) rejects that legitimate state — caught by testing
+  -- against the live row before applying, not assumed from the DDL alone.
+  constraint site_settings_value_length check (length(value) <= 2000)
 );
 
 create table bank_accounts (
@@ -79,6 +95,12 @@ create table bank_accounts (
   -- an accident of insertion time, because the field will want its most-used
   -- bank first.
   sort_order     int  not null,
+
+  -- Added by the 2026-08-17 amendment, formalizing a column that was already
+  -- live and already relied on by the shipped settings UI's toggle button.
+  -- An inactive account stays in the admin's list (so re-enabling it needs no
+  -- re-typing) but is dropped from what the customer sees on the booking page.
+  is_active      boolean not null default true,
 
   created_at     timestamptz not null default now(),
 
@@ -159,6 +181,21 @@ create table rate_card (
 -- "the price" a question about insertion order.
 create unique index uniq_rate_card_slot on rate_card (time_slot, day_type);
 
+-- ADDED BY THE 2026-08-17 AMENDMENT. Answers the other half of "which days
+-- are weekend": Saturday/Sunday is a function of the date alone, but a public
+-- holiday is not — Idul Fitri moves every year, a regional holiday is not a
+-- national one. An admin-managed list, not a hardcoded calendar: Indonesian
+-- national holidays are gazetted yearly and a constant here would go stale
+-- exactly the way the WhatsApp number and the Ketentuan used to.
+create table public_holidays (
+  id           uuid primary key default gen_random_uuid(),
+  holiday_date date not null unique,
+  label        text not null,
+  created_at   timestamptz not null default now(),
+
+  constraint public_holidays_label_length check (length(label) between 1 and 100)
+);
+
 commit;
 ```
 
@@ -238,6 +275,8 @@ Added to `src/server/required-schema.ts`, asserted by `pnpm check:schema`:
 - `uniq_rate_card_slot` exists and is **unique** on `(time_slot, day_type)`
 - `rate_card_time_slot_canonical` exists, and its literals read out of `pg_get_constraintdef` are **set-equal to `TIME_SLOTS`** from `src/domain/slots.ts` — the same assertion `bookings` and `slot_blocks` already carry, and the reason the eighteen strings are repeated rather than factored out
 - `rate_card_day_type_valid` and `rate_card_price_positive` exist
+- `public_holidays` exists with columns `id`, `holiday_date`, `label`, `created_at`; `holiday_date` is `unique`; `public_holidays_label_length` exists
+- `bank_accounts.is_active` exists, `boolean`, `not null`, default `true`
 
 `check:schema` cannot assert that the table is **populated**, and must not try. An empty `rate_card` is a valid schema and a broken product; that gap is a gate ([6-gate-settings-and-expiry.md](../tasks/6-gate-settings-and-expiry.md)), not a check.
 
@@ -245,9 +284,9 @@ Runtime, before the migration lands: `src/server/schema-guard.ts` returns false;
 
 ## Open items
 
-> **ASSUMPTION FLAGGED — which days are `weekend`.** The `rate_card_day_type_valid` constraint names two day types and says nothing about which dates map to which, because nobody has asked. Saturday and Sunday is the obvious guess and guesses are what this project keeps paying for; a field where Friday evening prices like a weekend is entirely ordinary. The answer belongs in `src/domain/pricing.ts` as one function, authored in web, and it belongs on the same client call as question 3 of gate 6.
+> **RESOLVED 2026-08-17 — which days are `weekend`.** Saturday and Sunday, or any date in `public_holidays`. The client's pricelist prices Sabtu–Minggu and public holidays identically, one tier, so the two are one `day_type = 'weekend'` rather than a three-value enum — a `holiday` row would need its own price column nobody has supplied and the pricelist doesn't ask for. The resolver is `resolveDayType()` in **`src/server/pricing.ts`**, not `src/domain/pricing.ts` as originally proposed here — see arena-player-admin's PROGRESS.md, 2026-08-17: web has no consumer for a price today (`rateCard()` still returns `[]`), so a byte-identical shared module with nothing on the other side to use it is the overhead this very document argued against paying early (§ "The arithmetic belongs in `src/domain/`" below). Promote it when web starts quoting a price, not before.
 
-> **ASSUMPTION FLAGGED — rounding.** `price_rupiah` is an integer and `dp_percent` is an integer, so `price × percent / 100` can land between rupiah. The rule (round up, round down, round to the nearest 500) must be written once, in `src/domain/pricing.ts`, and it must be the same rule the customer sees quoted on `/booking` and the admin sees totalled in Statistik. It is invisible while prices are round thousands, which is exactly why it will be discovered by a customer rather than a test.
+> **RESOLVED 2026-08-17 — rounding.** Round-half-up to the nearest rupiah: `round(price_rupiah * dp_percent / 100)`. Every price in the client's pricelist divides evenly at the current 50% `dp_percent`, so this has no visible effect today — it only matters if `dp_percent` changes or a future price isn't a round number, which is exactly why it needed to be decided now rather than discovered later. Lives beside `dpAmount()` in `src/server/pricing.ts`, same caveat as above about promotion to `src/domain/`.
 
 > **ASSUMPTION FLAGGED — "admin phone" and "WhatsApp number" are treated as one value.** `whatsapp_number` is stored in `wa.me` form (`628…`, no `+`, no punctuation) because that is what `wa.me` and the WhatsApp Business API expect, and because `src/domain/phone.ts` normalises visitor numbers into the same shape. If the field also has a voice number that is not on WhatsApp, that is a **second key**, not a rename of this one — a display number pushed through `wa.me` produces a link that opens a chat with nobody.
 
