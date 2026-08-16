@@ -1,8 +1,7 @@
 import Link from "next/link";
 
+import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-import { BrandMark } from "./brand-mark";
 
 // Server Component, colocated for the same reason as BrandMark — one
 // consumer, the dashboard layout, which passes this whole tree into

@@ -1,6 +1,6 @@
 import { NavDrawer } from "@/components/nav-drawer";
 
-import { BrandMark } from "./_components/brand-mark";
+import { BrandMark } from "@/components/brand-mark";
 import { SidebarNav } from "./_components/sidebar-nav";
 
 // Server Component. Wraps every authenticated route ("/", "/bookings", ...)
