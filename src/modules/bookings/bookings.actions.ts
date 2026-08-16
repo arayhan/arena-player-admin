@@ -4,7 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { confirmBooking, getBookingById, rejectBooking } from "@/server/queries";
+import {
+  confirmBooking,
+  createBooking,
+  expireOldPendingBookings,
+  getBookingById,
+  rejectBooking,
+  updateBooking,
+} from "@/server/queries";
+import { createBookingInputSchema, updateBookingInputSchema } from "./bookings.schema";
 
 const uuidSchema = z.string().uuid();
 
@@ -75,10 +83,72 @@ export async function rejectBookingAction(formData: FormData): Promise<void> {
 }
 
 export async function triggerManualExpiryAction(): Promise<void> {
-  const { expireOldPendingBookings } = await import("@/server/queries");
   const { expiredCount } = await expireOldPendingBookings();
 
   revalidatePath("/");
   revalidatePath("/bookings");
   redirect(`/?expired=${expiredCount}`);
+}
+
+export async function createBookingAction(formData: FormData): Promise<void> {
+  const raw = {
+    booking_date: formData.get("booking_date"),
+    time_slot: formData.get("time_slot"),
+    team_name: formData.get("team_name"),
+    phone: formData.get("phone"),
+    notes: formData.get("notes") || null,
+    status: formData.get("status") || "confirmed",
+  };
+
+  const parsed = createBookingInputSchema.safeParse(raw);
+  if (!parsed.success) {
+    const errorMsg = parsed.error.issues[0]?.message ?? "Data booking tidak valid.";
+    redirect(`/bookings/new?error=${encodeURIComponent(errorMsg)}`);
+    return;
+  }
+
+  const result = await createBooking(parsed.data);
+  if (!result.success) {
+    redirect(`/bookings/new?error=${encodeURIComponent(result.error)}`);
+    return;
+  }
+
+  revalidatePath("/");
+  revalidatePath("/bookings");
+  redirect(`/bookings/${result.id}?success=created`);
+}
+
+export async function updateBookingAction(formData: FormData): Promise<void> {
+  const raw = {
+    id: formData.get("id"),
+    team_name: formData.get("team_name"),
+    phone: formData.get("phone"),
+    notes: formData.get("notes") || null,
+  };
+
+  const parsed = updateBookingInputSchema.safeParse(raw);
+  if (!parsed.success) {
+    const id = typeof raw.id === "string" ? raw.id : "";
+    const errorMsg = parsed.error.issues[0]?.message ?? "Data booking tidak valid.";
+    redirect(`/bookings/${id}?conflict=${encodeURIComponent(errorMsg)}`);
+    return;
+  }
+
+  const result = await updateBooking(parsed.data.id, {
+    team_name: parsed.data.team_name,
+    phone: parsed.data.phone,
+    notes: parsed.data.notes,
+  });
+
+  if (!result.success) {
+    redirect(
+      `/bookings/${parsed.data.id}?conflict=${encodeURIComponent(result.error ?? "Gagal memperbarui booking.")}`,
+    );
+    return;
+  }
+
+  revalidatePath("/");
+  revalidatePath("/bookings");
+  revalidatePath(`/bookings/${parsed.data.id}`);
+  redirect(`/bookings/${parsed.data.id}?success=updated`);
 }

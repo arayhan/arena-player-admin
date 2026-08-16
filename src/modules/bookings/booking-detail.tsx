@@ -1,7 +1,7 @@
 import { StatusPill } from "@/components/status-pill";
 import type { BookingRow } from "@/server/queries";
 import { formatBookingDate, formatRelativeAge } from "./booking-formatters";
-import { confirmBookingAction, rejectBookingAction } from "./bookings.actions";
+import { confirmBookingAction, rejectBookingAction, updateBookingAction } from "./bookings.actions";
 import { ProofPanel } from "./proof-panel";
 
 type BookingDetailProps = {
@@ -55,7 +55,11 @@ export function BookingDetail({ booking, conflictMessage, successMessage }: Book
               ? "Booking berhasil dikonfirmasi."
               : successMessage === "rejected"
                 ? "Booking berhasil ditolak."
-                : successMessage}
+                : successMessage === "created"
+                  ? "Booking walk-in berhasil dibuat dan disimpan."
+                  : successMessage === "updated"
+                    ? "Perubahan data booking berhasil disimpan."
+                    : successMessage}
           </span>
         </div>
       )}
@@ -108,7 +112,7 @@ export function BookingDetail({ booking, conflictMessage, successMessage }: Book
               <div>
                 <span className="text-xs font-medium text-ink-muted">Kunci Bukti Transfer</span>
                 <p className="font-mono text-xs text-ink-muted">
-                  {booking.proof_key ?? "Tidak ada"}
+                  {booking.proof_key ?? "Tidak ada (Walk-in / Tunai)"}
                 </p>
               </div>
             </div>
@@ -127,6 +131,78 @@ export function BookingDetail({ booking, conflictMessage, successMessage }: Book
               )}
             </div>
           </div>
+
+          {/* Edit Booking Details Form */}
+          <details className="group rounded-panel border border-border bg-surface p-6">
+            <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold uppercase tracking-wider text-ink-muted">
+              <span>Edit Data Pemesan</span>
+              <span className="text-xs font-normal text-accent group-open:hidden">Ubah &darr;</span>
+              <span className="text-xs font-normal text-accent hidden group-open:inline">
+                Tutup &uarr;
+              </span>
+            </summary>
+
+            <form
+              action={updateBookingAction}
+              className="mt-4 flex flex-col gap-4 border-t border-border pt-4"
+            >
+              <input type="hidden" name="id" value={booking.id} />
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="edit_team_name" className="text-xs font-semibold text-ink-muted">
+                    Nama Tim / Pemesan
+                  </label>
+                  <input
+                    id="edit_team_name"
+                    name="team_name"
+                    type="text"
+                    defaultValue={booking.team_name}
+                    required
+                    maxLength={100}
+                    className="h-10 rounded-control border border-border bg-ground px-3 text-sm text-ink focus:border-accent focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="edit_phone" className="text-xs font-semibold text-ink-muted">
+                    Nomor WhatsApp
+                  </label>
+                  <input
+                    id="edit_phone"
+                    name="phone"
+                    type="tel"
+                    defaultValue={booking.phone}
+                    required
+                    className="h-10 rounded-control border border-border bg-ground px-3 text-sm text-ink focus:border-accent focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="edit_notes" className="text-xs font-semibold text-ink-muted">
+                  Catatan
+                </label>
+                <textarea
+                  id="edit_notes"
+                  name="notes"
+                  rows={2}
+                  defaultValue={booking.notes ?? ""}
+                  maxLength={500}
+                  className="rounded-control border border-border bg-ground p-2.5 text-sm text-ink focus:border-accent focus:outline-none"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="inline-flex min-h-[40px] items-center rounded-control bg-accent px-4 py-2 text-xs font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover"
+                >
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </details>
 
           {/* Action Buttons Panel */}
           <div className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-6">

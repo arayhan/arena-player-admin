@@ -1,8 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { redirect } from "next/navigation";
 
-import { confirmBookingAction, rejectBookingAction } from "./bookings.actions";
-import { confirmBooking, getBookingById, rejectBooking } from "@/server/queries";
+import {
+  confirmBookingAction,
+  createBookingAction,
+  rejectBookingAction,
+  updateBookingAction,
+} from "./bookings.actions";
+import {
+  confirmBooking,
+  createBooking,
+  getBookingById,
+  rejectBooking,
+  updateBooking,
+} from "@/server/queries";
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
@@ -16,6 +27,9 @@ vi.mock("@/server/queries", () => ({
   confirmBooking: vi.fn(),
   rejectBooking: vi.fn(),
   getBookingById: vi.fn(),
+  createBooking: vi.fn(),
+  updateBooking: vi.fn(),
+  expireOldPendingBookings: vi.fn(),
 }));
 
 describe("bookings.actions", () => {
@@ -82,6 +96,54 @@ describe("bookings.actions", () => {
       await rejectBookingAction(formData);
       expect(rejectBooking).toHaveBeenCalledWith(validId);
       expect(redirect).toHaveBeenCalledWith(`/bookings/${validId}?success=rejected`);
+    });
+  });
+
+  describe("createBookingAction", () => {
+    it("creates walk-in booking and redirects to detail page", async () => {
+      const createdId = "c3d4e5f6-a1b2-4c3d-8e4f-5a6b7c8d9e0f";
+      vi.mocked(createBooking).mockResolvedValue({ success: true, id: createdId });
+
+      const formData = new FormData();
+      formData.set("booking_date", "2026-08-20");
+      formData.set("time_slot", "19.00 - 20.00");
+      formData.set("team_name", "Garuda Walkin");
+      formData.set("phone", "08123456789");
+
+      await createBookingAction(formData);
+      expect(createBooking).toHaveBeenCalled();
+      expect(redirect).toHaveBeenCalledWith(`/bookings/${createdId}?success=created`);
+    });
+
+    it("redirects with error parameter on validation failure", async () => {
+      const formData = new FormData();
+      formData.set("booking_date", "invalid-date");
+      formData.set("time_slot", "19.00 - 20.00");
+      formData.set("team_name", "");
+
+      await createBookingAction(formData);
+      expect(redirect).toHaveBeenCalledWith(expect.stringContaining("/bookings/new?error="));
+    });
+  });
+
+  describe("updateBookingAction", () => {
+    it("updates booking and redirects to detail page with success", async () => {
+      const validId = "a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d";
+      vi.mocked(updateBooking).mockResolvedValue({ success: true });
+
+      const formData = new FormData();
+      formData.set("id", validId);
+      formData.set("team_name", "Tim Garuda Updated");
+      formData.set("phone", "08123456789");
+      formData.set("notes", "Catatan baru");
+
+      await updateBookingAction(formData);
+      expect(updateBooking).toHaveBeenCalledWith(validId, {
+        team_name: "Tim Garuda Updated",
+        phone: "08123456789",
+        notes: "Catatan baru",
+      });
+      expect(redirect).toHaveBeenCalledWith(`/bookings/${validId}?success=updated`);
     });
   });
 });

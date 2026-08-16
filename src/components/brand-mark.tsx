@@ -9,6 +9,20 @@
 // rule 2), kept uniform rather than reached-for only where it is load-
 // bearing.
 //
+// `public/logo.jpeg` IS EXPORTED AT 132px, WHICH IS `MARK.lg * 3` AND NOT A
+// ROUND NUMBER BY ACCIDENT. The client supplied a 1254x1254 / 53KB master, and
+// with next/image banned nothing downscales it: the browser decoded a 1254²
+// bitmap — around 6MB in memory — to paint a 44px chip. The transfer was never
+// the problem on one admin's wifi; the decode was. 132px covers a 3x display at
+// the largest size this component renders (`MARK.lg`), and the file is now
+// ~4.9KB.
+//
+// IF `MARK.lg` EVER GROWS, THIS ASSET MUST BE RE-EXPORTED, and nothing will
+// tell you: an undersized JPEG does not fail, it just goes soft on the one
+// screen the client sees first. The master is kept at
+// `docs/assets/logo-master.jpeg` for exactly that — re-export from there,
+// never from the served copy, which has already been through one lossy pass.
+//
 // The white chip behind the mark is a deliberate, narrow exception to
 // "colour comes only from the semantic tier": logo.jpeg is a flat JPEG
 // with no alpha, painted on white by the source asset itself, not a

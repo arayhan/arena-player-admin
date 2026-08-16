@@ -53,7 +53,23 @@ export async function middleware(request: NextRequest) {
  * inside the route handler — if the matcher covered it, a scheduler
  * calling with only a bearer token would collect this middleware's 307 to
  * `/login` instead of ever reaching the handler, and nothing would expire.
+ *
+ * `logo.jpeg` IS NAMED HERE BECAUSE `/login` RENDERS IT AND HAS NO SESSION.
+ * "Static assets" above meant `_next/*`, and files in `public/` are not
+ * served from there — they sit at the root, so `GET /logo.jpeg` matched this
+ * guard and came back as a 307 to `/login`. The failure was silent in the
+ * worst way: the `<img>` is in the served HTML, the page looks correct in
+ * `curl`, and only a real browser shows the broken chip — on the one screen
+ * the client sees first, and for every visitor who is not already logged in,
+ * which is all of them at that point.
+ *
+ * NAMED, NOT WILDCARDED. A blanket "anything with a file extension" escape
+ * would also unguard `/api/exports/bookings` and any future download route —
+ * customer names and phone numbers behind a pattern nobody would re-read.
+ * One public file, one entry; add the next one by name too.
  */
 export const config = {
-  matcher: ["/((?!login|api/auth/login|api/jobs/expire|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!login|api/auth/login|api/jobs/expire|_next/static|_next/image|favicon.ico|logo.jpeg).*)",
+  ],
 };

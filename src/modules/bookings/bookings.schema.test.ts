@@ -46,3 +46,52 @@ describe("parseBookingsFilter", () => {
     expect(filter.dir).toBe("asc");
   });
 });
+
+describe("createBookingInputSchema", () => {
+  it("accepts valid walk-in booking inputs", async () => {
+    const { createBookingInputSchema } = await import("./bookings.schema");
+    const result = createBookingInputSchema.safeParse({
+      booking_date: "2026-08-20",
+      time_slot: "19.00 - 20.00",
+      team_name: "Garuda FC",
+      phone: "08123456789",
+      notes: "Bayar tunai di lapangan",
+      status: "confirmed",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid date format", async () => {
+    const { createBookingInputSchema } = await import("./bookings.schema");
+    const result = createBookingInputSchema.safeParse({
+      booking_date: "20-08-2026",
+      time_slot: "19.00 - 20.00",
+      team_name: "Garuda FC",
+      phone: "08123456789",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateBookingInputSchema", () => {
+  it("accepts valid update inputs with valid UUID", async () => {
+    const { updateBookingInputSchema } = await import("./bookings.schema");
+    const result = updateBookingInputSchema.safeParse({
+      id: "a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d",
+      team_name: "Garuda FC Baru",
+      phone: "08123456789",
+      notes: "Perubahan nama tim",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects malformed UUID", async () => {
+    const { updateBookingInputSchema } = await import("./bookings.schema");
+    const result = updateBookingInputSchema.safeParse({
+      id: "not-a-uuid",
+      team_name: "Garuda FC",
+      phone: "08123456789",
+    });
+    expect(result.success).toBe(false);
+  });
+});

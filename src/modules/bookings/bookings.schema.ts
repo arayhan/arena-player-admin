@@ -90,3 +90,33 @@ export function parseBookingsFilter(
 
   return result.data;
 }
+
+export const createBookingInputSchema = z.object({
+  booking_date: z.string().refine(isBookingDateString, {
+    message: "Format tanggal harus YYYY-MM-DD",
+  }),
+  time_slot: z.string().min(1, "Pilihan slot waktu wajib diisi"),
+  team_name: z
+    .string()
+    .trim()
+    .min(1, "Nama tim / pemesan wajib diisi")
+    .max(100, "Nama tim maksimal 100 karakter"),
+  phone: z.string().trim().min(8, "Nomor WhatsApp wajib diisi"),
+  notes: z.string().trim().max(500, "Catatan maksimal 500 karakter").optional().nullable(),
+  status: z.enum(["pending", "confirmed"]).default("confirmed"),
+});
+
+export type CreateBookingFormValues = z.infer<typeof createBookingInputSchema>;
+
+export const updateBookingInputSchema = z.object({
+  id: z.string().uuid("ID booking tidak valid"),
+  team_name: z
+    .string()
+    .trim()
+    .min(1, "Nama tim / pemesan wajib diisi")
+    .max(100, "Nama tim maksimal 100 karakter"),
+  phone: z.string().trim().min(8, "Nomor WhatsApp wajib diisi"),
+  notes: z.string().trim().max(500, "Catatan maksimal 500 karakter").optional().nullable(),
+});
+
+export type UpdateBookingFormValues = z.infer<typeof updateBookingInputSchema>;

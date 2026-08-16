@@ -4,6 +4,7 @@ import { sql } from "@/server/db";
 import type { BookingStatus } from "@/domain/status";
 import type { TimeSlot } from "@/domain/slots";
 import { normalisePhone } from "@/domain/phone";
+import { todayAtField } from "@/domain/dates";
 
 export const SORTABLE = {
   when: "b.booking_date, b.time_slot",
@@ -209,6 +210,173 @@ export async function expireOldPendingBookings(): Promise<{
     return {
       expiredCount: 0,
       rows: [],
+    };
+  }
+}
+
+export type CreateBookingInput = {
+  booking_date: string;
+  time_slot: string;
+  team_name: string;
+  phone: string;
+  notes?: string | null;
+  status?: "pending" | "confirmed";
+};
+
+export type CreateBookingResult =
+  | { success: true; id: string }
+  | { success: false; error: string; code?: "CONFLICT" | "VALIDATION" | "UNKNOWN" };
+
+export async function createBooking(data: CreateBookingInput): Promise<CreateBookingResult> {
+  const normalisedPhone = normalisePhone(data.phone);
+  if (!normalisedPhone) {
+    return {
+      success: false,
+      error: "Nomor WhatsApp tidak valid.",
+      code: "VALIDATION",
+    };
+  }
+
+  const status = data.status ?? "confirmed";
+
+  try {
+    const rows = await sql<Array<{ id: string }>>`
+      insert into bookings (
+        booking_date,
+        time_slot,
+        team_name,
+        phone,
+        notes,
+        proof_key,
+        status
+      ) values (
+        ${data.booking_date},
+        ${data.time_slot},
+        ${data.team_name},
+        ${normalisedPhone},
+        ${data.notes ?? null},
+        null,
+        ${status}
+      )
+      returning id
+    `;
+
+    if (rows.length === 0 || !rows[0]?.id) {
+      return {
+        success: false,
+        error: "Gagal membuat booking baru.",
+        code: "UNKNOWN",
+      };
+    }
+
+    return {
+      success: true,
+      id: rows[0].id,
+    };
+  } catch (error: unknown) {
+    const pgError = error as { code?: string; message?: string };
+    if (pgError?.code === "23505") {
+      // 23505: unique_violation on uniq_active_slot
+      return {
+        success: false,
+        error: "Slot pada tanggal dan jam tersebut sudah terisi.",
+        code: "CONFLICT",
+      };
+    }
+
+    console.error("[queries] createBooking failed:", error);
+    return {
+      success: false,
+      error: "Terjadi kesalahan saat menyimpan booking.",
+      code: "UNKNOWN",
+    };
+  }
+}
+
+export async function updateBooking(
+  id: string,
+  data: {
+    team_name: string;
+    phone: string;
+    notes?: string | null;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  const normalisedPhone = normalisePhone(data.phone);
+  if (!normalisedPhone) {
+    return { success: false, error: "Nomor WhatsApp tidak valid." };
+  }
+
+  try {
+    const result = await sql`
+      update bookings
+      set team_name = ${data.team_name},
+          phone = ${normalisedPhone},
+          notes = ${data.notes ?? null}
+      where id = ${id}
+      returning id
+    `;
+
+    if (result.length === 0) {
+      return { success: false, error: "Booking tidak ditemukan." };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("[queries] updateBooking failed:", error);
+    return { success: false, error: "Gagal memperbarui data booking." };
+  }
+}
+
+export async function getDashboardMetrics(): Promise<{
+  pendingCount: number;
+  todayActiveCount: number;
+  monthTotalCount: number;
+  oldestPendingCreatedAt: string | null;
+}> {
+  const today = todayAtField();
+  const firstDayOfMonth = today.slice(0, 7) + "-01";
+
+  try {
+    // 1. Pending count and oldest created_at
+    const pendingRows = await sql<Array<{ count: string; oldest: string | null }>>`
+      select
+        count(*)::text as count,
+        min(created_at)::text as oldest
+      from bookings
+      where status = 'pending'
+    `;
+
+    // 2. Today's active bookings count
+    const todayRows = await sql<Array<{ count: string }>>`
+      select
+        count(*)::text as count
+      from bookings
+      where booking_date = ${today}
+        and status in ('pending', 'confirmed')
+    `;
+
+    // 3. Month total active bookings count
+    const monthRows = await sql<Array<{ count: string }>>`
+      select
+        count(*)::text as count
+      from bookings
+      where booking_date >= ${firstDayOfMonth}
+        and status in ('pending', 'confirmed')
+    `;
+
+    return {
+      pendingCount: Number(pendingRows[0]?.count ?? 0),
+      oldestPendingCreatedAt: pendingRows[0]?.oldest ?? null,
+      todayActiveCount: Number(todayRows[0]?.count ?? 0),
+      monthTotalCount: Number(monthRows[0]?.count ?? 0),
+    };
+  } catch (error) {
+    console.error("[queries] getDashboardMetrics failed:", error);
+    return {
+      pendingCount: 0,
+      todayActiveCount: 0,
+      monthTotalCount: 0,
+      oldestPendingCreatedAt: null,
     };
   }
 }

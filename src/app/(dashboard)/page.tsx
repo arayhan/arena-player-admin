@@ -7,7 +7,7 @@ import { triggerManualExpiryAction } from "@/modules/bookings/bookings.actions";
 import { BookingCard } from "@/modules/bookings/booking-card";
 import { BookingsTable } from "@/modules/bookings/bookings-table";
 import { EmptyQueue } from "@/modules/bookings/empty-queue";
-import { listBookings } from "@/server/queries";
+import { getDashboardMetrics, listBookings } from "@/server/queries";
 import { tableExists } from "@/server/schema-guard";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +50,9 @@ export default async function DashboardPage({ searchParams }: Props) {
     dir: "asc",
   });
 
+  // Fetch operational metrics
+  const metrics = await getDashboardMetrics();
+
   // Calculate oldest pending age if there are items in the queue
   const oldestPending =
     pendingBookings.length > 0
@@ -62,13 +65,46 @@ export default async function DashboardPage({ searchParams }: Props) {
   // Dead-man's switch: is oldest pending > 24 hours?
   const isOldestPast24h = oldestPending != null && isOlderThan24Hours(oldestPending.created_at);
 
-  // Schema guards for Phase 4 / Phase 6 metrics (never fabricate values!)
-  const hasEventsTable = await tableExists("booking_events");
-  const hasSettingsTable = await tableExists("site_settings");
-
   return (
     <div className="flex flex-col gap-6">
-      <Breadcrumbs items={[{ label: "Beranda" }]} />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Breadcrumbs items={[{ label: "Beranda" }]} />
+
+        {/* Quick Action Shortcuts */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/bookings/new"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-control bg-accent px-4 py-2 text-xs font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Tambah Booking Walk-in
+          </Link>
+
+          <Link
+            href="/api/exports/bookings"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-control border border-border bg-surface px-4 py-2 text-xs font-medium text-ink transition-colors duration-150 hover:bg-ground"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4">
+              <path
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Ekspor CSV
+          </Link>
+        </div>
+      </div>
 
       {/* Expiry feedback notification */}
       {expiredCount != null && (
@@ -227,30 +263,18 @@ export default async function DashboardPage({ searchParams }: Props) {
             </span>
           </div>
 
-          {/* Card 3: Confirmed Today (Guarded by Schema 002) */}
+          {/* Card 3: Today's Active Bookings */}
           <div className="flex flex-col gap-1 rounded-panel border border-border bg-surface p-4">
-            <span className="text-xs font-medium text-ink-muted">Dikonfirmasi Hari Ini</span>
-            {hasEventsTable ? (
-              <span className="text-2xl font-bold text-ink">0</span>
-            ) : (
-              <span className="text-xs text-ink-muted italic">
-                Menunggu migrasi 002 (booking_events)
-              </span>
-            )}
-            <span className="text-xs text-ink-muted">Audit konfirmasi harian</span>
+            <span className="text-xs font-medium text-ink-muted">Jadwal Hari Ini</span>
+            <span className="text-2xl font-bold text-ink">{metrics.todayActiveCount}</span>
+            <span className="text-xs text-ink-muted">Booking aktif hari ini</span>
           </div>
 
-          {/* Card 4: Revenue / DP (Guarded by Schema 003) */}
+          {/* Card 4: Month Active Bookings */}
           <div className="flex flex-col gap-1 rounded-panel border border-border bg-surface p-4">
-            <span className="text-xs font-medium text-ink-muted">Total DP Masuk</span>
-            {hasSettingsTable ? (
-              <span className="text-2xl font-bold text-ink">—</span>
-            ) : (
-              <span className="text-xs text-ink-muted italic">
-                Menunggu migrasi 003 (site_settings)
-              </span>
-            )}
-            <span className="text-xs text-ink-muted">Estimasi tarif per slot</span>
+            <span className="text-xs font-medium text-ink-muted">Total Booking Bulan Ini</span>
+            <span className="text-2xl font-bold text-ink">{metrics.monthTotalCount}</span>
+            <span className="text-xs text-ink-muted">Total terkonfirmasi & pending</span>
           </div>
         </div>
       </section>
