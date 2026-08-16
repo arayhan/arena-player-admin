@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { AddBankAccountForm } from "@/modules/settings/add-bank-account-form";
 import { BankAccountItem } from "@/modules/settings/bank-account-item";
-import {
-  addBankAccountAction,
-  updateSiteSettingsAction,
-} from "@/modules/settings/settings.actions";
+import { updateSiteSettingsAction } from "@/modules/settings/settings.actions";
 import { getBankAccounts, getSiteSettings } from "@/server/queries";
 import { tableExists } from "@/server/schema-guard";
 
@@ -226,56 +224,7 @@ export default async function SettingsPage({ searchParams }: Props) {
             )}
 
             {/* Add Bank Account Form */}
-            <form
-              action={addBankAccountAction}
-              className="mt-2 flex flex-col gap-3 rounded-control border border-border bg-ground p-4"
-            >
-              <h3 className="text-xs font-bold uppercase text-ink">Tambah Rekening Baru</h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <input
-                  name="bank"
-                  type="text"
-                  placeholder="Nama Bank (BCA, BRI)"
-                  required
-                  className="h-10 rounded-control border border-border bg-surface px-3 text-xs text-ink focus:border-accent focus:outline-none"
-                />
-                <input
-                  name="account_number"
-                  type="text"
-                  placeholder="Nomor Rekening"
-                  required
-                  className="h-10 rounded-control border border-border bg-surface px-3 font-mono text-xs font-semibold text-ink focus:border-accent focus:outline-none"
-                />
-                <input
-                  name="account_holder"
-                  type="text"
-                  placeholder="Nama Pemilik Rekening"
-                  required
-                  className="h-10 rounded-control border border-border bg-surface px-3 text-xs text-ink focus:border-accent focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <label className="relative inline-flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="is_active"
-                    defaultChecked
-                    className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
-                  />
-                  <span className="text-xs font-medium text-ink">
-                    Langsung aktifkan untuk pembayaran pelanggan
-                  </span>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                className="mt-1 inline-flex min-h-[44px] items-center justify-center rounded-control border border-border bg-surface px-4 py-2 text-xs font-semibold text-ink transition-colors hover:bg-border"
-              >
-                + Tambah Rekening
-              </button>
-            </form>
+            <AddBankAccountForm />
           </div>
         </div>
       </div>

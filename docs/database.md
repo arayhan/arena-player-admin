@@ -15,7 +15,13 @@ This file exists for the half that is different here: what the admin is allowed 
 | `bookings` — rows                    | `select` freely; `update status` under a guard; `insert` a walk-in (see below); **never** `delete`                               |
 | `bookings` — schema                  | none. No `create`, `alter`, or `drop`, ever                                                                                      |
 | `slot_blocks` (Phase 4)              | `select`, `insert`, `delete`. Schema still owned by web                                                                          |
+| `site_settings`                      | `select`, `insert`/`update` (upsert by key). Allow-listed to four known keys — a typo'd key writes a row nothing reads           |
+| `bank_accounts`                      | full CRUD (`select`, `insert`, `update`, `delete`), plus `is_active` toggle. Schema still owned by web                          |
+| `rate_card`                          | full CRUD. Phase 6, [003](schema-requests/003-site-settings.md). Schema still owned by web                                      |
+| `public_holidays`                    | full CRUD. Phase 6, [003](schema-requests/003-site-settings.md). Schema still owned by web                                      |
 | Storage bucket `arena-player-proofs` | **read only**, through an RLS `select` policy on `storage.objects` scoped to this bucket. No write, no delete, no listing needed |
+
+For all four settings/pricing tables above, "schema still owned by web" means the same thing it means for `bookings` and `slot_blocks`: this repo's admin UI writes rows, never DDL. The migration that created them lives in `arena-player-web/db/migrations/`, per hard rule 1.
 
 ### The insert, and why `delete` stays banned
 

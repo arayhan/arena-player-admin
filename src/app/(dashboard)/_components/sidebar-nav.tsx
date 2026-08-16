@@ -77,6 +77,21 @@ const NAV_ITEMS: NavItem[] = [
       </>
     ),
   },
+  {
+    label: "Tarif & Slot",
+    href: "/pricing",
+    icon: (
+      <>
+        <path
+          d="M20 12L12 20L4 12V5C4 4.45 4.45 4 5 4H12L20 12Z"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+      </>
+    ),
+  },
 ];
 
 const SISTEM_ITEMS: NavItem[] = [

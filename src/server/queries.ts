@@ -578,9 +578,18 @@ export type SiteSettingsMap = {
 };
 
 export async function getSiteSettings(): Promise<SiteSettingsMap> {
+  // `address` DEFAULTS TO EMPTY, NEVER A PLAUSIBLE-LOOKING PLACEHOLDER. This
+  // field used to default to an invented street address ("Jl. Lapangan
+  // Futsal Arena No. 1, Lombok") — never supplied by the client, seeded into
+  // the live database by an out-of-band script (deleted 2026-08-17) and
+  // duplicated right here as a fallback. Same defect, quieter: the DB row
+  // has since been corrected, but this constant would have reintroduced the
+  // fabrication on the very next moment the table was briefly unreachable.
+  // An empty string renders as the settings page's own "required" gap, which
+  // is the missing-data state PRODUCT.md asks for — not a fact nobody gave.
   const defaults: SiteSettingsMap = {
     whatsapp_number: "6289682620666",
-    address: "Jl. Lapangan Futsal Arena No. 1, Lombok",
+    address: "",
     maps_embed_url: "",
     dp_percent: "50",
   };
@@ -717,5 +726,108 @@ export async function deleteBankAccount(id: string): Promise<{ success: boolean;
   } catch (error) {
     console.error("[queries] deleteBankAccount failed:", error);
     return { success: false, error: "Gagal menghapus rekening bank." };
+  }
+}
+
+export type RateCardRow = {
+  time_slot: TimeSlot;
+  day_type: "weekday" | "weekend";
+  price_rupiah: number;
+};
+
+export async function getRateCard(): Promise<RateCardRow[]> {
+  try {
+    const rows = await sql<RateCardRow[]>`
+      select time_slot, day_type, price_rupiah
+      from rate_card
+      order by time_slot asc, day_type asc
+    `;
+    return rows;
+  } catch (error) {
+    console.error("[queries] getRateCard failed:", error);
+    return [];
+  }
+}
+
+export async function upsertRatePrice(
+  timeSlot: string,
+  dayType: "weekday" | "weekend",
+  priceRupiah: number,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await sql`
+      insert into rate_card (time_slot, day_type, price_rupiah, updated_at)
+      values (${timeSlot}, ${dayType}, ${priceRupiah}, now())
+      on conflict (time_slot, day_type) do update
+      set price_rupiah = ${priceRupiah}, updated_at = now()
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error("[queries] upsertRatePrice failed:", error);
+    return { success: false, error: "Gagal menyimpan harga slot." };
+  }
+}
+
+export type PublicHolidayRow = {
+  id: string;
+  holiday_date: string;
+  label: string;
+};
+
+export async function getPublicHolidays(): Promise<PublicHolidayRow[]> {
+  try {
+    const rows = await sql<PublicHolidayRow[]>`
+      select id, holiday_date::text as holiday_date, label
+      from public_holidays
+      order by holiday_date asc
+    `;
+    return rows;
+  } catch (error) {
+    console.error("[queries] getPublicHolidays failed:", error);
+    return [];
+  }
+}
+
+export async function addPublicHoliday(data: {
+  holiday_date: string;
+  label: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const rows = await sql<Array<{ id: string }>>`
+      insert into public_holidays (holiday_date, label)
+      values (${data.holiday_date}, ${data.label})
+      returning id
+    `;
+    if (rows.length === 0) {
+      return { success: false, error: "Gagal menambahkan hari libur." };
+    }
+    return { success: true };
+  } catch (error: unknown) {
+    const pgError = error as { code?: string };
+    if (pgError?.code === "23505") {
+      // 23505: unique_violation on public_holidays.holiday_date
+      return { success: false, error: "Tanggal ini sudah terdaftar sebagai hari libur." };
+    }
+    console.error("[queries] addPublicHoliday failed:", error);
+    return { success: false, error: "Gagal menambahkan hari libur." };
+  }
+}
+
+export async function deletePublicHoliday(
+  id: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await sql`
+      delete from public_holidays
+      where id = ${id}
+      returning id
+    `;
+    if (result.length === 0) {
+      return { success: false, error: "Data hari libur tidak ditemukan." };
+    }
+    return { success: true };
+  } catch (error) {
+    console.error("[queries] deletePublicHoliday failed:", error);
+    return { success: false, error: "Gagal menghapus hari libur." };
   }
 }

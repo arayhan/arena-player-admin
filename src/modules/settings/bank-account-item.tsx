@@ -14,14 +14,36 @@ type BankAccountItemProps = {
 
 export function BankAccountItem({ account }: BankAccountItemProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isActive, setIsActive] = useState(account.is_active);
+  const [editIsActive, setEditIsActive] = useState(account.is_active);
   const [isPending, startTransition] = useTransition();
+
+  function handleToggle() {
+    const nextState = !isActive;
+    setIsActive(nextState);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("id", account.id);
+      formData.set("is_active", nextState ? "true" : "false");
+      await toggleBankAccountStatusAction(formData);
+    });
+  }
+
+  function handleDelete() {
+    if (!confirm(`Hapus rekening ${account.bank} (${account.account_number})?`)) {
+      return;
+    }
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("id", account.id);
+      await deleteBankAccountAction(formData);
+    });
+  }
 
   return (
     <div
       className={`flex flex-col rounded-control border p-4 transition-all duration-150 ${
-        account.is_active
-          ? "border-border bg-surface shadow-xs"
-          : "border-border/60 bg-ground/50 opacity-80"
+        isActive ? "border-border bg-surface shadow-xs" : "border-border/60 bg-ground/50 opacity-80"
       }`}
     >
       {/* View Mode */}
@@ -38,62 +60,58 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
               </span>
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  account.is_active
+                  isActive
                     ? "border border-green-border bg-green-bg text-green-ink"
                     : "border border-border bg-neutral-100 text-ink-muted dark:bg-neutral-800"
                 }`}
               >
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
-                    account.is_active ? "bg-green-500" : "bg-neutral-400"
+                    isActive ? "bg-green-500" : "bg-neutral-400"
                   }`}
                 />
-                {account.is_active ? "Aktif" : "Nonaktif"}
+                {isActive ? "Aktif" : "Nonaktif"}
               </span>
             </div>
             <span className="text-xs text-ink-muted">a.n. {account.account_holder}</span>
           </div>
 
           {/* Right Side: Toggle Switch + Edit Text + Delete Button */}
-          <div className="flex items-center gap-3">
-            {/* Toggle Switch Component */}
-            <form action={toggleBankAccountStatusAction} className="inline-flex items-center">
-              <input type="hidden" name="id" value={account.id} />
-              <input type="hidden" name="is_active" value={account.is_active ? "false" : "true"} />
-              <button
-                type="submit"
-                disabled={isPending}
-                aria-label={
-                  account.is_active ? "Nonaktifkan rekening bank" : "Aktifkan rekening bank"
-                }
-                title={
-                  account.is_active
-                    ? "Klik untuk menonaktifkan rekening"
-                    : "Klik untuk mengaktifkan rekening"
-                }
-                className="group flex min-h-[44px] cursor-pointer items-center gap-2 py-1 text-xs text-ink"
+          <div className="flex items-center gap-2.5">
+            {/* iOS/Modern Toggle Switch */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isActive}
+              onClick={handleToggle}
+              disabled={isPending}
+              aria-label={isActive ? "Nonaktifkan rekening bank" : "Aktifkan rekening bank"}
+              title={
+                isActive ? "Klik untuk menonaktifkan rekening" : "Klik untuk mengaktifkan rekening"
+              }
+              className="inline-flex min-h-[44px] cursor-pointer items-center justify-center p-1 focus:outline-none"
+            >
+              <span
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  isActive ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-700"
+                }`}
               >
-                <div
-                  className={`relative h-6 w-11 rounded-full transition-colors duration-200 ease-in-out focus-visible:outline-2 focus-visible:outline-accent ${
-                    account.is_active
-                      ? "bg-green-500 dark:bg-green-600"
-                      : "bg-neutral-300 dark:bg-neutral-700"
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    isActive ? "translate-x-5" : "translate-x-0"
                   }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
-                      account.is_active ? "translate-x-6" : "translate-x-1"
-                    } mt-1`}
-                  />
-                </div>
-              </button>
-            </form>
+                />
+              </span>
+            </button>
 
             {/* Edit Text Button (Beside the switch) */}
             <button
               type="button"
-              onClick={() => setIsEditing(true)}
-              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-control border border-border bg-ground px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-accent hover:text-accent"
+              onClick={() => {
+                setEditIsActive(isActive);
+                setIsEditing(true);
+              }}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-control border border-border bg-ground px-3.5 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-accent hover:text-accent"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -112,35 +130,27 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
             </button>
 
             {/* Delete Button */}
-            <form
-              action={deleteBankAccountAction}
-              onSubmit={(e) => {
-                if (!confirm(`Hapus rekening ${account.bank} (${account.account_number})?`)) {
-                  e.preventDefault();
-                }
-              }}
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isPending}
+              aria-label="Hapus rekening"
+              title="Hapus rekening"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-control border border-red-border/60 bg-red-bg/50 text-xs font-medium text-red-ink transition-colors hover:bg-red-border/20"
             >
-              <input type="hidden" name="id" value={account.id} />
-              <button
-                type="submit"
-                aria-label="Hapus rekening"
-                title="Hapus rekening"
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-control border border-red-border/60 bg-red-bg/50 text-xs font-medium text-red-ink transition-colors hover:bg-red-border/20"
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+                className="h-4 w-4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
-                  className="h-4 w-4"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
-                </svg>
-              </button>
-            </form>
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
+              </svg>
+            </button>
           </div>
         </div>
       ) : (
@@ -148,14 +158,18 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
         <form
           action={async (formData: FormData) => {
             startTransition(async () => {
+              formData.set("is_active", editIsActive ? "true" : "false");
               await updateBankAccountAction(formData);
+              setIsActive(editIsActive);
               setIsEditing(false);
             });
           }}
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-3.5"
         >
-          <div className="flex items-center justify-between border-b border-border pb-2">
-            <span className="text-xs font-bold text-ink">Edit Rekening: {account.bank}</span>
+          <div className="flex items-center justify-between border-b border-border pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-ink">✏️ Ubah Rekening: {account.bank}</span>
+            </div>
             <button
               type="button"
               onClick={() => setIsEditing(false)}
@@ -206,18 +220,34 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-border pt-3">
-            <label className="inline-flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                name="is_active"
-                defaultChecked={account.is_active}
-                className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
-              />
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+            {/* Toggle Switch in Edit Mode */}
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={editIsActive}
+                onClick={() => setEditIsActive(!editIsActive)}
+                className="inline-flex min-h-[44px] cursor-pointer items-center justify-center p-1 focus:outline-none"
+              >
+                <span
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    editIsActive ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-700"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      editIsActive ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </span>
+              </button>
               <span className="text-xs font-medium text-ink">
-                Status Aktif (Ditampilkan pada formulir DP)
+                {editIsActive
+                  ? "Status: Aktif (Tampil di form DP)"
+                  : "Status: Nonaktif (Disembunyikan)"}
               </span>
-            </label>
+            </div>
 
             <div className="flex items-center gap-2">
               <button

@@ -179,4 +179,62 @@ const SLOT_BLOCKS: RequiredTable = {
   ],
 };
 
-export const REQUIRED_TABLES: readonly RequiredTable[] = [BOOKINGS, SLOT_BLOCKS];
+/**
+ * `rate_card` and `public_holidays` — Phase 6. Requested (and, for
+ * `public_holidays`, added by amendment) in
+ * docs/schema-requests/003-site-settings.md.
+ */
+const RATE_CARD: RequiredTable = {
+  name: "rate_card",
+  columns: [
+    { name: "id", dataType: "uuid", nullable: false },
+    { name: "time_slot", dataType: "text", nullable: false },
+    { name: "day_type", dataType: "text", nullable: false },
+    { name: "price_rupiah", dataType: "integer", nullable: false },
+    { name: "updated_at", dataType: "timestamp with time zone", nullable: false },
+  ],
+  indexes: [
+    {
+      name: "uniq_rate_card_slot",
+      unique: true,
+      columns: ["time_slot", "day_type"],
+    },
+  ],
+  checkConstraints: [
+    {
+      kind: "enum-set-equal",
+      name: "rate_card_time_slot_canonical",
+      expectedLiterals: TIME_SLOTS,
+    },
+    {
+      kind: "enum-subset",
+      name: "rate_card_day_type_valid",
+      expectedLiterals: ["weekday", "weekend"],
+    },
+  ],
+};
+
+const PUBLIC_HOLIDAYS: RequiredTable = {
+  name: "public_holidays",
+  columns: [
+    { name: "id", dataType: "uuid", nullable: false },
+    { name: "holiday_date", dataType: "date", nullable: false },
+    { name: "label", dataType: "text", nullable: false },
+    { name: "created_at", dataType: "timestamp with time zone", nullable: false },
+  ],
+  indexes: [],
+  checkConstraints: [
+    {
+      kind: "max-length",
+      name: "public_holidays_label_length",
+      maxLength: 100,
+    },
+  ],
+};
+
+export const REQUIRED_TABLES: readonly RequiredTable[] = [
+  BOOKINGS,
+  SLOT_BLOCKS,
+  RATE_CARD,
+  PUBLIC_HOLIDAYS,
+];
