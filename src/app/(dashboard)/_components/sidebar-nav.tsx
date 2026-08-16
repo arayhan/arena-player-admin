@@ -104,8 +104,6 @@ const SISTEM_ITEMS: NavItem[] = [
   {
     label: "Pengaturan",
     href: "/settings",
-    disabled: true,
-    badge: "Segera",
     icon: (
       <>
         <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />

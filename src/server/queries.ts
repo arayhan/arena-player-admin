@@ -569,3 +569,103 @@ export async function getStatsData(): Promise<StatsSummary> {
     };
   }
 }
+
+export type SiteSettingsMap = {
+  whatsapp_number: string;
+  address: string;
+  maps_embed_url: string;
+  dp_percent: string;
+};
+
+export async function getSiteSettings(): Promise<SiteSettingsMap> {
+  const defaults: SiteSettingsMap = {
+    whatsapp_number: "6289682620666",
+    address: "Jl. Lapangan Futsal Arena No. 1, Lombok",
+    maps_embed_url: "",
+    dp_percent: "50",
+  };
+
+  try {
+    const rows = await sql<Array<{ key: string; value: string }>>`
+      select key, value from site_settings
+    `;
+    for (const r of rows) {
+      if (r.key in defaults) {
+        defaults[r.key as keyof SiteSettingsMap] = r.value;
+      }
+    }
+    return defaults;
+  } catch (error) {
+    console.error("[queries] getSiteSettings fallback to defaults:", error);
+    return defaults;
+  }
+}
+
+export async function updateSiteSetting(
+  key: string,
+  value: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await sql`
+      insert into site_settings (key, value, updated_at)
+      values (${key}, ${value}, now())
+      on conflict (key) do update
+      set value = ${value}, updated_at = now()
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error(`[queries] updateSiteSetting failed for ${key}:`, error);
+    return { success: false, error: "Gagal menyimpan pengaturan." };
+  }
+}
+
+export type BankAccountRow = {
+  id: string;
+  bank: string;
+  account_number: string;
+  account_holder: string;
+  sort_order: number;
+};
+
+export async function getBankAccounts(): Promise<BankAccountRow[]> {
+  try {
+    const rows = await sql<BankAccountRow[]>`
+      select id, bank, account_number, account_holder, sort_order
+      from bank_accounts
+      order by sort_order asc
+    `;
+    return rows;
+  } catch (error) {
+    console.error("[queries] getBankAccounts failed:", error);
+    return [];
+  }
+}
+
+export async function createBankAccount(data: {
+  bank: string;
+  account_number: string;
+  account_holder: string;
+  sort_order?: number;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const sortOrder = data.sort_order ?? 1;
+    await sql`
+      insert into bank_accounts (bank, account_number, account_holder, sort_order)
+      values (${data.bank}, ${data.account_number}, ${data.account_holder}, ${sortOrder})
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error("[queries] createBankAccount failed:", error);
+    return { success: false, error: "Gagal menambahkan rekening bank." };
+  }
+}
+
+export async function deleteBankAccount(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await sql`delete from bank_accounts where id = ${id}`;
+    return { success: true };
+  } catch (error) {
+    console.error("[queries] deleteBankAccount failed:", error);
+    return { success: false, error: "Gagal menghapus rekening bank." };
+  }
+}
