@@ -119,19 +119,44 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               name="password"
               type="password"
               required
+              // FOCUS LANDS ON THE FIELD TO RETYPE, NOT ON THE TEXT EXPLAINING
+              // WHY. This used to sit on the error box below, which is static
+              // text after the input in DOM order: Tab from it went FORWARD to
+              // the submit button and skipped the input entirely, so recovering
+              // from a failed login cost a Shift+Tab backwards — on the one
+              // screen where failure is the expected case (WCAG 2.4.3).
+              //
+              // The error is still announced on arrival: `aria-describedby`
+              // names it, and focusing a control reads its description out with
+              // it. Error id first so the failure is heard before the handover
+              // boilerplate.
+              //
+              // Only on failure. A clean /login does not steal focus, which on
+              // a phone would open the keyboard over a page the admin may have
+              // opened for another reason.
+              autoFocus={Boolean(message)}
               autoComplete="current-password"
-              aria-describedby={message ? "password-hint login-error" : "password-hint"}
+              aria-describedby={message ? "login-error password-hint" : "password-hint"}
               aria-invalid={message ? true : undefined}
               className="h-11 rounded-control border border-input-border bg-surface px-3 text-body text-ink transition-colors duration-150 hover:border-ink-muted focus:border-accent"
             />
           </Field>
 
+          {/* NOT FOCUSED, AND NOT FOCUSABLE. The input above claims focus and
+              names this box in its `aria-describedby`, so the message is read
+              out with the control the admin has to use — putting focus here
+              instead only added a keystroke on the way back to the field.
+
+              `role="alert"` stays, but it is NOT what announces this today: an
+              alert fires when a live region is inserted, and this arrives on a
+              full page load (POST → 303 → GET) where the box is present at
+              parse time. It is here so the announcement survives if this ever
+              becomes a client-side render. Do not delete the focus above on
+              the strength of this role. */}
           {message ? (
             <div
               id="login-error"
               role="alert"
-              tabIndex={-1}
-              autoFocus
               className="rounded-control border border-red-border bg-red-bg px-3 py-2 text-sm text-red-ink"
             >
               {message}
