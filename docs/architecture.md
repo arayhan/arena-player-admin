@@ -203,6 +203,10 @@ Payload is `{ sub: 'admin', iat, exp }` and nothing else. There is no second sub
 
 In-memory, per-IP, on the login route only: 5 attempts per 15 minutes, then 429. Deliberately not Redis and not a database table — one admin, one password, and a process restart clearing the counter is an acceptable weakness against an argon2id hash. It exists to make online brute force pointless, not to be a security product.
 
+**The window is anchored to the first attempt and is never extended when the limit fires.** Five attempts spread over fourteen minutes leave one minute on the clock when the sixth is refused, not fifteen. `/login` therefore reads the remaining time out of the live bucket (`peekRateLimit`) rather than printing the window length — the derived constant it used to interpolate was the length of the window, not the length of the wait, and overstated it by up to the whole fifteen minutes.
+
+**The bucket `Map` is pinned to `globalThis`, and that is load-bearing rather than defensive.** Next bundles the route-handler layer and the RSC layer separately, so a module imported by both is instantiated twice in one process. Measured against a production build before the pin: the route returned 429 while `/login`, rendering microseconds later in the same process, found no bucket for the same IP and silently fell back to its non-numeric copy. Nothing throws when the two copies diverge. The counter is still per-process and still cleared by a redeploy — the pin fixes visibility across bundle layers, not durability.
+
 ---
 
 ## The bookings list

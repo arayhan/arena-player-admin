@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/button";
 import { Field } from "@/components/field";
-import { WINDOW_MINUTES } from "@/server/auth/rate-limit";
+import { getClientIp } from "@/server/auth/client-ip";
+import { peekRateLimit } from "@/server/auth/rate-limit";
 
 // Server Component. No client-side JS: the form posts to
 // `/api/auth/login` as a plain HTML `<form>`, and a failed login redirects
@@ -21,18 +23,45 @@ type LoginPageProps = {
   searchParams: Promise<{ error?: string }>;
 };
 
-function errorMessage(error: string | undefined): string | null {
+async function errorMessage(error: string | undefined): Promise<string | null> {
   if (error === "rate_limited") {
-    // The wait is interpolated, never written as a literal: the admin is at
-    // the field with a customer waiting, and a wait stated wrongly is worse
-    // than one not stated at all.
+    // THE NUMBER IS MEASURED AT RENDER TIME, NOT THE WINDOW LENGTH. The window
+    // is anchored to the FIRST attempt and never extended, so `WINDOW_MS` — the
+    // value this string used to interpolate — is the length of the window and
+    // not the length of the wait. Five attempts spread over fourteen minutes
+    // left one minute on the clock while this line said fifteen. The admin is
+    // at the field with a customer waiting: a wait stated wrongly is worse than
+    // one not stated at all, and this one overstated it in the only direction
+    // that makes them give up and walk away.
     //
+    // `headers()` is awaited only in this branch, so an ordinary /login render
+    // does none of this work. The IP comes from the same `getClientIp` the
+    // login route records against — see that file for why the two must not
+    // drift apart.
+    const remainingMs = peekRateLimit(getClientIp(await headers()));
+
+    if (remainingMs === null) {
+      // No lock this process can see. Usually the window has simply passed;
+      // it is also what a restarted process reports, since the counter lives
+      // in memory. "Sebentar lagi" is true under every one of those states,
+      // which a number would not be — and inventing one here would be the
+      // exact defect this branch exists to remove.
+      return "Terlalu banyak percobaan. Coba lagi sebentar lagi.";
+    }
+
+    // CEIL, NEVER ROUND. Rounding 90s down to "1 menit" sends the admin back to
+    // a door that is still shut, and the second failed attempt is the one that
+    // makes them stop trusting the message. Ceil bottoms out at 1, so there is
+    // no "0 menit". Indonesian does not inflect for plural, so one string
+    // serves 1 and 14 alike.
+    const minutes = Math.ceil(remainingMs / 60_000);
+
     // Problem first, then the way out. This is the highest-stakes state in
     // the app — one account, no reset, no MFA — so it says plainly that the
     // lock is temporary and names when it lifts. It does not apologise and
     // it does not soften: a security surface that gets chatty on failure
     // reads as one that is not sure what it is doing.
-    return `Terlalu banyak percobaan. Masuk dikunci ${WINDOW_MINUTES} menit, setelah itu bisa dicoba lagi.`;
+    return `Terlalu banyak percobaan. Coba lagi dalam ${minutes} menit.`;
   }
   if (error === "empty") {
     return "Kata sandi belum diisi.";
@@ -49,7 +78,7 @@ const DEV_LOGIN_BYPASS = process.env.NODE_ENV === "development";
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error } = await searchParams;
-  const message = errorMessage(error);
+  const message = await errorMessage(error);
 
   return (
     // `bg-login-plate` is the client's own navy behind the card in light mode,
