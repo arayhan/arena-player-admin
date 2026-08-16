@@ -182,7 +182,7 @@ export default async function DashboardPage({ searchParams }: Props) {
           <form action={triggerManualExpiryAction}>
             <button
               type="submit"
-              className="inline-flex min-h-[36px] items-center gap-2 rounded-control border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-150 hover:bg-ground"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-control border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink transition-colors duration-150 hover:bg-ground"
             >
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-3.5 w-3.5">
                 <path

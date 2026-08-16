@@ -45,7 +45,7 @@ export function BookingsTable({ bookings }: { bookings: BookingRow[] }) {
                     href={waLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-[28px] items-center text-xs font-normal text-accent underline underline-offset-2 hover:text-accent-hover"
+                    className="inline-flex min-h-[44px] items-center text-xs font-normal text-accent underline underline-offset-2 hover:text-accent-hover"
                   >
                     {booking.phone}
                   </a>
@@ -57,7 +57,7 @@ export function BookingsTable({ bookings }: { bookings: BookingRow[] }) {
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   <Link
                     href={`/bookings/${booking.id}`}
-                    className="inline-flex min-h-[36px] items-center rounded-control bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover"
+                    className="inline-flex min-h-[44px] items-center rounded-control bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover"
                   >
                     Detail
                   </Link>

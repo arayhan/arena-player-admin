@@ -91,7 +91,7 @@ export function BookingDetail({ booking, conflictMessage, successMessage }: Book
                     href={waLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-[32px] items-center text-accent underline underline-offset-2 hover:text-accent-hover"
+                    className="inline-flex min-h-[44px] items-center text-accent underline underline-offset-2 hover:text-accent-hover"
                   >
                     {booking.phone} &rarr;
                   </a>

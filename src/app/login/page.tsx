@@ -73,7 +73,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               autoComplete="current-password"
               aria-describedby={message ? "password-hint login-error" : "password-hint"}
               aria-invalid={message ? true : undefined}
-              className="h-10 rounded-control border border-input-border bg-surface px-3 text-body text-ink"
+              className="h-11 rounded-control border border-input-border bg-surface px-3 text-body text-ink"
             />
           </Field>
 
