@@ -100,7 +100,7 @@ const BOOKINGS: RequiredTable = {
     { name: "team_name", dataType: "text", nullable: false },
     { name: "phone", dataType: "text", nullable: false },
     { name: "notes", dataType: "text", nullable: true },
-    { name: "proof_key", dataType: "text", nullable: false },
+    { name: "proof_key", dataType: "text", nullable: true },
     { name: "status", dataType: "text", nullable: false },
     { name: "created_at", dataType: "timestamp with time zone", nullable: false },
   ],
