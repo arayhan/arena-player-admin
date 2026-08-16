@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/button";
 import { Field } from "@/components/field";
 import { WINDOW_MINUTES } from "@/server/auth/rate-limit";
@@ -25,7 +26,13 @@ function errorMessage(error: string | undefined): string | null {
     // The wait is interpolated, never written as a literal: the admin is at
     // the field with a customer waiting, and a wait stated wrongly is worse
     // than one not stated at all.
-    return `Terlalu banyak percobaan masuk. Coba lagi dalam ${WINDOW_MINUTES} menit.`;
+    //
+    // Problem first, then the way out. This is the highest-stakes state in
+    // the app — one account, no reset, no MFA — so it says plainly that the
+    // lock is temporary and names when it lifts. It does not apologise and
+    // it does not soften: a security surface that gets chatty on failure
+    // reads as one that is not sure what it is doing.
+    return `Terlalu banyak percobaan. Masuk dikunci ${WINDOW_MINUTES} menit, setelah itu bisa dicoba lagi.`;
   }
   if (error === "empty") {
     return "Kata sandi belum diisi.";
@@ -45,9 +52,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const message = errorMessage(error);
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-ground px-4">
+    // `bg-login-plate` is the client's own navy behind the card in light mode,
+    // and the unchanged dark ground in dark mode — see the token's comment in
+    // globals.css for the measurements behind that split. Nothing textual sits
+    // on the plate; the card keeps `surface`, so every contrast pair in here is
+    // the one it already was.
+    <main className="flex flex-1 items-center justify-center bg-login-plate px-4 py-10">
       <div className="w-full max-w-sm rounded-panel border border-border bg-surface p-8">
-        <h1>Masuk</h1>
+        {/* The mark alone — the wordmark is off because the <h1> and the line
+            under it already name the app, and the same words twice in one
+            card reads as a bug rather than as brand. */}
+        <BrandMark size="lg" showWordmark={false} />
+        <h1 className="mt-6">Masuk</h1>
         <p className="mt-1 text-sm text-ink-muted">Arena Player — back office admin.</p>
 
         {/* No `noValidate`: the input's `required` is the cheapest guard there
@@ -65,6 +81,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 : "Kata sandi admin diberikan saat serah terima."
             }
           >
+            {/* border-color at 150ms is the whole motion budget DESIGN.md
+                allows, and it is spent here because this is the only control
+                on the page. The global :focus-visible ring in globals.css
+                sits on top of this and is NOT replaced by it. */}
             <input
               id="password"
               name="password"
@@ -73,7 +93,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               autoComplete="current-password"
               aria-describedby={message ? "password-hint login-error" : "password-hint"}
               aria-invalid={message ? true : undefined}
-              className="h-11 rounded-control border border-input-border bg-surface px-3 text-body text-ink"
+              className="h-11 rounded-control border border-input-border bg-surface px-3 text-body text-ink transition-colors duration-150 hover:border-ink-muted focus:border-accent"
             />
           </Field>
 

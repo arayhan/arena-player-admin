@@ -89,6 +89,26 @@
   color-scheme: light;
 
   --ground: #f4f6fa;
+  /* /login only, and a second narrow exception to "colour comes only from the
+   * semantic tier" — documented for the same reason the white chip in
+   * components/brand-mark.tsx is. #011a43 is navy-900, sampled from the
+   * client's own logo (PRODUCT.md, Brand Commitments), and /login is the one
+   * surface in this app with room to say so.
+   *
+   * NOTHING TEXTUAL EVER SITS ON THIS. The login card keeps --surface, so
+   * every contrast pair inside it is unchanged and this introduces no new one.
+   * The white card on navy measures 17.07.
+   *
+   * DARK IS DELIBERATELY NOT NAVY, and this was measured rather than assumed.
+   * Dark mode is already navy throughout, so a saturated plate there is either
+   * a glare or, kept dark, it costs the card the separation the dashboard
+   * already ships. The shipped dark baseline is border-vs-ground 1.38 and
+   * surface-vs-ground 1.10; every navy-lifted candidate came in under it
+   * (#0b2350 gave 1.10/1.15, #04122f gave 1.33/1.05). So dark holds the
+   * ground value exactly — the login page is visually unchanged in dark — and
+   * the brand presence there comes from the white logo chip instead, which is
+   * the one element that reads on any navy. */
+  --login-plate: #011a43;
   --surface: #ffffff;
   --sidebar: #ffffff;
   --ink: #011a43;
@@ -125,6 +145,7 @@
     color-scheme: dark;
 
     --ground: #060d1f;
+    --login-plate: #060d1f;
     --surface: #0c1830;
     --sidebar: #0a1428;
     --ink: #eef1f8;
@@ -156,6 +177,7 @@
   color-scheme: dark;
 
   --ground: #060d1f;
+  --login-plate: #060d1f;
   --surface: #0c1830;
   --sidebar: #0a1428;
   --ink: #eef1f8;
@@ -188,6 +210,7 @@
   color-scheme: light;
 
   --ground: #f4f6fa;
+  --login-plate: #011a43;
   --surface: #ffffff;
   --sidebar: #ffffff;
   --ink: #011a43;
@@ -218,6 +241,7 @@
  * out of :root when no utility happens to reference it. */
 @theme static inline {
   --color-ground: var(--ground);
+  --color-login-plate: var(--login-plate);
   --color-surface: var(--surface);
   --color-sidebar: var(--sidebar);
   --color-ink: var(--ink);
