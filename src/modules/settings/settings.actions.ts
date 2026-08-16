@@ -48,7 +48,7 @@ const bankAccountSchema = z.object({
   bank: z.string().min(1, "Nama bank wajib diisi").max(40),
   account_number: z.string().min(1, "Nomor rekening wajib diisi").max(40),
   account_holder: z.string().min(1, "Nama pemilik rekening wajib diisi").max(100),
-  sort_order: z.coerce.number().int().min(1).default(1),
+  is_active: z.coerce.boolean().default(true),
 });
 
 export async function addBankAccountAction(formData: FormData): Promise<void> {
@@ -56,7 +56,7 @@ export async function addBankAccountAction(formData: FormData): Promise<void> {
     bank: formData.get("bank"),
     account_number: formData.get("account_number"),
     account_holder: formData.get("account_holder"),
-    sort_order: formData.get("sort_order") || 1,
+    is_active: formData.get("is_active") === "true" || formData.get("is_active") === "on",
   };
 
   const parsed = bankAccountSchema.safeParse(raw);
@@ -76,6 +76,62 @@ export async function addBankAccountAction(formData: FormData): Promise<void> {
 
   revalidatePath("/settings");
   redirect("/settings?success=bank_added");
+}
+
+export async function updateBankAccountAction(formData: FormData): Promise<void> {
+  const idRaw = formData.get("id");
+  if (typeof idRaw !== "string" || !idRaw) {
+    redirect("/settings");
+    return;
+  }
+
+  const raw = {
+    bank: formData.get("bank"),
+    account_number: formData.get("account_number"),
+    account_holder: formData.get("account_holder"),
+    is_active: formData.get("is_active") === "true" || formData.get("is_active") === "on",
+  };
+
+  const parsed = bankAccountSchema.safeParse(raw);
+  if (!parsed.success) {
+    const errorMsg = parsed.error.issues[0]?.message ?? "Data rekening tidak valid.";
+    redirect(`/settings?error=${encodeURIComponent(errorMsg)}`);
+    return;
+  }
+
+  const { updateBankAccount } = await import("@/server/queries");
+  const result = await updateBankAccount(idRaw, parsed.data);
+  if (!result.success) {
+    redirect(
+      `/settings?error=${encodeURIComponent(result.error ?? "Gagal memperbarui rekening.")}`,
+    );
+    return;
+  }
+
+  revalidatePath("/settings");
+  redirect("/settings?success=bank_updated");
+}
+
+export async function toggleBankAccountStatusAction(formData: FormData): Promise<void> {
+  const idRaw = formData.get("id");
+  const isActiveRaw = formData.get("is_active");
+  if (typeof idRaw !== "string" || !idRaw) {
+    redirect("/settings");
+    return;
+  }
+
+  const newStatus = isActiveRaw === "true";
+  const { toggleBankAccountStatus } = await import("@/server/queries");
+  const result = await toggleBankAccountStatus(idRaw, newStatus);
+  if (!result.success) {
+    redirect(
+      `/settings?error=${encodeURIComponent(result.error ?? "Gagal mengubah status rekening.")}`,
+    );
+    return;
+  }
+
+  revalidatePath("/settings");
+  redirect("/settings?success=bank_updated");
 }
 
 export async function deleteBankAccountAction(formData: FormData): Promise<void> {

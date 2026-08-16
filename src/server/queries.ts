@@ -625,14 +625,15 @@ export type BankAccountRow = {
   account_number: string;
   account_holder: string;
   sort_order: number;
+  is_active: boolean;
 };
 
 export async function getBankAccounts(): Promise<BankAccountRow[]> {
   try {
     const rows = await sql<BankAccountRow[]>`
-      select id, bank, account_number, account_holder, sort_order
+      select id, bank, account_number, account_holder, sort_order, coalesce(is_active, true) as is_active
       from bank_accounts
-      order by sort_order asc
+      order by sort_order asc, created_at asc
     `;
     return rows;
   } catch (error) {
@@ -645,18 +646,67 @@ export async function createBankAccount(data: {
   bank: string;
   account_number: string;
   account_holder: string;
-  sort_order?: number;
+  is_active?: boolean;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const sortOrder = data.sort_order ?? 1;
+    const isActive = data.is_active ?? true;
     await sql`
-      insert into bank_accounts (bank, account_number, account_holder, sort_order)
-      values (${data.bank}, ${data.account_number}, ${data.account_holder}, ${sortOrder})
+      insert into bank_accounts (bank, account_number, account_holder, is_active, sort_order)
+      select 
+        ${data.bank}, 
+        ${data.account_number}, 
+        ${data.account_holder}, 
+        ${isActive}, 
+        coalesce(max(sort_order), 0) + 1
+      from bank_accounts
     `;
     return { success: true };
   } catch (error) {
     console.error("[queries] createBankAccount failed:", error);
     return { success: false, error: "Gagal menambahkan rekening bank." };
+  }
+}
+
+export async function updateBankAccount(
+  id: string,
+  data: {
+    bank: string;
+    account_number: string;
+    account_holder: string;
+    is_active?: boolean;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await sql`
+      update bank_accounts
+      set
+        bank = ${data.bank},
+        account_number = ${data.account_number},
+        account_holder = ${data.account_holder},
+        is_active = coalesce(${data.is_active ?? null}, is_active)
+      where id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error("[queries] updateBankAccount failed:", error);
+    return { success: false, error: "Gagal memperbarui rekening bank." };
+  }
+}
+
+export async function toggleBankAccountStatus(
+  id: string,
+  isActive: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await sql`
+      update bank_accounts
+      set is_active = ${isActive}
+      where id = ${id}
+    `;
+    return { success: true };
+  } catch (error) {
+    console.error("[queries] toggleBankAccountStatus failed:", error);
+    return { success: false, error: "Gagal mengubah status aktif rekening bank." };
   }
 }
 
