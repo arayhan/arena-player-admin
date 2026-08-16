@@ -30,7 +30,19 @@ const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("arena-the
 // CLAUDE.md hard rule 10.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`${inter.variable} h-full antialiased`}>
+    // `suppressHydrationWarning` IS REQUIRED BY THE SCRIPT ABOVE, NOT A
+    // WORKAROUND FOR ONE. THEME_INIT_SCRIPT runs during HTML parsing and adds
+    // `data-theme` to this element, so by the time React hydrates the DOM
+    // carries an attribute no render produced and React reports a mismatch it
+    // cannot patch. This tells React the DOM wins for THIS element's own
+    // attributes only — it does not travel to <head>, <body> or any child, so
+    // a real mismatch anywhere else still surfaces.
+    //
+    // No `data-theme` default is set here on purpose, unlike Next's own theme
+    // example. globals.css treats "no attribute" as "follow the OS" via
+    // `prefers-color-scheme`; stamping `light` here would make every visitor
+    // who never touched the toggle render light regardless of their system.
+    <html lang="id" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
