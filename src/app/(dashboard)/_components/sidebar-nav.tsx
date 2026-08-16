@@ -54,8 +54,6 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Statistik",
     href: "/stats",
-    disabled: true,
-    badge: "Segera",
     icon: (
       <path
         d="M4 20V11M10 20V4M16 20V14M20 20V8"
@@ -78,8 +76,6 @@ const NAV_ITEMS: NavItem[] = [
         />
       </>
     ),
-    disabled: true,
-    badge: "Segera",
   },
 ];
 
@@ -87,8 +83,6 @@ const SISTEM_ITEMS: NavItem[] = [
   {
     label: "Ekspor",
     href: "/export",
-    disabled: true,
-    badge: "Segera",
     icon: (
       <>
         <path

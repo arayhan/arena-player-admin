@@ -21,35 +21,38 @@ colors:
   green-100: "#DCFCE7"
   green-700: "#15803D"
   green-800: "#166534"
+# rem, not px — see "The type scale is rem" below. The px figure in each
+# comment is what the step renders at the browser's default 16px root, which
+# is what every measurement in this file was taken against.
 typography:
   h1:
     fontFamily: Inter
-    fontSize: 24px
+    fontSize: 1.5rem # 24px
     fontWeight: 700
     lineHeight: 1.25
   h2:
     fontFamily: Inter
-    fontSize: 18px
+    fontSize: 1.125rem # 18px
     fontWeight: 600
     lineHeight: 1.3
   body:
     fontFamily: Inter
-    fontSize: 16px
+    fontSize: 1rem # 16px
     fontWeight: 400
     lineHeight: 1.5
   sm:
     fontFamily: Inter
-    fontSize: 14px
+    fontSize: 0.875rem # 14px
     fontWeight: 400
     lineHeight: 1.5
   xs:
     fontFamily: Inter
-    fontSize: 12px
+    fontSize: 0.75rem # 12px
     fontWeight: 400
     lineHeight: 1.5
   mono:
     fontFamily: ui-monospace
-    fontSize: 14px
+    fontSize: 0.875rem # 14px
     fontWeight: 400
     lineHeight: 1.5
 rounded:
@@ -292,6 +295,16 @@ The dark `border` divider measures **1.26** on surface — exempt for exactly th
 - **Contrast ratios are computed, not carried forward.** Two overstated figures shipped once in the other repo, and a third was caught in this file — see above.
 - **Focus rings are restyled, never removed.** This app is keyboard-heavy by nature; the admin is tabbing through a queue.
 - UI copy Indonesian, code and comments English.
+
+## The type scale is rem; everything else is px
+
+**Only the six type steps are rem. Spacing, radius and every control height stay px, and that split is the whole point.**
+
+A px `font-size` ignores the browser's own font-size preference outright. Page zoom still works, so this was never a 1.4.4 failure — but an admin who set 20px in their browser because they need 20px was silently handed 16px on every screen in this app. The six steps are now `1.5 / 1.125 / 1 / 0.875 / 0.75 / 0.875rem`, which are exact divisions of a 16px root: at the default setting every rendered pixel is unchanged, so no contrast figure or screenshot in this file is invalidated by the switch.
+
+Spacing and radius stay px because they are not type and do not answer to a reading preference. Control heights stay px for a harder reason: **`h-11` is the 44px touch floor**, and expressing it in rem would let a font-size preference shrink a target below the floor — the opposite of an accessibility win, and invisible until someone measures it.
+
+The consequence to know about, since it is the direction this can fail: type grows inside controls that do not. At a 24px root — 150%, past what most people set — `body` is 24px on a 1.5 line inside a 44px control, which still fits. Beyond that it clips. The honest fix if it ever matters is `min-height` on the control rather than a fixed `h-11`, and it is not being done pre-emptively for a setting nobody in this project's audience has reported using.
 
 ## Layout
 

@@ -380,3 +380,192 @@ export async function getDashboardMetrics(): Promise<{
     };
   }
 }
+
+export type SlotBlockRow = {
+  id: string;
+  block_date: string;
+  time_slot: TimeSlot;
+  reason: string | null;
+  created_at: string;
+};
+
+export async function listSlotBlocks(params?: {
+  fromDate?: string | null;
+}): Promise<SlotBlockRow[]> {
+  const fromDate = params?.fromDate ?? todayAtField();
+  try {
+    const rows = await sql<SlotBlockRow[]>`
+      select
+        id,
+        block_date::text as block_date,
+        time_slot,
+        reason,
+        created_at::text as created_at
+      from slot_blocks
+      where block_date >= ${fromDate}
+      order by block_date asc, time_slot asc
+    `;
+    return rows;
+  } catch (error) {
+    console.error("[queries] listSlotBlocks failed:", error);
+    return [];
+  }
+}
+
+export async function createSlotBlock(data: {
+  block_date: string;
+  time_slot: string;
+  reason?: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const rows = await sql<Array<{ id: string }>>`
+      insert into slot_blocks (
+        block_date,
+        time_slot,
+        reason
+      ) values (
+        ${data.block_date},
+        ${data.time_slot},
+        ${data.reason ?? null}
+      )
+      returning id
+    `;
+    if (rows.length === 0) {
+      return { success: false, error: "Gagal menyimpan pemblokiran slot." };
+    }
+    return { success: true };
+  } catch (error: unknown) {
+    const pgError = error as { code?: string };
+    if (pgError?.code === "23505") {
+      // 23505: unique_violation on uniq_slot_block
+      return {
+        success: false,
+        error: "Slot pada tanggal dan jam tersebut sudah diblokir sebelumnya.",
+      };
+    }
+    console.error("[queries] createSlotBlock failed:", error);
+    return { success: false, error: "Terjadi kesalahan saat memblokir slot." };
+  }
+}
+
+export async function deleteSlotBlock(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await sql`
+      delete from slot_blocks
+      where id = ${id}
+      returning id
+    `;
+    if (result.length === 0) {
+      return { success: false, error: "Data pemblokiran tidak ditemukan." };
+    }
+    return { success: true };
+  } catch (error) {
+    console.error("[queries] deleteSlotBlock failed:", error);
+    return { success: false, error: "Gagal membuka blokir slot." };
+  }
+}
+
+export type StatsSummary = {
+  statusBreakdown: Record<BookingStatus, number>;
+  totalAllTime: number;
+  popularSlots: Array<{ time_slot: string; count: number }>;
+  recentDays: Array<{ date: string; confirmedCount: number; pendingCount: number }>;
+};
+
+export async function getStatsData(): Promise<StatsSummary> {
+  const today = todayAtField();
+
+  try {
+    // 1. Status breakdown
+    const statusRows = await sql<Array<{ status: BookingStatus; count: string }>>`
+      select
+        status,
+        count(*)::text as count
+      from bookings
+      group by status
+    `;
+
+    const statusBreakdown: Record<BookingStatus, number> = {
+      pending: 0,
+      confirmed: 0,
+      rejected: 0,
+      expired: 0,
+    };
+
+    let totalAllTime = 0;
+    for (const r of statusRows) {
+      const c = Number(r.count || 0);
+      statusBreakdown[r.status] = c;
+      totalAllTime += c;
+    }
+
+    // 2. Popular slots (confirmed + pending)
+    const slotRows = await sql<Array<{ time_slot: string; count: string }>>`
+      select
+        time_slot,
+        count(*)::text as count
+      from bookings
+      where status in ('confirmed', 'pending')
+      group by time_slot
+      order by count(*) desc
+      limit 6
+    `;
+
+    const popularSlots = slotRows.map((r) => ({
+      time_slot: r.time_slot,
+      count: Number(r.count || 0),
+    }));
+
+    // 3. Next 7 days breakdown
+    const dailyRows = await sql<
+      Array<{ booking_date: string; status: BookingStatus; count: string }>
+    >`
+      select
+        booking_date::text as booking_date,
+        status,
+        count(*)::text as count
+      from bookings
+      where booking_date >= ${today}
+        and status in ('confirmed', 'pending')
+      group by booking_date, status
+      order by booking_date asc
+    `;
+
+    const dayMap = new Map<string, { confirmedCount: number; pendingCount: number }>();
+    for (const r of dailyRows) {
+      if (!dayMap.has(r.booking_date)) {
+        dayMap.set(r.booking_date, { confirmedCount: 0, pendingCount: 0 });
+      }
+      const entry = dayMap.get(r.booking_date)!;
+      if (r.status === "confirmed") {
+        entry.confirmedCount += Number(r.count || 0);
+      } else if (r.status === "pending") {
+        entry.pendingCount += Number(r.count || 0);
+      }
+    }
+
+    const recentDays: Array<{ date: string; confirmedCount: number; pendingCount: number }> = [];
+    dayMap.forEach((val, date) => {
+      recentDays.push({
+        date,
+        confirmedCount: val.confirmedCount,
+        pendingCount: val.pendingCount,
+      });
+    });
+
+    return {
+      statusBreakdown,
+      totalAllTime,
+      popularSlots,
+      recentDays: recentDays.slice(0, 7),
+    };
+  } catch (error) {
+    console.error("[queries] getStatsData failed:", error);
+    return {
+      statusBreakdown: { pending: 0, confirmed: 0, rejected: 0, expired: 0 },
+      totalAllTime: 0,
+      popularSlots: [],
+      recentDays: [],
+    };
+  }
+}

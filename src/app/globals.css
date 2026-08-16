@@ -34,20 +34,36 @@
   --color-green-800: #166534;
 
   /* --- Type. 6 fixed steps, no clamp() — this is a table read at arm's
-   * length on a phone, not a marketing headline that survives 375-1440px. */
+   * length on a phone, not a marketing headline that survives 375-1440px.
+   *
+   * REM, AND THIS IS THE ONE SCALE IN THE FILE THAT IS. A px font-size
+   * discards the browser's own font-size preference: page zoom still works,
+   * so it was never a 1.4.4 failure, but an admin who set 20px because they
+   * need 20px was handed 16px on every screen here and nothing said so.
+   *
+   * The values are exact divisions of a 16px root, so at the default setting
+   * every rendered pixel is unchanged and no measurement in DESIGN.md is
+   * invalidated by the switch. The px figure stays in each comment because
+   * that is what the contrast and layout work was measured against.
+   *
+   * SPACING, RADIUS AND CONTROL HEIGHTS BELOW STAY px ON PURPOSE. `h-11` is
+   * the 44px touch floor; in rem a font-size preference could shrink a target
+   * BELOW that floor, which is an accessibility loss wearing an accessibility
+   * fix's clothes, and invisible until someone measures it. See DESIGN.md,
+   * "The type scale is rem; everything else is px". */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --text-h1: 24px;
+  --text-h1: 1.5rem; /* 24px */
   --text-h1--line-height: 1.25;
-  --text-h2: 18px;
+  --text-h2: 1.125rem; /* 18px */
   --text-h2--line-height: 1.3;
-  --text-body: 16px;
+  --text-body: 1rem; /* 16px */
   --text-body--line-height: 1.5;
-  --text-sm: 14px;
+  --text-sm: 0.875rem; /* 14px */
   --text-sm--line-height: 1.5;
-  --text-xs: 12px;
+  --text-xs: 0.75rem; /* 12px */
   --text-xs--line-height: 1.5;
-  --text-mono: 14px;
+  --text-mono: 0.875rem; /* 14px */
   --text-mono--line-height: 1.5;
 
   /* --- Radius. control/panel follow web's Phase 1b client checkpoint
