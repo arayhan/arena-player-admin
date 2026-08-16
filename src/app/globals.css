@@ -307,30 +307,53 @@
 @source not "../../docs";
 @source not "../../.claude";
 
-body {
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
-  color: var(--ink);
-  background: var(--ground);
-  -webkit-font-smoothing: antialiased;
+/* IN `@layer base`, AND THAT ONE WORD IS THE WHOLE POINT. Written unlayered,
+ * these element rules land after `@layer utilities` and therefore BEAT every
+ * utility that sets the same property — measured, not theorised: `<h1
+ * className="mt-6">` on /login computed to `margin-top: 0px`, and a probe
+ * `<h2 class="text-sm mb-4">` rendered at 18px with no margin. Two call sites
+ * were silently losing the classes they were written with, and nothing failed:
+ * the class is in the markup, the build is green, and only a computed-style
+ * read shows it.
+ *
+ * Layers fix the direction rather than the specificity, so the rules still
+ * apply to a bare `<h1>` and a utility still wins when one is written. This
+ * layer is declared by `@import "tailwindcss"` above and ordered before
+ * `utilities`, so appending to it here needs no `@layer` list of our own.
+ *
+ * `margin: 0` stays even though Preflight already sets it — inside `base` it
+ * is inert against utilities, and it states the intent at the point someone
+ * reads the type scale. */
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    color: var(--ink);
+    background: var(--ground);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1 {
+    font-size: var(--text-h1);
+    line-height: var(--text-h1--line-height);
+    font-weight: 700;
+    margin: 0;
+  }
+
+  h2 {
+    font-size: var(--text-h2);
+    line-height: var(--text-h2--line-height);
+    font-weight: 600;
+    margin: 0;
+  }
 }
 
-h1 {
-  font-size: var(--text-h1);
-  line-height: var(--text-h1--line-height);
-  font-weight: 700;
-  margin: 0;
-}
-
-h2 {
-  font-size: var(--text-h2);
-  line-height: var(--text-h2--line-height);
-  font-weight: 600;
-  margin: 0;
-}
-
-/* Focus is restyled, never removed. */
+/* Focus is restyled, never removed — and this rule stays UNLAYERED on purpose,
+ * unlike the three above. Beating utilities is the defect there and the feature
+ * here: DESIGN.md's "focus rings are restyled, never removed" only holds if a
+ * stray `focus-visible:outline-none` cannot switch it off. Same for the
+ * reduced-motion block below, which must outrank everything. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
