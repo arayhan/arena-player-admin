@@ -109,7 +109,7 @@ export default async function BookingsPage({ searchParams }: Props) {
                 {filter.page > 1 && (
                   <Link
                     href={`/bookings?page=${filter.page - 1}`}
-                    className="inline-flex min-h-[40px] items-center rounded-control border border-border px-3 py-1.5 font-medium text-ink hover:bg-ground"
+                    className="inline-flex min-h-[44px] items-center rounded-control border border-border px-3 py-1.5 font-medium text-ink hover:bg-ground"
                   >
                     Sebelumnya
                   </Link>
@@ -117,7 +117,7 @@ export default async function BookingsPage({ searchParams }: Props) {
                 {filter.page < totalPages && (
                   <Link
                     href={`/bookings?page=${filter.page + 1}`}
-                    className="inline-flex min-h-[40px] items-center rounded-control border border-border px-3 py-1.5 font-medium text-ink hover:bg-ground"
+                    className="inline-flex min-h-[44px] items-center rounded-control border border-border px-3 py-1.5 font-medium text-ink hover:bg-ground"
                   >
                     Selanjutnya
                   </Link>
