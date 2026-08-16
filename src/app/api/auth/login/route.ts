@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getClientIp } from "@/server/auth/client-ip";
 import { checkRateLimit, clearRateLimit } from "@/server/auth/rate-limit";
 import { verifyPassword } from "@/server/auth/password";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, signSession } from "@/server/auth/session";
@@ -44,35 +45,6 @@ const FALLBACK_HASH =
 const DEV_LOGIN_BYPASS = process.env.NODE_ENV === "development";
 
 /**
- * Takes the RIGHTMOST `X-Forwarded-For` entry, not the leftmost. Every hop
- * a request passes through APPENDS its own view of the client to this
- * header — the leftmost entry is whatever the original caller claimed to
- * be, which is attacker-controlled and free to rotate on every request,
- * defeating the rate limiter entirely (or, run in reverse, letting an
- * attacker spoof the real admin's IP to lock them out for 15 minutes). The
- * rightmost entry is the one hop closest to this process, appended by
- * infrastructure this app trusts (its own reverse proxy), not by the
- * client.
- *
- * ASSUMPTION FLAGGED FOR PHASE 5: this repo has no documented Sumopod
- * deployment notes confirming what header its edge/proxy layer sets or
- * whether it appends to `X-Forwarded-For` at all (a platform-provided
- * header, if one exists, would be a stronger signal than any hop count in
- * a client-supplied header). Rightmost-XFF is the safer default absent
- * that confirmation. Whoever runs step 08 / Phase 5 against the real
- * platform must verify this against an actual multi-hop request and
- * correct it here if Sumopod's proxy behaves differently.
- */
-function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const hops = forwarded.split(",");
-    return hops[hops.length - 1]!.trim();
-  }
-  return request.headers.get("x-real-ip") ?? "unknown";
-}
-
-/**
  * The login page posts a plain `<form>` (no client component involved) and
  * a real browser sends `Accept: text/html,...` on that navigation, so a
  * failure can redirect back to `/login?error=1` for the no-JS flow. A
@@ -97,7 +69,7 @@ function withSessionCookie(response: NextResponse, token: string): NextResponse 
 }
 
 export async function POST(request: NextRequest) {
-  const ip = getClientIp(request);
+  const ip = getClientIp(request.headers);
   const html = wantsHtml(request);
 
   // Read once, up front: the empty check has to happen before the rate limiter
