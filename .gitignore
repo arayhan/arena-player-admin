@@ -12,6 +12,7 @@ next-env.d.ts
 # env — never commit any of these
 .env
 .env*.local
+.mcp.json
 
 # secrets scratch: the hash-generation script writes nothing, but people paste into files
 *.secret
