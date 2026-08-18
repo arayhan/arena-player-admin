@@ -18,12 +18,22 @@ export const metadata: Metadata = {
 };
 
 type Props = {
-  searchParams?: Promise<{ expired?: string }>;
+  searchParams?: Promise<{
+    expired?: string;
+    success?: string;
+    conflict?: string;
+    error?: string;
+  }>;
 };
 
 export default async function DashboardPage({ searchParams }: Props) {
   const resolvedParams = searchParams ? await searchParams : undefined;
   const expiredCount = resolvedParams?.expired ? Number(resolvedParams.expired) : null;
+  const successMessage = resolvedParams?.success;
+  const conflictMessage = resolvedParams?.conflict
+    ? decodeURIComponent(resolvedParams.conflict)
+    : null;
+  const errorMessage = resolvedParams?.error ? decodeURIComponent(resolvedParams.error) : null;
 
   const hasBookingsTable = await tableExists("bookings");
 
@@ -129,6 +139,67 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
       )}
 
+      {/* Action Success / Conflict / Error Feedback */}
+      {successMessage && (
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-panel border border-green-border bg-green-bg p-4 text-sm font-medium text-green-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5 flex-none">
+            <path
+              d="M5 13l4 4L19 7"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>
+            {successMessage === "confirmed"
+              ? "Booking berhasil dikonfirmasi dan slot telah dikunci."
+              : successMessage === "rejected"
+                ? "Booking telah ditolak dan slot dibuka kembali."
+                : "Tindakan berhasil diproses."}
+          </span>
+        </div>
+      )}
+
+      {conflictMessage && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-panel border border-amber-border bg-amber-bg p-4 text-sm font-medium text-amber-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5 flex-none">
+            <path
+              d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>{conflictMessage}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-panel border border-red-border bg-red-bg p-4 text-sm font-medium text-red-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5 flex-none">
+            <path
+              d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* Dead-man's switch alert */}
       {isOldestPast24h && (
         <div
@@ -181,13 +252,13 @@ export default async function DashboardPage({ searchParams }: Props) {
             {/* Mobile cards view (<720px / md) */}
             <div className="flex flex-col gap-3 md:hidden">
               {pendingBookings.map((b) => (
-                <BookingCard key={b.id} booking={b} />
+                <BookingCard key={b.id} booking={b} returnUrl="/" />
               ))}
             </div>
 
             {/* Desktop table view (≥720px / md) */}
             <div className="hidden md:block">
-              <BookingsTable bookings={pendingBookings} />
+              <BookingsTable bookings={pendingBookings} returnUrl="/" />
             </div>
 
             {totalCount > 5 && (

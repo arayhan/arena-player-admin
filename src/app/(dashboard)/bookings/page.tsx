@@ -45,8 +45,91 @@ export default async function BookingsPage({ searchParams }: Props) {
     filter.to !== null ||
     filter.q !== null;
 
+  const successMessage =
+    typeof resolvedParams?.success === "string" ? resolvedParams.success : null;
+  const conflictMessage =
+    typeof resolvedParams?.conflict === "string"
+      ? decodeURIComponent(resolvedParams.conflict)
+      : null;
+  const errorMessage =
+    typeof resolvedParams?.error === "string" ? decodeURIComponent(resolvedParams.error) : null;
+
+  // Reconstruct return URL with current filter query
+  const queryParts: string[] = [];
+  if (filter.status.length > 0) {
+    for (const s of filter.status) queryParts.push(`status=${encodeURIComponent(s)}`);
+  }
+  if (filter.from) queryParts.push(`from=${encodeURIComponent(filter.from)}`);
+  if (filter.to) queryParts.push(`to=${encodeURIComponent(filter.to)}`);
+  if (filter.q) queryParts.push(`q=${encodeURIComponent(filter.q)}`);
+  if (filter.sort !== "when") queryParts.push(`sort=${encodeURIComponent(filter.sort)}`);
+  if (filter.dir !== "asc") queryParts.push(`dir=${encodeURIComponent(filter.dir)}`);
+  if (filter.page > 1) queryParts.push(`page=${filter.page}`);
+  const returnUrl = `/bookings${queryParts.length > 0 ? `?${queryParts.join("&")}` : ""}`;
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Action Success / Conflict / Error Feedback */}
+      {successMessage && (
+        <div
+          role="status"
+          className="flex items-center gap-3 rounded-panel border border-green-border bg-green-bg p-4 text-sm font-medium text-green-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5 flex-none">
+            <path
+              d="M5 13l4 4L19 7"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>
+            {successMessage === "confirmed"
+              ? "Booking berhasil dikonfirmasi dan slot telah dikunci."
+              : successMessage === "rejected"
+                ? "Booking telah ditolak dan slot dibuka kembali."
+                : "Tindakan berhasil diproses."}
+          </span>
+        </div>
+      )}
+
+      {conflictMessage && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-panel border border-amber-border bg-amber-bg p-4 text-sm font-medium text-amber-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5 flex-none">
+            <path
+              d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>{conflictMessage}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-panel border border-red-border bg-red-bg p-4 text-sm font-medium text-red-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-5 w-5 flex-none">
+            <path
+              d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
@@ -103,13 +186,13 @@ export default async function BookingsPage({ searchParams }: Props) {
           {/* Mobile cards view (<720px / md) */}
           <div className="flex flex-col gap-3 md:hidden">
             {bookings.map((b) => (
-              <BookingCard key={b.id} booking={b} />
+              <BookingCard key={b.id} booking={b} returnUrl={returnUrl} />
             ))}
           </div>
 
           {/* Desktop table view (≥720px / md) */}
           <div className="hidden md:block">
-            <BookingsTable bookings={bookings} />
+            <BookingsTable bookings={bookings} returnUrl={returnUrl} />
           </div>
 
           {/* Pagination */}

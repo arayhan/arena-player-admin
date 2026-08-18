@@ -83,6 +83,18 @@ describe("bookings.actions", () => {
         expect.stringContaining(`/bookings/${validId}?conflict=`),
       );
     });
+    it("confirms booking and redirects to returnUrl if provided", async () => {
+      const validId = "a1b2c3d4-e5f6-4a1b-8c2d-3e4f5a6b7c8d";
+      vi.mocked(confirmBooking).mockResolvedValue({ success: true });
+
+      const formData = new FormData();
+      formData.set("id", validId);
+      formData.set("returnUrl", "/bookings?status=pending");
+
+      await confirmBookingAction(formData);
+      expect(confirmBooking).toHaveBeenCalledWith(validId);
+      expect(redirect).toHaveBeenCalledWith("/bookings?status=pending&success=confirmed");
+    });
   });
 
   describe("rejectBookingAction", () => {
@@ -96,6 +108,19 @@ describe("bookings.actions", () => {
       await rejectBookingAction(formData);
       expect(rejectBooking).toHaveBeenCalledWith(validId);
       expect(redirect).toHaveBeenCalledWith(`/bookings/${validId}?success=rejected`);
+    });
+
+    it("rejects booking and redirects to returnUrl if provided", async () => {
+      const validId = "b2c3d4e5-f6a1-4b2c-8d3e-4f5a6b7c8d9e";
+      vi.mocked(rejectBooking).mockResolvedValue({ success: true });
+
+      const formData = new FormData();
+      formData.set("id", validId);
+      formData.set("returnUrl", "/");
+
+      await rejectBookingAction(formData);
+      expect(rejectBooking).toHaveBeenCalledWith(validId);
+      expect(redirect).toHaveBeenCalledWith("/?success=rejected");
     });
   });
 
