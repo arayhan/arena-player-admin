@@ -2,7 +2,6 @@ import { StatusPill } from "@/components/status-pill";
 import type { BookingRow } from "@/server/queries";
 import { formatBookingDate, formatRelativeAge } from "./booking-formatters";
 import { confirmBookingAction, rejectBookingAction, updateBookingAction } from "./bookings.actions";
-import { ProofPanel } from "./proof-panel";
 
 type BookingDetailProps = {
   booking: BookingRow;
@@ -64,216 +63,190 @@ export function BookingDetail({ booking, conflictMessage, successMessage }: Book
         </div>
       )}
 
-      {/* 2. Main Details Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Column: Booking Info & Actions */}
-        <div className="flex flex-col gap-6 lg:col-span-2">
-          {/* Header Card */}
-          <div className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                  Jadwal Pertandingan
-                </div>
-                <h1 className="text-2xl font-bold text-ink">
-                  {formattedDate} · {booking.time_slot}
-                </h1>
+      {/* 2. Main Details */}
+      <div className="max-w-3xl flex flex-col gap-6">
+        {/* Header Card */}
+        <div className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                Jadwal Pertandingan
               </div>
-              <StatusPill status={booking.status} />
+              <h1 className="text-2xl font-bold text-ink">
+                {formattedDate} · {booking.time_slot}
+              </h1>
+            </div>
+            <StatusPill status={booking.status} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <span className="text-xs font-medium text-ink-muted">Nama Tim / Pemesan</span>
+              <p className="text-base font-semibold text-ink">{booking.team_name}</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <span className="text-xs font-medium text-ink-muted">Nama Tim / Pemesan</span>
-                <p className="text-base font-semibold text-ink">{booking.team_name}</p>
-              </div>
-
-              <div>
-                <span className="text-xs font-medium text-ink-muted">Nomor WhatsApp</span>
-                <p className="text-base font-semibold text-ink">
-                  <a
-                    href={waLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-[44px] items-center text-accent underline underline-offset-2 hover:text-accent-hover"
-                  >
-                    {booking.phone} &rarr;
-                  </a>
-                </p>
-              </div>
-
-              <div>
-                <span className="text-xs font-medium text-ink-muted">Waktu Pemesanan</span>
-                <p className="text-sm text-ink">
-                  {booking.created_at} ({age})
-                </p>
-              </div>
-
-              <div>
-                <span className="text-xs font-medium text-ink-muted">Kunci Bukti Transfer</span>
-                <p className="font-mono text-xs text-ink-muted">
-                  {booking.proof_key ?? "Tidak ada (Walk-in / Tunai)"}
-                </p>
-              </div>
+            <div>
+              <span className="text-xs font-medium text-ink-muted">Nomor WhatsApp</span>
+              <p className="text-base font-semibold text-ink">
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[44px] items-center text-accent underline underline-offset-2 hover:text-accent-hover"
+                >
+                  {booking.phone} &rarr;
+                </a>
+              </p>
             </div>
 
-            {/* Notes Section */}
-            <div className="border-t border-border pt-4">
-              <span className="text-xs font-semibold text-ink-muted uppercase">
-                Catatan Pemesan
-              </span>
-              {booking.notes && booking.notes.trim().length > 0 ? (
-                <p className="mt-1 rounded-control bg-ground p-3 text-sm text-ink whitespace-pre-wrap">
-                  {booking.notes}
-                </p>
-              ) : (
-                <p className="mt-1 text-sm text-ink-muted italic">Tidak ada catatan.</p>
-              )}
+            <div>
+              <span className="text-xs font-medium text-ink-muted">Waktu Pemesanan</span>
+              <p className="text-sm text-ink">
+                {booking.created_at} ({age})
+              </p>
             </div>
           </div>
 
-          {/* Edit Booking Details Form */}
-          <details className="group rounded-panel border border-border bg-surface p-6">
-            <summary className="flex cursor-pointer items-center justify-between text-sm font-semibold uppercase tracking-wider text-ink-muted">
-              <span>Edit Data Pemesan</span>
-              <span className="text-xs font-normal text-accent group-open:hidden">Ubah &darr;</span>
-              <span className="text-xs font-normal text-accent hidden group-open:inline">
-                Tutup &uarr;
-              </span>
-            </summary>
+          {/* Notes Section */}
+          <div className="border-t border-border pt-4">
+            <span className="text-xs font-semibold text-ink-muted uppercase">Catatan Pemesan</span>
+            {booking.notes && booking.notes.trim().length > 0 ? (
+              <p className="mt-1 rounded-control bg-ground p-3 text-sm text-ink whitespace-pre-wrap">
+                {booking.notes}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-ink-muted italic">Tidak ada catatan.</p>
+            )}
+          </div>
+        </div>
 
-            <form
-              action={updateBookingAction}
-              className="mt-4 flex flex-col gap-4 border-t border-border pt-4"
-            >
-              <input type="hidden" name="id" value={booking.id} />
+        {/* Edit Booking Details Form */}
+        <div className="rounded-panel border border-border bg-surface p-6">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-ink-muted">
+            Edit Data Booking
+          </h2>
+          <form action={updateBookingAction} className="flex flex-col gap-4">
+            <input type="hidden" name="id" value={booking.id} />
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="edit_team_name" className="text-xs font-semibold text-ink-muted">
-                    Nama Tim / Pemesan
-                  </label>
-                  <input
-                    id="edit_team_name"
-                    name="team_name"
-                    type="text"
-                    defaultValue={booking.team_name}
-                    required
-                    maxLength={100}
-                    className="h-10 rounded-control border border-border bg-ground px-3 text-sm text-ink focus:border-accent focus:outline-none"
-                  />
-                </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="team_name" className="text-xs font-medium text-ink">
+                Nama Tim / Pemesan
+              </label>
+              <input
+                id="team_name"
+                name="team_name"
+                type="text"
+                defaultValue={booking.team_name}
+                required
+                minLength={2}
+                maxLength={60}
+                className="rounded-control border border-border bg-ground px-3 py-2 text-sm text-ink outline-none transition-colors duration-150 focus:border-accent"
+              />
+            </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="edit_phone" className="text-xs font-semibold text-ink-muted">
-                    Nomor WhatsApp
-                  </label>
-                  <input
-                    id="edit_phone"
-                    name="phone"
-                    type="tel"
-                    defaultValue={booking.phone}
-                    required
-                    className="h-10 rounded-control border border-border bg-ground px-3 text-sm text-ink focus:border-accent focus:outline-none"
-                  />
-                </div>
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="phone" className="text-xs font-medium text-ink">
+                Nomor WhatsApp
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="text"
+                defaultValue={booking.phone}
+                required
+                className="rounded-control border border-border bg-ground px-3 py-2 text-sm text-ink outline-none transition-colors duration-150 focus:border-accent"
+              />
+            </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="edit_notes" className="text-xs font-semibold text-ink-muted">
-                  Catatan
-                </label>
-                <textarea
-                  id="edit_notes"
-                  name="notes"
-                  rows={2}
-                  defaultValue={booking.notes ?? ""}
-                  maxLength={500}
-                  className="rounded-control border border-border bg-ground p-2.5 text-sm text-ink focus:border-accent focus:outline-none"
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="notes" className="text-xs font-medium text-ink">
+                Catatan (Opsional)
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                defaultValue={booking.notes ?? ""}
+                maxLength={500}
+                className="rounded-control border border-border bg-ground px-3 py-2 text-sm text-ink outline-none transition-colors duration-150 focus:border-accent"
+              />
+            </div>
 
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="inline-flex min-h-[40px] items-center rounded-control bg-accent px-4 py-2 text-xs font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover"
-                >
-                  Simpan Perubahan
-                </button>
-              </div>
-            </form>
-          </details>
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                className="inline-flex min-h-[44px] items-center rounded-control bg-accent px-4 py-2 text-xs font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover"
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </form>
+        </div>
 
-          {/* Action Buttons Panel */}
-          <div className="flex flex-col gap-3 rounded-panel border border-border bg-surface p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-              Tindakan Status
-            </h2>
+        {/* Action Controls Card */}
+        <div className="rounded-panel border border-border bg-surface p-6">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-ink-muted">
+            Tindakan Admin
+          </h2>
 
-            {booking.status === "pending" && (
-              <div className="flex flex-wrap items-center gap-3">
+          {booking.status === "pending" && (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-ink-muted">
+                Pemesanan ini menunggu konfirmasi admin. Periksa transfer dan jadwal sebelum
+                mengonfirmasi.
+              </p>
+              <div className="flex flex-wrap gap-3">
                 <form action={confirmBookingAction}>
                   <input type="hidden" name="id" value={booking.id} />
                   <button
                     type="submit"
-                    className="inline-flex min-h-[44px] items-center rounded-control bg-accent px-6 py-2.5 text-sm font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover"
+                    className="inline-flex min-h-[44px] items-center rounded-control bg-green-600 px-5 py-2.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-green-700"
                   >
-                    Konfirmasi Booking
+                    Konfirmasi Booking (Kunci Slot)
                   </button>
                 </form>
-
                 <form action={rejectBookingAction}>
                   <input type="hidden" name="id" value={booking.id} />
                   <button
                     type="submit"
-                    className="inline-flex min-h-[44px] items-center rounded-control border border-red-border bg-red-bg px-6 py-2.5 text-sm font-medium text-red-ink transition-colors duration-150 hover:bg-red-border/20"
+                    className="inline-flex min-h-[44px] items-center rounded-control border border-red-border bg-red-bg px-5 py-2.5 text-xs font-semibold text-red-ink transition-colors duration-150 hover:bg-red-border/20"
                   >
                     Tolak Booking
                   </button>
                 </form>
               </div>
-            )}
+            </div>
+          )}
 
-            {booking.status === "confirmed" && (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm text-green-ink font-medium">
-                  Booking ini telah dikonfirmasi dan slot telah dikunci.
-                </p>
-                <form action={rejectBookingAction}>
-                  <input type="hidden" name="id" value={booking.id} />
-                  <button
-                    type="submit"
-                    className="inline-flex min-h-[44px] items-center rounded-control border border-red-border bg-red-bg px-4 py-2 text-xs font-medium text-red-ink transition-colors duration-150 hover:bg-red-border/20"
-                  >
-                    Batalkan / Tolak Booking (Pembatalan 1x24 Jam)
-                  </button>
-                </form>
-              </div>
-            )}
-
-            {booking.status === "rejected" && (
-              <p className="text-sm text-ink-muted">
-                Booking ini telah ditolak. Slot dibuka kembali untuk pemesan lain.
+          {booking.status === "confirmed" && (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-green-ink font-medium">
+                Booking ini telah dikonfirmasi dan slot telah dikunci.
               </p>
-            )}
+              <form action={rejectBookingAction}>
+                <input type="hidden" name="id" value={booking.id} />
+                <button
+                  type="submit"
+                  className="inline-flex min-h-[44px] items-center rounded-control border border-red-border bg-red-bg px-4 py-2 text-xs font-medium text-red-ink transition-colors duration-150 hover:bg-red-border/20"
+                >
+                  Batalkan / Tolak Booking (Pembatalan 1x24 Jam)
+                </button>
+              </form>
+            </div>
+          )}
 
-            {booking.status === "expired" && (
-              <p className="text-sm text-ink-muted">
-                Booking ini telah kedaluwarsa karena tidak dikonfirmasi dalam batas waktu. Slot
-                telah dibuka kembali.
-              </p>
-            )}
-          </div>
-        </div>
+          {booking.status === "rejected" && (
+            <p className="text-sm text-ink-muted">
+              Booking ini telah ditolak. Slot dibuka kembali untuk pemesan lain.
+            </p>
+          )}
 
-        {/* Right Column: Payment Proof Panel */}
-        <div className="flex flex-col gap-3">
-          <div className="rounded-panel border border-border bg-surface p-6">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-ink-muted">
-              Bukti Transfer
-            </h2>
-            <ProofPanel proofKey={booking.proof_key} teamName={booking.team_name} />
-          </div>
+          {booking.status === "expired" && (
+            <p className="text-sm text-ink-muted">
+              Booking ini telah kedaluwarsa karena tidak dikonfirmasi dalam batas waktu. Slot telah
+              dibuka kembali.
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -18,10 +18,13 @@ const uuidSchema = z.string().uuid();
 
 export async function confirmBookingAction(formData: FormData): Promise<void> {
   const idRaw = formData.get("id");
+  const returnUrlRaw = formData.get("returnUrl");
+  const returnUrl =
+    typeof returnUrlRaw === "string" && returnUrlRaw.startsWith("/") ? returnUrlRaw : null;
   const parsed = uuidSchema.safeParse(idRaw);
 
   if (!parsed.success) {
-    redirect("/bookings");
+    redirect(returnUrl ?? "/bookings");
     return;
   }
 
@@ -41,6 +44,12 @@ export async function confirmBookingAction(formData: FormData): Promise<void> {
       message = "Booking ini sudah kedaluwarsa.";
     }
 
+    if (returnUrl) {
+      const sep = returnUrl.includes("?") ? "&" : "?";
+      redirect(`${returnUrl}${sep}conflict=${encodeURIComponent(message)}`);
+      return;
+    }
+
     redirect(`/bookings/${id}?conflict=${encodeURIComponent(message)}`);
     return;
   }
@@ -48,15 +57,25 @@ export async function confirmBookingAction(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${id}`);
+
+  if (returnUrl) {
+    const sep = returnUrl.includes("?") ? "&" : "?";
+    redirect(`${returnUrl}${sep}success=confirmed`);
+    return;
+  }
+
   redirect(`/bookings/${id}?success=confirmed`);
 }
 
 export async function rejectBookingAction(formData: FormData): Promise<void> {
   const idRaw = formData.get("id");
+  const returnUrlRaw = formData.get("returnUrl");
+  const returnUrl =
+    typeof returnUrlRaw === "string" && returnUrlRaw.startsWith("/") ? returnUrlRaw : null;
   const parsed = uuidSchema.safeParse(idRaw);
 
   if (!parsed.success) {
-    redirect("/bookings");
+    redirect(returnUrl ?? "/bookings");
     return;
   }
 
@@ -72,6 +91,12 @@ export async function rejectBookingAction(formData: FormData): Promise<void> {
       message = "Booking ini sudah kedaluwarsa.";
     }
 
+    if (returnUrl) {
+      const sep = returnUrl.includes("?") ? "&" : "?";
+      redirect(`${returnUrl}${sep}conflict=${encodeURIComponent(message)}`);
+      return;
+    }
+
     redirect(`/bookings/${id}?conflict=${encodeURIComponent(message)}`);
     return;
   }
@@ -79,6 +104,13 @@ export async function rejectBookingAction(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${id}`);
+
+  if (returnUrl) {
+    const sep = returnUrl.includes("?") ? "&" : "?";
+    redirect(`${returnUrl}${sep}success=rejected`);
+    return;
+  }
+
   redirect(`/bookings/${id}?success=rejected`);
 }
 
