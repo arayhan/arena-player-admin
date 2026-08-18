@@ -91,9 +91,17 @@ export async function triggerManualExpiryAction(): Promise<void> {
 }
 
 export async function createBookingAction(formData: FormData): Promise<void> {
+  const timeSlots = formData.getAll("time_slots");
+  const timeSlotFallback = formData.get("time_slot");
+
   const raw = {
     booking_date: formData.get("booking_date"),
-    time_slot: formData.get("time_slot"),
+    time_slots:
+      timeSlots.length > 0
+        ? timeSlots.map(String)
+        : typeof timeSlotFallback === "string" && timeSlotFallback
+          ? [timeSlotFallback]
+          : [],
     team_name: formData.get("team_name"),
     phone: formData.get("phone"),
     notes: formData.get("notes") || null,
@@ -107,7 +115,15 @@ export async function createBookingAction(formData: FormData): Promise<void> {
     return;
   }
 
-  const result = await createBooking(parsed.data);
+  const result = await createBooking({
+    booking_date: parsed.data.booking_date,
+    time_slots: parsed.data.time_slots,
+    team_name: parsed.data.team_name,
+    phone: parsed.data.phone,
+    notes: parsed.data.notes,
+    status: parsed.data.status,
+  });
+
   if (!result.success) {
     redirect(`/bookings/new?error=${encodeURIComponent(result.error)}`);
     return;

@@ -48,24 +48,42 @@ describe("parseBookingsFilter", () => {
 });
 
 describe("createBookingInputSchema", () => {
-  it("accepts valid walk-in booking inputs", async () => {
+  it("accepts valid walk-in booking inputs with single slot", async () => {
     const { createBookingInputSchema } = await import("./bookings.schema");
     const result = createBookingInputSchema.safeParse({
       booking_date: "2026-08-20",
-      time_slot: "19.00 - 20.00",
+      time_slots: "19.00 - 20.00",
       team_name: "Garuda FC",
       phone: "08123456789",
       notes: "Bayar tunai di lapangan",
       status: "confirmed",
     });
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.time_slots).toEqual(["19.00 - 20.00"]);
+    }
+  });
+
+  it("accepts valid walk-in booking inputs with multiple slots array", async () => {
+    const { createBookingInputSchema } = await import("./bookings.schema");
+    const result = createBookingInputSchema.safeParse({
+      booking_date: "2026-08-20",
+      time_slots: ["18.00 - 19.00", "19.00 - 20.00"],
+      team_name: "Garuda FC",
+      phone: "08123456789",
+      status: "confirmed",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.time_slots).toEqual(["18.00 - 19.00", "19.00 - 20.00"]);
+    }
   });
 
   it("rejects invalid date format", async () => {
     const { createBookingInputSchema } = await import("./bookings.schema");
     const result = createBookingInputSchema.safeParse({
       booking_date: "20-08-2026",
-      time_slot: "19.00 - 20.00",
+      time_slots: ["19.00 - 20.00"],
       team_name: "Garuda FC",
       phone: "08123456789",
     });

@@ -100,25 +100,55 @@ describe("bookings.actions", () => {
   });
 
   describe("createBookingAction", () => {
-    it("creates walk-in booking and redirects to detail page", async () => {
+    it("creates walk-in booking with single slot and redirects to detail page", async () => {
       const createdId = "c3d4e5f6-a1b2-4c3d-8e4f-5a6b7c8d9e0f";
       vi.mocked(createBooking).mockResolvedValue({ success: true, id: createdId });
 
       const formData = new FormData();
       formData.set("booking_date", "2026-08-20");
-      formData.set("time_slot", "19.00 - 20.00");
+      formData.append("time_slots", "19.00 - 20.00");
       formData.set("team_name", "Garuda Walkin");
       formData.set("phone", "08123456789");
 
       await createBookingAction(formData);
-      expect(createBooking).toHaveBeenCalled();
+      expect(createBooking).toHaveBeenCalledWith({
+        booking_date: "2026-08-20",
+        time_slots: ["19.00 - 20.00"],
+        team_name: "Garuda Walkin",
+        phone: "08123456789",
+        notes: null,
+        status: "confirmed",
+      });
+      expect(redirect).toHaveBeenCalledWith(`/bookings/${createdId}?success=created`);
+    });
+
+    it("creates walk-in booking with multiple slots in one go", async () => {
+      const createdId = "c3d4e5f6-a1b2-4c3d-8e4f-5a6b7c8d9e0f";
+      vi.mocked(createBooking).mockResolvedValue({ success: true, id: createdId });
+
+      const formData = new FormData();
+      formData.set("booking_date", "2026-08-20");
+      formData.append("time_slots", "18.00 - 19.00");
+      formData.append("time_slots", "19.00 - 20.00");
+      formData.set("team_name", "Garuda Walkin");
+      formData.set("phone", "08123456789");
+
+      await createBookingAction(formData);
+      expect(createBooking).toHaveBeenCalledWith({
+        booking_date: "2026-08-20",
+        time_slots: ["18.00 - 19.00", "19.00 - 20.00"],
+        team_name: "Garuda Walkin",
+        phone: "08123456789",
+        notes: null,
+        status: "confirmed",
+      });
       expect(redirect).toHaveBeenCalledWith(`/bookings/${createdId}?success=created`);
     });
 
     it("redirects with error parameter on validation failure", async () => {
       const formData = new FormData();
       formData.set("booking_date", "invalid-date");
-      formData.set("time_slot", "19.00 - 20.00");
+      formData.append("time_slots", "19.00 - 20.00");
       formData.set("team_name", "");
 
       await createBookingAction(formData);

@@ -1,10 +1,11 @@
 import "server-only";
 
-import { sql } from "@/server/db";
-import type { BookingStatus } from "@/domain/status";
-import type { TimeSlot } from "@/domain/slots";
+import { isPastSlot, todayAtField } from "@/domain/dates";
 import { normalisePhone } from "@/domain/phone";
-import { todayAtField } from "@/domain/dates";
+import { TIME_SLOTS, type TimeSlot } from "@/domain/slots";
+import type { BookingStatus } from "@/domain/status";
+import { resolveDayType } from "@/server/pricing";
+import { sql } from "@/server/db";
 
 export const SORTABLE = {
   when: "b.booking_date, b.time_slot",
@@ -216,7 +217,8 @@ export async function expireOldPendingBookings(): Promise<{
 
 export type CreateBookingInput = {
   booking_date: string;
-  time_slot: string;
+  time_slot?: string;
+  time_slots?: string[];
   team_name: string;
   phone: string;
   notes?: string | null;
@@ -224,7 +226,7 @@ export type CreateBookingInput = {
 };
 
 export type CreateBookingResult =
-  | { success: true; id: string }
+  | { success: true; id: string; ids?: string[] }
   | { success: false; error: string; code?: "CONFLICT" | "VALIDATION" | "UNKNOWN" };
 
 export async function createBooking(data: CreateBookingInput): Promise<CreateBookingResult> {
@@ -237,41 +239,61 @@ export async function createBooking(data: CreateBookingInput): Promise<CreateBoo
     };
   }
 
+  const slots =
+    data.time_slots && data.time_slots.length > 0
+      ? data.time_slots
+      : data.time_slot
+        ? [data.time_slot]
+        : [];
+
+  if (slots.length === 0) {
+    return {
+      success: false,
+      error: "Pilihan slot waktu wajib diisi.",
+      code: "VALIDATION",
+    };
+  }
+
   const status = data.status ?? "confirmed";
 
   try {
-    const rows = await sql<Array<{ id: string }>>`
-      insert into bookings (
-        booking_date,
-        time_slot,
-        team_name,
-        phone,
-        notes,
-        proof_key,
-        status
-      ) values (
-        ${data.booking_date},
-        ${data.time_slot},
-        ${data.team_name},
-        ${normalisedPhone},
-        ${data.notes ?? null},
-        null,
-        ${status}
-      )
-      returning id
-    `;
+    const ids: string[] = [];
+    for (const slot of slots) {
+      const rows = await sql<Array<{ id: string }>>`
+        insert into bookings (
+          booking_date,
+          time_slot,
+          team_name,
+          phone,
+          notes,
+          proof_key,
+          status
+        ) values (
+          ${data.booking_date},
+          ${slot},
+          ${data.team_name},
+          ${normalisedPhone},
+          ${data.notes ?? null},
+          null,
+          ${status}
+        )
+        returning id
+      `;
 
-    if (rows.length === 0 || !rows[0]?.id) {
-      return {
-        success: false,
-        error: "Gagal membuat booking baru.",
-        code: "UNKNOWN",
-      };
+      if (rows.length === 0 || !rows[0]?.id) {
+        return {
+          success: false,
+          error: `Gagal membuat booking untuk slot ${slot}.`,
+          code: "UNKNOWN",
+        };
+      }
+      ids.push(rows[0].id);
     }
 
     return {
       success: true,
-      id: rows[0].id,
+      id: ids[0] ?? "",
+      ids,
     };
   } catch (error: unknown) {
     const pgError = error as { code?: string; message?: string };
@@ -279,7 +301,7 @@ export async function createBooking(data: CreateBookingInput): Promise<CreateBoo
       // 23505: unique_violation on uniq_active_slot
       return {
         success: false,
-        error: "Slot pada tanggal dan jam tersebut sudah terisi.",
+        error: "Salah satu slot pada tanggal dan jam yang dipilih sudah terisi.",
         code: "CONFLICT",
       };
     }
@@ -289,6 +311,176 @@ export async function createBooking(data: CreateBookingInput): Promise<CreateBoo
       success: false,
       error: "Terjadi kesalahan saat menyimpan booking.",
       code: "UNKNOWN",
+    };
+  }
+}
+
+export type SlotOptionItem = {
+  slot: TimeSlot;
+  status: "available" | "confirmed" | "pending" | "blocked" | "past";
+  statusLabel: string;
+  selectable: boolean;
+  price: number;
+  priceFormatted: string;
+  hasPhotoPromo: boolean;
+};
+
+export type DateAvailabilityResult = {
+  date: string;
+  dayType: "weekday" | "weekend";
+  isHoliday: boolean;
+  holidayLabel: string | null;
+  dpPercent: number;
+  slots: SlotOptionItem[];
+};
+
+export async function getSlotAvailabilityForDate(
+  date: string,
+  now: Date = new Date(),
+): Promise<DateAvailabilityResult> {
+  const formatter = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  });
+
+  try {
+    const [bookingRows, blockRows, holidayRows, rateRows, siteSettings] = await Promise.all([
+      sql<Array<{ time_slot: string; status: BookingStatus }>>`
+        select time_slot, status
+        from bookings
+        where booking_date::text = ${date}
+          and status in ('pending', 'confirmed')
+      `,
+      sql<Array<{ time_slot: string }>>`
+        select time_slot
+        from slot_blocks
+        where block_date::text = ${date}
+      `,
+      sql<Array<{ holiday_date: string; label: string }>>`
+        select holiday_date::text as holiday_date, label
+        from public_holidays
+      `,
+      sql<Array<{ time_slot: string; day_type: string; price_rupiah: number }>>`
+        select time_slot, day_type, price_rupiah
+        from rate_card
+      `,
+      getSiteSettings(),
+    ]);
+
+    const holidayMap = new Map(holidayRows.map((h) => [h.holiday_date, h.label]));
+    const holidayDates = new Set(holidayRows.map((h) => h.holiday_date));
+    const dayType = resolveDayType(date, holidayDates);
+    const isHoliday = holidayMap.has(date);
+    const holidayLabel = holidayMap.get(date) ?? null;
+    const dpPercent = parseInt(siteSettings.dp_percent, 10) || 50;
+
+    const bookingStatusMap = new Map(bookingRows.map((b) => [b.time_slot, b.status]));
+    const blockedSlotSet = new Set(blockRows.map((b) => b.time_slot));
+
+    const rateMap = new Map(
+      rateRows.filter((r) => r.day_type === dayType).map((r) => [r.time_slot, r.price_rupiah]),
+    );
+
+    const slots: SlotOptionItem[] = TIME_SLOTS.map((slot) => {
+      const hour = parseInt(slot.split(":")[0] ?? "0", 10);
+      const hasPhotoPromo = hour >= 16;
+
+      let defaultPrice = 200_000;
+      if (dayType === "weekday") {
+        defaultPrice = hour < 16 ? 200_000 : hour < 18 ? 300_000 : 400_000;
+      } else {
+        defaultPrice = hour < 16 ? 200_000 : hour < 18 ? 350_000 : 450_000;
+      }
+
+      const price = rateMap.get(slot) ?? defaultPrice;
+      const priceFormatted = formatter.format(price);
+
+      if (isPastSlot(date, slot, now)) {
+        return {
+          slot,
+          status: "past",
+          statusLabel: "Sudah Lewat",
+          selectable: false,
+          price,
+          priceFormatted,
+          hasPhotoPromo,
+        };
+      }
+
+      if (blockedSlotSet.has(slot)) {
+        return {
+          slot,
+          status: "blocked",
+          statusLabel: "Diblokir Admin",
+          selectable: false,
+          price,
+          priceFormatted,
+          hasPhotoPromo,
+        };
+      }
+
+      const bStatus = bookingStatusMap.get(slot);
+      if (bStatus === "confirmed") {
+        return {
+          slot,
+          status: "confirmed",
+          statusLabel: "Terisi (Confirmed)",
+          selectable: false,
+          price,
+          priceFormatted,
+          hasPhotoPromo,
+        };
+      }
+
+      if (bStatus === "pending") {
+        return {
+          slot,
+          status: "pending",
+          statusLabel: "Pending (Menunggu DP)",
+          selectable: false,
+          price,
+          priceFormatted,
+          hasPhotoPromo,
+        };
+      }
+
+      return {
+        slot,
+        status: "available",
+        statusLabel: "Tersedia",
+        selectable: true,
+        price,
+        priceFormatted,
+        hasPhotoPromo,
+      };
+    });
+
+    return {
+      date,
+      dayType,
+      isHoliday,
+      holidayLabel,
+      dpPercent,
+      slots,
+    };
+  } catch (error) {
+    console.error("[queries] getSlotAvailabilityForDate failed:", error);
+    return {
+      date,
+      dayType: "weekday",
+      isHoliday: false,
+      holidayLabel: null,
+      dpPercent: 50,
+      slots: TIME_SLOTS.map((slot) => ({
+        slot,
+        status: "available",
+        statusLabel: "Tersedia",
+        selectable: true,
+        price: 200_000,
+        priceFormatted: formatter.format(200_000),
+        hasPhotoPromo: parseInt(slot.split(":")[0] ?? "0", 10) >= 16,
+      })),
     };
   }
 }

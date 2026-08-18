@@ -95,7 +95,15 @@ export const createBookingInputSchema = z.object({
   booking_date: z.string().refine(isBookingDateString, {
     message: "Format tanggal harus YYYY-MM-DD",
   }),
-  time_slot: z.string().min(1, "Pilihan slot waktu wajib diisi"),
+  time_slots: z
+    .union([z.string(), z.array(z.string())])
+    .transform((val) => (Array.isArray(val) ? val : [val]))
+    .refine(
+      (arr) => arr.length > 0 && arr.every((s) => typeof s === "string" && s.trim().length > 0),
+      {
+        message: "Pilih minimal satu slot waktu",
+      },
+    ),
   team_name: z
     .string()
     .trim()
