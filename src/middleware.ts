@@ -70,6 +70,6 @@ export async function middleware(request: NextRequest) {
  */
 export const config = {
   matcher: [
-    "/((?!login|api/auth/login|api/jobs/expire|_next/static|_next/image|favicon.ico|logo.jpeg).*)",
+    "/((?!login|api/auth/login|api/jobs/expire|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|logo.jpeg|logo.png|logo-mark.png).*)",
   ],
 };

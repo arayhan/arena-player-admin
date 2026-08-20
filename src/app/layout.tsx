@@ -16,6 +16,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Arena Player — Admin",
   description: "Back-office pemesanan lapangan mini soccer Arena Player.",
+  openGraph: {
+    title: "Arena Player — Admin",
+    description: "Back-office pemesanan lapangan mini soccer Arena Player.",
+    type: "website",
+    locale: "id_ID",
+    siteName: "Arena Player Admin",
+    images: [{ url: "/logo.png", width: 1042, height: 671, alt: "Arena Player Admin" }],
+  },
 };
 
 // Stamps `data-theme` on <html> before first paint. Without this, the page
