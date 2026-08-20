@@ -104,11 +104,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <Field
             label="Kata sandi"
             htmlFor="password"
-            hint={
-              DEV_LOGIN_BYPASS
-                ? "Mode pengembangan: kata sandi apa pun diterima."
-                : "Kata sandi admin diberikan saat serah terima."
-            }
+            hint={DEV_LOGIN_BYPASS ? "Mode pengembangan: kata sandi apa pun diterima." : undefined}
           >
             {/* border-color at 150ms is the whole motion budget DESIGN.md
                 allows, and it is spent here because this is the only control
@@ -128,15 +124,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               //
               // The error is still announced on arrival: `aria-describedby`
               // names it, and focusing a control reads its description out with
-              // it. Error id first so the failure is heard before the handover
-              // boilerplate.
+              // it.
               //
               // Only on failure. A clean /login does not steal focus, which on
               // a phone would open the keyboard over a page the admin may have
               // opened for another reason.
               autoFocus={Boolean(message)}
               autoComplete="current-password"
-              aria-describedby={message ? "login-error password-hint" : "password-hint"}
+              aria-describedby={
+                message
+                  ? DEV_LOGIN_BYPASS
+                    ? "login-error password-hint"
+                    : "login-error"
+                  : DEV_LOGIN_BYPASS
+                    ? "password-hint"
+                    : undefined
+              }
               aria-invalid={message ? true : undefined}
               className="h-11 rounded-control border border-input-border bg-surface px-3 text-body text-ink transition-colors duration-150 hover:border-ink-muted focus:border-accent"
             />

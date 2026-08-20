@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getRedirectUrl } from "@/server/auth/redirect";
 import { SESSION_COOKIE_NAME } from "@/server/auth/session";
 
 /**
@@ -9,7 +10,7 @@ import { SESSION_COOKIE_NAME } from "@/server/auth/session";
  * revocation path instead.
  */
 export async function POST(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/login", request.url), 303);
+  const response = NextResponse.redirect(getRedirectUrl(request, "/login"), 303);
   response.cookies.set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,
     secure: true,

@@ -37,6 +37,10 @@ function makeRequest(opts: {
   accept?: string;
   ip?: string;
   xff?: string;
+  xfHost?: string;
+  xfProto?: string;
+  host?: string;
+  url?: string;
 }): NextRequest {
   const form = new FormData();
   if (opts.password !== undefined) form.set("password", opts.password);
@@ -44,8 +48,11 @@ function makeRequest(opts: {
   const headers = new Headers();
   if (opts.accept) headers.set("accept", opts.accept);
   headers.set("x-forwarded-for", opts.xff ?? opts.ip ?? "203.0.113.1");
+  if (opts.xfHost) headers.set("x-forwarded-host", opts.xfHost);
+  if (opts.xfProto) headers.set("x-forwarded-proto", opts.xfProto);
+  if (opts.host) headers.set("host", opts.host);
 
-  return new NextRequest("http://localhost:3001/api/auth/login", {
+  return new NextRequest(opts.url ?? "http://localhost:3001/api/auth/login", {
     method: "POST",
     headers,
     body: form,
@@ -188,6 +195,24 @@ describe("POST /api/auth/login — wantsHtml negotiation", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("http://localhost:3001/login?error=invalid");
+  });
+
+  it("redirects 303 to public domain when behind reverse proxy on 0.0.0.0:3000", async () => {
+    const response = await POST(
+      makeRequest({
+        password: "wrong",
+        accept: "text/html",
+        ip: "198.51.100.5",
+        url: "http://0.0.0.0:3000/api/auth/login",
+        host: "admin.arena-player.com",
+        xfProto: "https",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "https://admin.arena-player.com/login?error=invalid",
+    );
   });
 
   it("returns bare JSON on success when Accept does not want html", async () => {

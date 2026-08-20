@@ -13,6 +13,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getClientIp } from "@/server/auth/client-ip";
 import { checkRateLimit, clearRateLimit } from "@/server/auth/rate-limit";
 import { verifyPassword } from "@/server/auth/password";
+import { getRedirectUrl } from "@/server/auth/redirect";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, signSession } from "@/server/auth/session";
 
 /**
@@ -90,14 +91,14 @@ export async function POST(request: NextRequest) {
     // not a fact about the credential. Wrong-password and unknown-state stay
     // identical to each other and both still pay the argon2 cost below.
     if (html) {
-      return NextResponse.redirect(new URL("/login?error=empty", request.url), 303);
+      return NextResponse.redirect(getRedirectUrl(request, "/login?error=empty"), 303);
     }
     return NextResponse.json({ error: "empty_password" }, { status: 400 });
   }
 
   if (checkRateLimit(ip) === "limited") {
     if (html) {
-      return NextResponse.redirect(new URL("/login?error=rate_limited", request.url), 303);
+      return NextResponse.redirect(getRedirectUrl(request, "/login?error=rate_limited"), 303);
     }
     return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
   }
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
 
   if (!valid) {
     if (html) {
-      return NextResponse.redirect(new URL("/login?error=invalid", request.url), 303);
+      return NextResponse.redirect(getRedirectUrl(request, "/login?error=invalid"), 303);
     }
     return NextResponse.json({ error: "invalid_credentials" }, { status: 401 });
   }
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
   const token = await signSession();
 
   if (html) {
-    return withSessionCookie(NextResponse.redirect(new URL("/", request.url), 303), token);
+    return withSessionCookie(NextResponse.redirect(getRedirectUrl(request, "/"), 303), token);
   }
   return withSessionCookie(NextResponse.json({ ok: true }), token);
 }

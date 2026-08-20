@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+import { getRedirectUrl } from "@/server/auth/redirect";
 import { SESSION_COOKIE_NAME, verifySession } from "@/server/auth/session";
 
 /**
@@ -33,10 +34,7 @@ export async function middleware(request: NextRequest) {
   const session = token ? await verifySession(token) : null;
 
   if (!session) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    loginUrl.search = "";
-    const redirect = NextResponse.redirect(loginUrl);
+    const redirect = NextResponse.redirect(getRedirectUrl(request, "/login"));
     redirect.headers.set("Cache-Control", NO_STORE);
     return redirect;
   }
