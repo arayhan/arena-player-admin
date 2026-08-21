@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { redirect } from "next/navigation";
 
 import {
   addBankAccountAction,
@@ -15,10 +14,6 @@ import {
   updateBankAccount,
   updateSiteSetting,
 } from "@/server/queries";
-
-vi.mock("next/navigation", () => ({
-  redirect: vi.fn(),
-}));
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
@@ -38,7 +33,7 @@ describe("settings.actions", () => {
   });
 
   describe("updateSiteSettingsAction", () => {
-    it("updates site settings and redirects with success", async () => {
+    it("updates site settings and returns success", async () => {
       vi.mocked(updateSiteSetting).mockResolvedValue({ success: true });
 
       const formData = new FormData();
@@ -47,25 +42,26 @@ describe("settings.actions", () => {
       formData.set("maps_embed_url", "https://maps.google.com/test");
       formData.set("dp_percent", "50");
 
-      await updateSiteSettingsAction(formData);
+      const res = await updateSiteSettingsAction(formData);
       expect(updateSiteSetting).toHaveBeenCalledWith("whatsapp_number", "6289682620666");
       expect(updateSiteSetting).toHaveBeenCalledWith("address", "Jl. Lapangan Futsal No. 10");
       expect(updateSiteSetting).toHaveBeenCalledWith("dp_percent", "50");
-      expect(redirect).toHaveBeenCalledWith("/settings?success=saved");
+      expect(res).toEqual({ success: true });
     });
 
-    it("rejects invalid input and redirects with error", async () => {
+    it("rejects invalid input and returns error", async () => {
       const formData = new FormData();
       formData.set("whatsapp_number", "");
       formData.set("address", "");
 
-      await updateSiteSettingsAction(formData);
-      expect(redirect).toHaveBeenCalledWith(expect.stringContaining("/settings?error="));
+      const res = await updateSiteSettingsAction(formData);
+      expect(res.success).toBe(false);
+      expect(res.error).toBeDefined();
     });
   });
 
   describe("addBankAccountAction", () => {
-    it("adds bank account and redirects with success", async () => {
+    it("adds bank account and returns success", async () => {
       vi.mocked(createBankAccount).mockResolvedValue({ success: true });
 
       const formData = new FormData();
@@ -74,14 +70,14 @@ describe("settings.actions", () => {
       formData.set("account_holder", "Arena Futsal");
       formData.set("is_active", "on");
 
-      await addBankAccountAction(formData);
+      const res = await addBankAccountAction(formData);
       expect(createBankAccount).toHaveBeenCalledWith({
         bank: "BCA",
         account_number: "1234567890",
         account_holder: "Arena Futsal",
         is_active: true,
       });
-      expect(redirect).toHaveBeenCalledWith("/settings?success=bank_added");
+      expect(res).toEqual({ success: true });
     });
 
     it("trims whitespace from bank, account_number, and account_holder", async () => {
@@ -93,19 +89,19 @@ describe("settings.actions", () => {
       formData.set("account_holder", "  MARIANA ULFAH ");
       formData.set("is_active", "true");
 
-      await addBankAccountAction(formData);
+      const res = await addBankAccountAction(formData);
       expect(createBankAccount).toHaveBeenCalledWith({
         bank: "BRI",
         account_number: "4736-01-017915-53-2",
         account_holder: "MARIANA ULFAH",
         is_active: true,
       });
-      expect(redirect).toHaveBeenCalledWith("/settings?success=bank_added");
+      expect(res).toEqual({ success: true });
     });
   });
 
   describe("updateBankAccountAction", () => {
-    it("updates bank account details and redirects", async () => {
+    it("updates bank account details and returns success", async () => {
       vi.mocked(updateBankAccount).mockResolvedValue({ success: true });
 
       const formData = new FormData();
@@ -115,41 +111,41 @@ describe("settings.actions", () => {
       formData.set("account_holder", "Arena Futsal Baru");
       formData.set("is_active", "on");
 
-      await updateBankAccountAction(formData);
+      const res = await updateBankAccountAction(formData);
       expect(updateBankAccount).toHaveBeenCalledWith("bank-uuid-123", {
         bank: "BRI",
         account_number: "9876543210",
         account_holder: "Arena Futsal Baru",
         is_active: true,
       });
-      expect(redirect).toHaveBeenCalledWith("/settings?success=bank_updated");
+      expect(res).toEqual({ success: true });
     });
   });
 
   describe("toggleBankAccountStatusAction", () => {
-    it("toggles active status and redirects", async () => {
+    it("toggles active status and returns success", async () => {
       vi.mocked(toggleBankAccountStatus).mockResolvedValue({ success: true });
 
       const formData = new FormData();
       formData.set("id", "bank-uuid-123");
       formData.set("is_active", "false");
 
-      await toggleBankAccountStatusAction(formData);
+      const res = await toggleBankAccountStatusAction(formData);
       expect(toggleBankAccountStatus).toHaveBeenCalledWith("bank-uuid-123", false);
-      expect(redirect).toHaveBeenCalledWith("/settings?success=bank_updated");
+      expect(res).toEqual({ success: true });
     });
   });
 
   describe("deleteBankAccountAction", () => {
-    it("deletes bank account and redirects with success", async () => {
+    it("deletes bank account and returns success", async () => {
       vi.mocked(deleteBankAccount).mockResolvedValue({ success: true });
 
       const formData = new FormData();
       formData.set("id", "bank-uuid-123");
 
-      await deleteBankAccountAction(formData);
+      const res = await deleteBankAccountAction(formData);
       expect(deleteBankAccount).toHaveBeenCalledWith("bank-uuid-123");
-      expect(redirect).toHaveBeenCalledWith("/settings?success=bank_deleted");
+      expect(res).toEqual({ success: true });
     });
   });
 });

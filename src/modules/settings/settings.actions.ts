@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { normalisePhone } from "@/domain/phone";
@@ -14,7 +13,9 @@ const generalSettingsSchema = z.object({
   dp_percent: z.string().trim().regex(/^\d+$/, "Persentase DP harus berupa angka"),
 });
 
-export async function updateSiteSettingsAction(formData: FormData): Promise<void> {
+export async function updateSiteSettingsAction(
+  formData: FormData,
+): Promise<{ success: boolean; error?: string }> {
   const raw = {
     whatsapp_number: formData.get("whatsapp_number"),
     address: formData.get("address"),
@@ -25,14 +26,15 @@ export async function updateSiteSettingsAction(formData: FormData): Promise<void
   const parsed = generalSettingsSchema.safeParse(raw);
   if (!parsed.success) {
     const errorMsg = parsed.error.issues[0]?.message ?? "Data pengaturan tidak valid.";
-    redirect(`/settings?error=${encodeURIComponent(errorMsg)}`);
-    return;
+    return { success: false, error: errorMsg };
   }
 
   const normalisedWhatsApp = normalisePhone(parsed.data.whatsapp_number);
   if (!normalisedWhatsApp) {
-    redirect("/settings?error=Format+nomor+WhatsApp+tidak+valid");
-    return;
+    return {
+      success: false,
+      error: "Format nomor WhatsApp tidak valid (contoh: 08123456789 atau 628123456789).",
+    };
   }
 
   await updateSiteSetting("whatsapp_number", normalisedWhatsApp);
@@ -41,17 +43,27 @@ export async function updateSiteSettingsAction(formData: FormData): Promise<void
   await updateSiteSetting("dp_percent", parsed.data.dp_percent);
 
   revalidatePath("/settings");
-  redirect("/settings?success=saved");
+  return { success: true };
 }
 
 const bankAccountSchema = z.object({
-  bank: z.string().trim().min(1, "Nama bank wajib diisi").max(40),
-  account_number: z.string().trim().min(1, "Nomor rekening wajib diisi").max(40),
-  account_holder: z.string().trim().min(1, "Nama pemilik rekening wajib diisi").max(100),
+  bank: z.string().trim().min(1, "Nama bank wajib diisi").max(40, "Nama bank maksimal 40 karakter"),
+  account_number: z
+    .string()
+    .trim()
+    .min(1, "Nomor rekening wajib diisi")
+    .max(40, "Nomor rekening maksimal 40 karakter"),
+  account_holder: z
+    .string()
+    .trim()
+    .min(1, "Nama pemilik rekening wajib diisi")
+    .max(100, "Nama pemilik rekening maksimal 100 karakter"),
   is_active: z.coerce.boolean().default(true),
 });
 
-export async function addBankAccountAction(formData: FormData): Promise<void> {
+export async function addBankAccountAction(
+  formData: FormData,
+): Promise<{ success: boolean; error?: string }> {
   const raw = {
     bank: formData.get("bank"),
     account_number: formData.get("account_number"),
@@ -62,27 +74,24 @@ export async function addBankAccountAction(formData: FormData): Promise<void> {
   const parsed = bankAccountSchema.safeParse(raw);
   if (!parsed.success) {
     const errorMsg = parsed.error.issues[0]?.message ?? "Data rekening tidak valid.";
-    redirect(`/settings?error=${encodeURIComponent(errorMsg)}`);
-    return;
+    return { success: false, error: errorMsg };
   }
 
   const result = await createBankAccount(parsed.data);
   if (!result.success) {
-    redirect(
-      `/settings?error=${encodeURIComponent(result.error ?? "Gagal menambahkan rekening.")}`,
-    );
-    return;
+    return { success: false, error: result.error ?? "Gagal menambahkan rekening." };
   }
 
   revalidatePath("/settings");
-  redirect("/settings?success=bank_added");
+  return { success: true };
 }
 
-export async function updateBankAccountAction(formData: FormData): Promise<void> {
+export async function updateBankAccountAction(
+  formData: FormData,
+): Promise<{ success: boolean; error?: string }> {
   const idRaw = formData.get("id");
   if (typeof idRaw !== "string" || !idRaw) {
-    redirect("/settings");
-    return;
+    return { success: false, error: "ID rekening tidak valid." };
   }
 
   const raw = {
@@ -95,58 +104,52 @@ export async function updateBankAccountAction(formData: FormData): Promise<void>
   const parsed = bankAccountSchema.safeParse(raw);
   if (!parsed.success) {
     const errorMsg = parsed.error.issues[0]?.message ?? "Data rekening tidak valid.";
-    redirect(`/settings?error=${encodeURIComponent(errorMsg)}`);
-    return;
+    return { success: false, error: errorMsg };
   }
 
   const { updateBankAccount } = await import("@/server/queries");
   const result = await updateBankAccount(idRaw, parsed.data);
   if (!result.success) {
-    redirect(
-      `/settings?error=${encodeURIComponent(result.error ?? "Gagal memperbarui rekening.")}`,
-    );
-    return;
+    return { success: false, error: result.error ?? "Gagal memperbarui rekening." };
   }
 
   revalidatePath("/settings");
-  redirect("/settings?success=bank_updated");
+  return { success: true };
 }
 
-export async function toggleBankAccountStatusAction(formData: FormData): Promise<void> {
+export async function toggleBankAccountStatusAction(
+  formData: FormData,
+): Promise<{ success: boolean; error?: string }> {
   const idRaw = formData.get("id");
   const isActiveRaw = formData.get("is_active");
   if (typeof idRaw !== "string" || !idRaw) {
-    redirect("/settings");
-    return;
+    return { success: false, error: "ID rekening tidak valid." };
   }
 
   const newStatus = isActiveRaw === "true";
   const { toggleBankAccountStatus } = await import("@/server/queries");
   const result = await toggleBankAccountStatus(idRaw, newStatus);
   if (!result.success) {
-    redirect(
-      `/settings?error=${encodeURIComponent(result.error ?? "Gagal mengubah status rekening.")}`,
-    );
-    return;
+    return { success: false, error: result.error ?? "Gagal mengubah status rekening." };
   }
 
   revalidatePath("/settings");
-  redirect("/settings?success=bank_updated");
+  return { success: true };
 }
 
-export async function deleteBankAccountAction(formData: FormData): Promise<void> {
+export async function deleteBankAccountAction(
+  formData: FormData,
+): Promise<{ success: boolean; error?: string }> {
   const idRaw = formData.get("id");
   if (typeof idRaw !== "string" || !idRaw) {
-    redirect("/settings");
-    return;
+    return { success: false, error: "ID rekening tidak valid." };
   }
 
   const result = await deleteBankAccount(idRaw);
   if (!result.success) {
-    redirect(`/settings?error=${encodeURIComponent(result.error ?? "Gagal menghapus rekening.")}`);
-    return;
+    return { success: false, error: result.error ?? "Gagal menghapus rekening." };
   }
 
   revalidatePath("/settings");
-  redirect("/settings?success=bank_deleted");
+  return { success: true };
 }

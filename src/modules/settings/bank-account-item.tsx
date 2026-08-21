@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import type { BankAccountRow } from "@/server/queries";
 import {
   deleteBankAccountAction,
@@ -16,28 +16,64 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isActive, setIsActive] = useState(account.is_active);
   const [editIsActive, setEditIsActive] = useState(account.is_active);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleToggle() {
+  async function handleToggle() {
     const nextState = !isActive;
     setIsActive(nextState);
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("id", account.id);
-      formData.set("is_active", nextState ? "true" : "false");
-      await toggleBankAccountStatusAction(formData);
-    });
+    setIsPending(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.set("id", account.id);
+    formData.set("is_active", nextState ? "true" : "false");
+
+    const res = await toggleBankAccountStatusAction(formData);
+    setIsPending(false);
+
+    if (!res.success) {
+      setIsActive(!nextState);
+      setError(res.error ?? "Gagal mengubah status rekening.");
+    }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirm(`Hapus rekening ${account.bank} (${account.account_number})?`)) {
       return;
     }
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("id", account.id);
-      await deleteBankAccountAction(formData);
-    });
+    setIsPending(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.set("id", account.id);
+
+    const res = await deleteBankAccountAction(formData);
+    setIsPending(false);
+
+    if (!res.success) {
+      setError(res.error ?? "Gagal menghapus rekening.");
+    }
+  }
+
+  async function handleEditSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsPending(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    formData.set("id", account.id);
+    formData.set("is_active", editIsActive ? "true" : "false");
+
+    const res = await updateBankAccountAction(formData);
+    setIsPending(false);
+
+    if (res.success) {
+      setIsActive(editIsActive);
+      setIsEditing(false);
+    } else {
+      setError(res.error ?? "Gagal memperbarui rekening.");
+    }
   }
 
   return (
@@ -46,6 +82,24 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
         isActive ? "border-border bg-surface shadow-xs" : "border-border/60 bg-ground/50 opacity-80"
       }`}
     >
+      {error && (
+        <div
+          role="alert"
+          className="mb-3 flex items-center gap-2 rounded-control border border-red-border bg-red-bg p-2.5 text-xs text-red-ink"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-4 w-4 flex-none">
+            <path
+              d="M12 9v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* View Mode */}
       {!isEditing ? (
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -108,6 +162,7 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
             <button
               type="button"
               onClick={() => {
+                setError(null);
                 setEditIsActive(isActive);
                 setIsEditing(true);
               }}
@@ -136,7 +191,7 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
               disabled={isPending}
               aria-label="Hapus rekening"
               title="Hapus rekening"
-              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-control border border-red-border/60 bg-red-bg/50 text-xs font-medium text-red-ink transition-colors hover:bg-red-border/20"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-control border border-red-border/60 bg-red-bg/50 text-xs font-medium text-red-ink transition-colors hover:bg-red-border/20 disabled:opacity-50"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -155,23 +210,22 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
         </div>
       ) : (
         /* Edit Form Mode */
-        <form action={updateBankAccountAction} className="flex flex-col gap-3.5">
-          <input type="hidden" name="id" value={account.id} />
-          <input type="hidden" name="is_active" value={editIsActive ? "true" : "false"} />
+        <form onSubmit={handleEditSubmit} className="flex flex-col gap-3.5">
           <div className="flex items-center justify-between border-b border-border pb-2.5">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-ink">✏️ Ubah Rekening: {account.bank}</span>
             </div>
             <button
               type="button"
-              onClick={() => setIsEditing(false)}
+              onClick={() => {
+                setError(null);
+                setIsEditing(false);
+              }}
               className="text-xs font-semibold text-ink-muted hover:text-ink"
             >
               Batal ✕
             </button>
           </div>
-
-          <input type="hidden" name="id" value={account.id} />
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1">
@@ -183,6 +237,7 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
                 type="text"
                 defaultValue={account.bank}
                 required
+                maxLength={40}
                 className="h-10 rounded-control border border-border bg-ground px-3 text-xs font-medium text-ink focus:border-accent focus:outline-none"
               />
             </div>
@@ -195,6 +250,7 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
                 type="text"
                 defaultValue={account.account_number}
                 required
+                maxLength={40}
                 className="h-10 rounded-control border border-border bg-ground px-3 font-mono text-xs font-semibold text-ink focus:border-accent focus:outline-none"
               />
             </div>
@@ -207,6 +263,7 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
                 type="text"
                 defaultValue={account.account_holder}
                 required
+                maxLength={100}
                 className="h-10 rounded-control border border-border bg-ground px-3 text-xs font-medium text-ink focus:border-accent focus:outline-none"
               />
             </div>
@@ -244,16 +301,20 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
+                onClick={() => {
+                  setError(null);
+                  setIsEditing(false);
+                }}
                 className="inline-flex min-h-[44px] items-center justify-center rounded-control border border-border px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-ground"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-control bg-accent px-5 py-2 text-xs font-semibold text-accent-ink transition-colors hover:bg-accent-hover"
+                disabled={isPending}
+                className="inline-flex min-h-[44px] items-center justify-center rounded-control bg-accent px-5 py-2 text-xs font-semibold text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
               >
-                Simpan Perubahan
+                {isPending ? "Menyimpan..." : "Simpan Perubahan"}
               </button>
             </div>
           </div>
