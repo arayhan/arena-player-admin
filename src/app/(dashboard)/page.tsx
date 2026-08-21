@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BOOKING_STATUSES } from "@/domain/status";
 import { formatRelativeAge, isOlderThan24Hours } from "@/modules/bookings/booking-formatters";
 import { triggerManualExpiryAction } from "@/modules/bookings/bookings.actions";
 import { BookingCard } from "@/modules/bookings/booking-card";
+import { BookingsFilters } from "@/modules/bookings/bookings-filters";
+import { parseBookingsFilter } from "@/modules/bookings/bookings.schema";
 import { BookingsTable } from "@/modules/bookings/bookings-table";
 import { EmptyQueue } from "@/modules/bookings/empty-queue";
 import { getDashboardMetrics, listBookings } from "@/server/queries";
@@ -17,23 +20,23 @@ export const metadata: Metadata = {
   description: "Dashboard antrean booking dan status operasional lapangan.",
 };
 
+const PAGE_SIZE = 50;
+
 type Props = {
-  searchParams?: Promise<{
-    expired?: string;
-    success?: string;
-    conflict?: string;
-    error?: string;
-  }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function DashboardPage({ searchParams }: Props) {
   const resolvedParams = searchParams ? await searchParams : undefined;
   const expiredCount = resolvedParams?.expired ? Number(resolvedParams.expired) : null;
-  const successMessage = resolvedParams?.success;
-  const conflictMessage = resolvedParams?.conflict
-    ? decodeURIComponent(resolvedParams.conflict)
-    : null;
-  const errorMessage = resolvedParams?.error ? decodeURIComponent(resolvedParams.error) : null;
+  const successMessage =
+    typeof resolvedParams?.success === "string" ? resolvedParams.success : null;
+  const conflictMessage =
+    typeof resolvedParams?.conflict === "string"
+      ? decodeURIComponent(resolvedParams.conflict)
+      : null;
+  const errorMessage =
+    typeof resolvedParams?.error === "string" ? decodeURIComponent(resolvedParams.error) : null;
 
   const hasBookingsTable = await tableExists("bookings");
 
@@ -52,28 +55,49 @@ export default async function DashboardPage({ searchParams }: Props) {
     );
   }
 
-  // Fetch pending queue rows (capped at first 5 for the dashboard preview)
-  const { rows: pendingBookings, totalCount } = await listBookings({
-    status: ["pending"],
-    limit: 5,
-    sort: "when",
-    dir: "asc",
+  const filter = parseBookingsFilter(resolvedParams);
+  const offset = (filter.page - 1) * PAGE_SIZE;
+
+  // Fetch all bookings according to the filter (default: all statuses)
+  const { rows: bookings, totalCount } = await listBookings({
+    status: filter.status,
+    from: filter.from,
+    to: filter.to,
+    q: filter.q,
+    sort: filter.sort,
+    dir: filter.dir,
+    limit: PAGE_SIZE,
+    offset,
   });
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const isFiltered =
+    filter.status.length < BOOKING_STATUSES.length ||
+    filter.from !== null ||
+    filter.to !== null ||
+    filter.q !== null;
 
   // Fetch operational metrics
   const metrics = await getDashboardMetrics();
 
-  // Calculate oldest pending age if there are items in the queue
-  const oldestPending =
-    pendingBookings.length > 0
-      ? [...pendingBookings].sort(
-          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-        )[0]
-      : null;
-  const oldestAge = oldestPending ? formatRelativeAge(oldestPending.created_at) : null;
+  const oldestAge = metrics.oldestPendingCreatedAt
+    ? formatRelativeAge(metrics.oldestPendingCreatedAt)
+    : null;
+  const isOldestPast24h =
+    metrics.oldestPendingCreatedAt != null && isOlderThan24Hours(metrics.oldestPendingCreatedAt);
 
-  // Dead-man's switch: is oldest pending > 24 hours?
-  const isOldestPast24h = oldestPending != null && isOlderThan24Hours(oldestPending.created_at);
+  // Build return URL
+  const queryParts: string[] = [];
+  if (filter.status.length > 0 && filter.status.length < BOOKING_STATUSES.length) {
+    for (const s of filter.status) queryParts.push(`status=${encodeURIComponent(s)}`);
+  }
+  if (filter.from) queryParts.push(`from=${encodeURIComponent(filter.from)}`);
+  if (filter.to) queryParts.push(`to=${encodeURIComponent(filter.to)}`);
+  if (filter.q) queryParts.push(`q=${encodeURIComponent(filter.q)}`);
+  if (filter.sort !== "when") queryParts.push(`sort=${encodeURIComponent(filter.sort)}`);
+  if (filter.dir !== "asc") queryParts.push(`dir=${encodeURIComponent(filter.dir)}`);
+  if (filter.page > 1) queryParts.push(`page=${filter.page}`);
+  const returnUrl = `/${queryParts.length > 0 ? `?${queryParts.join("&")}` : ""}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -222,64 +246,8 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
       )}
 
-      {/* 1. Queue Section (Queue First per 6-step-01) */}
-      <section className="flex flex-col gap-4" aria-labelledby="queue-heading">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
-          <div>
-            <h1 id="queue-heading" className="text-xl font-bold text-ink">
-              Antrean Booking
-            </h1>
-            <p className="text-sm text-ink-muted">
-              {totalCount > 0
-                ? `${totalCount} booking menunggu tindakan konfirmasi`
-                : "Semua booking telah diproses"}
-            </p>
-          </div>
-          {totalCount > 0 && (
-            <Link
-              href="/bookings"
-              className="inline-flex min-h-[44px] items-center text-xs font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
-            >
-              Lihat semua booking ({totalCount}) &rarr;
-            </Link>
-          )}
-        </div>
-
-        {totalCount === 0 ? (
-          <EmptyQueue />
-        ) : (
-          <div className="flex flex-col gap-4">
-            {/* Mobile cards view (<720px / md) */}
-            <div className="flex flex-col gap-3 md:hidden">
-              {pendingBookings.map((b) => (
-                <BookingCard key={b.id} booking={b} returnUrl="/" />
-              ))}
-            </div>
-
-            {/* Desktop table view (≥720px / md) */}
-            <div className="hidden md:block">
-              <BookingsTable bookings={pendingBookings} returnUrl="/" />
-            </div>
-
-            {totalCount > 5 && (
-              <div className="text-center pt-2">
-                <Link
-                  href="/bookings"
-                  className="inline-flex min-h-[44px] items-center rounded-control border border-border bg-surface px-4 py-2 text-xs font-medium text-ink transition-colors duration-150 hover:bg-ground"
-                >
-                  Buka {totalCount - 5} antrean lainnya di Konsol Booking &rarr;
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* 2. Supporting Band Underneath Queue (Yields to the queue per 6-step-01) */}
-      <section
-        className="flex flex-col gap-4 border-t border-border pt-4"
-        aria-labelledby="metrics-heading"
-      >
+      {/* 1. Supporting Metrics Band */}
+      <section className="flex flex-col gap-4" aria-labelledby="metrics-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="metrics-heading" className="text-sm font-semibold text-ink-muted">
             Ringkasan Operasional
@@ -309,9 +277,9 @@ export default async function DashboardPage({ searchParams }: Props) {
           {/* Card 1: Pending Count */}
           <div className="flex flex-col gap-1 rounded-panel border border-border bg-surface p-4">
             <span className="text-xs font-medium text-ink-muted">Menunggu Konfirmasi</span>
-            <span className="text-2xl font-bold text-ink">{totalCount}</span>
+            <span className="text-2xl font-bold text-ink">{metrics.pendingCount}</span>
             <span className="text-xs text-ink-muted">
-              {totalCount === 0 ? "Antrean bersih" : "Perlu segera ditindak"}
+              {metrics.pendingCount === 0 ? "Antrean bersih" : "Perlu segera ditindak"}
             </span>
           </div>
 
@@ -348,6 +316,80 @@ export default async function DashboardPage({ searchParams }: Props) {
             <span className="text-xs text-ink-muted">Total terkonfirmasi & pending</span>
           </div>
         </div>
+      </section>
+
+      {/* 2. All Bookings Section */}
+      <section
+        className="flex flex-col gap-4 border-t border-border pt-4"
+        aria-labelledby="bookings-heading"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+          <div>
+            <h1 id="bookings-heading" className="text-xl font-bold text-ink">
+              Daftar Semua Booking
+            </h1>
+            <p className="text-sm text-ink-muted">
+              Total {totalCount} booking {isFiltered ? "ditemukan berdasarkan filter" : "terdaftar"}
+            </p>
+          </div>
+          <Link
+            href="/bookings"
+            className="inline-flex min-h-[44px] items-center text-xs font-medium text-accent underline underline-offset-2 hover:text-accent-hover"
+          >
+            Buka di Konsol Booking &rarr;
+          </Link>
+        </div>
+
+        {/* Filter Bar */}
+        <BookingsFilters currentFilter={filter} actionPath="/" />
+
+        {bookings.length === 0 ? (
+          <EmptyQueue isFilterActive={isFiltered} />
+        ) : (
+          <div className="flex flex-col gap-4">
+            {/* Mobile cards view (<720px / md) */}
+            <div className="flex flex-col gap-3 md:hidden">
+              {bookings.map((b) => (
+                <BookingCard key={b.id} booking={b} returnUrl={returnUrl} />
+              ))}
+            </div>
+
+            {/* Desktop table view (≥720px / md) */}
+            <div className="hidden md:block">
+              <BookingsTable bookings={bookings} returnUrl={returnUrl} />
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <nav
+                aria-label="Navigasi halaman"
+                className="flex items-center justify-between border-t border-border pt-4 text-xs text-ink-muted"
+              >
+                <span>
+                  Halaman {filter.page} dari {totalPages}
+                </span>
+                <div className="flex items-center gap-2">
+                  {filter.page > 1 && (
+                    <Link
+                      href={`/?page=${filter.page - 1}`}
+                      className="inline-flex min-h-[44px] items-center rounded-control border border-border px-3 py-1.5 font-medium text-ink hover:bg-ground"
+                    >
+                      Sebelumnya
+                    </Link>
+                  )}
+                  {filter.page < totalPages && (
+                    <Link
+                      href={`/?page=${filter.page + 1}`}
+                      className="inline-flex min-h-[44px] items-center rounded-control border border-border px-3 py-1.5 font-medium text-ink hover:bg-ground"
+                    >
+                      Selanjutnya
+                    </Link>
+                  )}
+                </div>
+              </nav>
+            )}
+          </div>
+        )}
       </section>
     </div>
   );

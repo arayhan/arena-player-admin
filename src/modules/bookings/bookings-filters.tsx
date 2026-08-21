@@ -1,14 +1,23 @@
 import type { BookingsFilter } from "./bookings.schema";
 import { todayAtField } from "@/domain/dates";
+import { BOOKING_STATUSES } from "@/domain/status";
 
-export function BookingsFilters({ currentFilter }: { currentFilter: BookingsFilter }) {
+export function BookingsFilters({
+  currentFilter,
+  actionPath = "/bookings",
+}: {
+  currentFilter: BookingsFilter;
+  actionPath?: string;
+}) {
   const isToday = currentFilter.from === todayAtField() && !currentFilter.to;
   const isAllDates = currentFilter.from === null && currentFilter.to === null;
+  const isAllStatuses =
+    currentFilter.status.length === BOOKING_STATUSES.length || currentFilter.status.length === 0;
 
   return (
     <form
       method="GET"
-      action="/bookings"
+      action={actionPath}
       className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-4 text-sm text-ink"
     >
       <div className="flex flex-wrap items-center gap-3">
@@ -20,22 +29,12 @@ export function BookingsFilters({ currentFilter }: { currentFilter: BookingsFilt
             defaultValue={currentFilter.q ?? ""}
             placeholder="Cari tim atau no HP..."
             aria-label="Cari nama tim atau nomor HP"
-            className="w-full rounded-control border border-input-border bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+            className="w-full rounded-control border border-input-border bg-ground px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
           />
         </div>
 
         {/* Date presets */}
         <div className="flex items-center gap-1 rounded-control border border-border p-1">
-          <button
-            type="submit"
-            name="from"
-            value={todayAtField()}
-            className={`rounded-control px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
-              isToday ? "bg-accent text-accent-ink" : "text-ink hover:bg-ground"
-            }`}
-          >
-            Hari Ini
-          </button>
           <button
             type="submit"
             name="from"
@@ -45,6 +44,16 @@ export function BookingsFilters({ currentFilter }: { currentFilter: BookingsFilt
             }`}
           >
             Semua Tanggal
+          </button>
+          <button
+            type="submit"
+            name="from"
+            value={todayAtField()}
+            className={`rounded-control px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
+              isToday ? "bg-accent text-accent-ink" : "text-ink hover:bg-ground"
+            }`}
+          >
+            Hari Ini
           </button>
         </div>
 
@@ -60,6 +69,18 @@ export function BookingsFilters({ currentFilter }: { currentFilter: BookingsFilt
       {/* Status Filter Chips */}
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <span className="text-xs font-semibold text-ink-muted">STATUS:</span>
+        <button
+          type="submit"
+          name="status"
+          value="all"
+          className={`rounded-control border px-3 py-1 text-xs font-medium transition-colors duration-150 ${
+            isAllStatuses
+              ? "border-accent bg-accent text-accent-ink"
+              : "border-border bg-surface text-ink hover:bg-ground"
+          }`}
+        >
+          Semua Status
+        </button>
         {(
           [
             { label: "Menunggu", value: "pending" },
@@ -68,7 +89,7 @@ export function BookingsFilters({ currentFilter }: { currentFilter: BookingsFilt
             { label: "Kedaluwarsa", value: "expired" },
           ] as const
         ).map((item) => {
-          const isSelected = currentFilter.status.includes(item.value);
+          const isSelected = !isAllStatuses && currentFilter.status.includes(item.value);
           return (
             <button
               key={item.value}

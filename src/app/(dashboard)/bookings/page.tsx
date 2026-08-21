@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { BOOKING_STATUSES } from "@/domain/status";
 import { parseBookingsFilter } from "@/modules/bookings/bookings.schema";
 import { BookingsFilters } from "@/modules/bookings/bookings-filters";
 import { BookingsTable } from "@/modules/bookings/bookings-table";
@@ -39,8 +40,7 @@ export default async function BookingsPage({ searchParams }: Props) {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const isFiltered =
-    filter.status.length > 1 ||
-    filter.status[0] !== "pending" ||
+    filter.status.length < BOOKING_STATUSES.length ||
     filter.from !== null ||
     filter.to !== null ||
     filter.q !== null;
@@ -56,7 +56,7 @@ export default async function BookingsPage({ searchParams }: Props) {
 
   // Reconstruct return URL with current filter query
   const queryParts: string[] = [];
-  if (filter.status.length > 0) {
+  if (filter.status.length > 0 && filter.status.length < BOOKING_STATUSES.length) {
     for (const s of filter.status) queryParts.push(`status=${encodeURIComponent(s)}`);
   }
   if (filter.from) queryParts.push(`from=${encodeURIComponent(filter.from)}`);

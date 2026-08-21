@@ -46,7 +46,7 @@ export type ListBookingsParams = {
 };
 
 export async function listBookings({
-  status = ["pending"],
+  status,
   from = null,
   to = null,
   q = null,
@@ -60,10 +60,11 @@ export async function listBookings({
     const qPhone = qText ? normalisePhone(qText) : null;
     const selectedSort = SORTABLE[sort] ? sort : "when";
     const selectedDir = SORT_DIR[dir] ? dir : "asc";
+    const statusFilter = status && status.length > 0 ? status : null;
 
     // SQL statement from docs/architecture.md, "The query".
     // Bound parameters:
-    // $1 status[]  text[]
+    // $1 status[]  text[] (nullable: when null, matches all statuses)
     // $2 from      date nullable
     // $3 to        date nullable
     // $4 q_text    text nullable
@@ -82,7 +83,7 @@ export async function listBookings({
         b.created_at::text   as created_at,
         count(*) over ()::int as total_count
       from bookings b
-      where b.status = any(${status}::text[])
+      where (${statusFilter}::text[] is null or b.status = any(${statusFilter}::text[]))
         and (${from}::date is null or b.booking_date >= ${from}::date)
         and (${to}::date is null or b.booking_date <= ${to}::date)
         and (

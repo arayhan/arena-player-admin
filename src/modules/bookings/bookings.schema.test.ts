@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { parseBookingsFilter } from "./bookings.schema";
-import { todayAtField } from "@/domain/dates";
 
 describe("parseBookingsFilter", () => {
   it("returns default values on undefined input", () => {
     const filter = parseBookingsFilter(undefined);
-    expect(filter.status).toEqual(["pending"]);
-    expect(filter.from).toEqual(todayAtField());
+    expect(filter.status).toEqual(["pending", "confirmed", "rejected", "expired"]);
+    expect(filter.from).toBeNull();
     expect(filter.to).toBeNull();
     expect(filter.q).toBeNull();
     expect(filter.sort).toBe("when");
@@ -23,9 +22,14 @@ describe("parseBookingsFilter", () => {
     expect(filter2.status).toEqual(["pending", "confirmed"]);
   });
 
-  it("falls back to ['pending'] on invalid status", () => {
+  it("handles 'all' status by setting status to all statuses", () => {
+    const filter = parseBookingsFilter({ status: "all" });
+    expect(filter.status).toEqual(["pending", "confirmed", "rejected", "expired"]);
+  });
+
+  it("falls back to all statuses on invalid status", () => {
     const filter = parseBookingsFilter({ status: "invalid_status" });
-    expect(filter.status).toEqual(["pending"]);
+    expect(filter.status).toEqual(["pending", "confirmed", "rejected", "expired"]);
   });
 
   it("handles 'all' dates by setting from to null", () => {
@@ -40,7 +44,7 @@ describe("parseBookingsFilter", () => {
       sort: "malicious_column; drop table users;",
       dir: "invalid_dir",
     });
-    expect(filter.from).toEqual(todayAtField());
+    expect(filter.from).toBeNull();
     expect(filter.page).toBe(1);
     expect(filter.sort).toBe("when");
     expect(filter.dir).toBe("asc");

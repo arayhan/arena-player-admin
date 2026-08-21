@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isBookingDateString, todayAtField } from "@/domain/dates";
+import { isBookingDateString } from "@/domain/dates";
 import { BOOKING_STATUSES, type BookingStatus } from "@/domain/status";
 import { SORTABLE, SORT_DIR, type SortDir, type SortKey } from "@/server/queries";
 
@@ -9,19 +9,20 @@ export const bookingsFilterSchema = z.object({
     .union([z.string(), z.array(z.string())])
     .optional()
     .transform((val): BookingStatus[] => {
-      if (!val) return ["pending"];
+      if (!val || val === "all") return [...BOOKING_STATUSES];
       const arr = Array.isArray(val) ? val : [val];
+      if (arr.includes("all")) return [...BOOKING_STATUSES];
       const valid = arr.filter((s): s is BookingStatus =>
         (BOOKING_STATUSES as readonly string[]).includes(s),
       );
-      return valid.length > 0 ? valid : ["pending"];
+      return valid.length > 0 ? valid : [...BOOKING_STATUSES];
     }),
   from: z
     .string()
     .optional()
     .transform((val) => {
       if (!val || val === "all") return null;
-      return isBookingDateString(val) ? val : todayAtField();
+      return isBookingDateString(val) ? val : null;
     }),
   to: z
     .string()
@@ -65,8 +66,8 @@ export function parseBookingsFilter(
 ): BookingsFilter {
   if (!raw) {
     return {
-      status: ["pending"],
-      from: todayAtField(),
+      status: [...BOOKING_STATUSES],
+      from: null,
       to: null,
       q: null,
       sort: "when",
@@ -78,8 +79,8 @@ export function parseBookingsFilter(
   const result = bookingsFilterSchema.safeParse(raw);
   if (!result.success) {
     return {
-      status: ["pending"],
-      from: todayAtField(),
+      status: [...BOOKING_STATUSES],
+      from: null,
       to: null,
       q: null,
       sort: "when",
