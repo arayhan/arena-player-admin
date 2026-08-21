@@ -114,12 +114,15 @@ export async function rejectBookingAction(formData: FormData): Promise<void> {
   redirect(`/bookings/${id}?success=rejected`);
 }
 
-export async function triggerManualExpiryAction(): Promise<void> {
+export async function triggerManualExpiryAction(): Promise<{
+  success: boolean;
+  expiredCount: number;
+}> {
   const { expiredCount } = await expireOldPendingBookings();
 
   revalidatePath("/");
   revalidatePath("/bookings");
-  redirect(`/?expired=${expiredCount}`);
+  return { success: true, expiredCount };
 }
 
 export async function createBookingAction(formData: FormData): Promise<void> {

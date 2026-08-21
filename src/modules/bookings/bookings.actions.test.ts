@@ -5,11 +5,13 @@ import {
   confirmBookingAction,
   createBookingAction,
   rejectBookingAction,
+  triggerManualExpiryAction,
   updateBookingAction,
 } from "./bookings.actions";
 import {
   confirmBooking,
   createBooking,
+  expireOldPendingBookings,
   getBookingById,
   rejectBooking,
   updateBooking,
@@ -199,6 +201,20 @@ describe("bookings.actions", () => {
         notes: "Catatan baru",
       });
       expect(redirect).toHaveBeenCalledWith(`/bookings/${validId}?success=updated`);
+    });
+  });
+
+  describe("triggerManualExpiryAction", () => {
+    it("runs manual expiry and returns expired count without redirecting", async () => {
+      vi.mocked(expireOldPendingBookings).mockResolvedValue({
+        expiredCount: 3,
+        rows: [],
+      });
+
+      const res = await triggerManualExpiryAction();
+      expect(expireOldPendingBookings).toHaveBeenCalled();
+      expect(res).toEqual({ success: true, expiredCount: 3 });
+      expect(redirect).not.toHaveBeenCalled();
     });
   });
 });
