@@ -83,6 +83,25 @@ describe("settings.actions", () => {
       });
       expect(redirect).toHaveBeenCalledWith("/settings?success=bank_added");
     });
+
+    it("trims whitespace from bank, account_number, and account_holder", async () => {
+      vi.mocked(createBankAccount).mockResolvedValue({ success: true });
+
+      const formData = new FormData();
+      formData.set("bank", "  BRI  ");
+      formData.set("account_number", " 4736-01-017915-53-2 ");
+      formData.set("account_holder", "  MARIANA ULFAH ");
+      formData.set("is_active", "true");
+
+      await addBankAccountAction(formData);
+      expect(createBankAccount).toHaveBeenCalledWith({
+        bank: "BRI",
+        account_number: "4736-01-017915-53-2",
+        account_holder: "MARIANA ULFAH",
+        is_active: true,
+      });
+      expect(redirect).toHaveBeenCalledWith("/settings?success=bank_added");
+    });
   });
 
   describe("updateBankAccountAction", () => {

@@ -8,10 +8,10 @@ import { normalisePhone } from "@/domain/phone";
 import { createBankAccount, deleteBankAccount, updateSiteSetting } from "@/server/queries";
 
 const generalSettingsSchema = z.object({
-  whatsapp_number: z.string().min(1, "Nomor WhatsApp wajib diisi"),
-  address: z.string().min(1, "Alamat lapangan wajib diisi"),
-  maps_embed_url: z.string().optional().nullable(),
-  dp_percent: z.string().regex(/^\d+$/, "Persentase DP harus berupa angka"),
+  whatsapp_number: z.string().trim().min(1, "Nomor WhatsApp wajib diisi"),
+  address: z.string().trim().min(1, "Alamat lapangan wajib diisi"),
+  maps_embed_url: z.string().trim().optional().nullable(),
+  dp_percent: z.string().trim().regex(/^\d+$/, "Persentase DP harus berupa angka"),
 });
 
 export async function updateSiteSettingsAction(formData: FormData): Promise<void> {
@@ -45,9 +45,9 @@ export async function updateSiteSettingsAction(formData: FormData): Promise<void
 }
 
 const bankAccountSchema = z.object({
-  bank: z.string().min(1, "Nama bank wajib diisi").max(40),
-  account_number: z.string().min(1, "Nomor rekening wajib diisi").max(40),
-  account_holder: z.string().min(1, "Nama pemilik rekening wajib diisi").max(100),
+  bank: z.string().trim().min(1, "Nama bank wajib diisi").max(40),
+  account_number: z.string().trim().min(1, "Nomor rekening wajib diisi").max(40),
+  account_holder: z.string().trim().min(1, "Nama pemilik rekening wajib diisi").max(100),
   is_active: z.coerce.boolean().default(true),
 });
 

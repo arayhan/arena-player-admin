@@ -155,17 +155,9 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
         </div>
       ) : (
         /* Edit Form Mode */
-        <form
-          action={async (formData: FormData) => {
-            startTransition(async () => {
-              formData.set("is_active", editIsActive ? "true" : "false");
-              await updateBankAccountAction(formData);
-              setIsActive(editIsActive);
-              setIsEditing(false);
-            });
-          }}
-          className="flex flex-col gap-3.5"
-        >
+        <form action={updateBankAccountAction} className="flex flex-col gap-3.5">
+          <input type="hidden" name="id" value={account.id} />
+          <input type="hidden" name="is_active" value={editIsActive ? "true" : "false"} />
           <div className="flex items-center justify-between border-b border-border pb-2.5">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-ink">✏️ Ubah Rekening: {account.bank}</span>
@@ -259,10 +251,9 @@ export function BankAccountItem({ account }: BankAccountItemProps) {
               </button>
               <button
                 type="submit"
-                disabled={isPending}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-control bg-accent px-5 py-2 text-xs font-semibold text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-control bg-accent px-5 py-2 text-xs font-semibold text-accent-ink transition-colors hover:bg-accent-hover"
               >
-                {isPending ? "Menyimpan..." : "Simpan Perubahan"}
+                Simpan Perubahan
               </button>
             </div>
           </div>
