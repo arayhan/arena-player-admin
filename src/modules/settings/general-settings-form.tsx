@@ -7,6 +7,7 @@ type GeneralSettingsFormProps = {
   initialSettings: {
     whatsapp_number: string;
     address: string;
+    operating_hours: string;
     maps_embed_url: string;
     dp_percent: string;
   };
@@ -114,6 +115,24 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
           required
           className="rounded-control border border-border bg-ground p-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
         />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="operating_hours" className="text-xs font-semibold uppercase text-ink-muted">
+          Jam Operasional
+        </label>
+        <input
+          id="operating_hours"
+          name="operating_hours"
+          type="text"
+          defaultValue={initialSettings.operating_hours || "06.00–24.00 WITA"}
+          placeholder="Contoh: 06.00–24.00 WITA"
+          required
+          className="h-11 rounded-control border border-border bg-ground px-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+        />
+        <span className="text-[11px] text-ink-muted">
+          Format tampilan jam operasional yang tampil pada halaman utama.
+        </span>
       </div>
 
       <div className="flex flex-col gap-1.5">

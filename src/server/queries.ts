@@ -766,23 +766,16 @@ export async function getStatsData(): Promise<StatsSummary> {
 export type SiteSettingsMap = {
   whatsapp_number: string;
   address: string;
+  operating_hours: string;
   maps_embed_url: string;
   dp_percent: string;
 };
 
 export async function getSiteSettings(): Promise<SiteSettingsMap> {
-  // `address` DEFAULTS TO EMPTY, NEVER A PLAUSIBLE-LOOKING PLACEHOLDER. This
-  // field used to default to an invented street address ("Jl. Lapangan
-  // Futsal Arena No. 1, Lombok") — never supplied by the client, seeded into
-  // the live database by an out-of-band script (deleted 2026-08-17) and
-  // duplicated right here as a fallback. Same defect, quieter: the DB row
-  // has since been corrected, but this constant would have reintroduced the
-  // fabrication on the very next moment the table was briefly unreachable.
-  // An empty string renders as the settings page's own "required" gap, which
-  // is the missing-data state PRODUCT.md asks for — not a fact nobody gave.
   const defaults: SiteSettingsMap = {
     whatsapp_number: "6289682620666",
     address: "",
+    operating_hours: "06.00–24.00 WITA",
     maps_embed_url: "",
     dp_percent: "50",
   };

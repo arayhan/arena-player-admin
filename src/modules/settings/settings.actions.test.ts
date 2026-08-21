@@ -39,12 +39,14 @@ describe("settings.actions", () => {
       const formData = new FormData();
       formData.set("whatsapp_number", "089682620666");
       formData.set("address", "Jl. Lapangan Futsal No. 10");
+      formData.set("operating_hours", "06.00–24.00 WITA");
       formData.set("maps_embed_url", "https://maps.google.com/test");
       formData.set("dp_percent", "50");
 
       const res = await updateSiteSettingsAction(formData);
       expect(updateSiteSetting).toHaveBeenCalledWith("whatsapp_number", "6289682620666");
       expect(updateSiteSetting).toHaveBeenCalledWith("address", "Jl. Lapangan Futsal No. 10");
+      expect(updateSiteSetting).toHaveBeenCalledWith("operating_hours", "06.00–24.00 WITA");
       expect(updateSiteSetting).toHaveBeenCalledWith("dp_percent", "50");
       expect(res).toEqual({ success: true });
     });

@@ -9,6 +9,7 @@ import { createBankAccount, deleteBankAccount, updateSiteSetting } from "@/serve
 const generalSettingsSchema = z.object({
   whatsapp_number: z.string().trim().min(1, "Nomor WhatsApp wajib diisi"),
   address: z.string().trim().min(1, "Alamat lapangan wajib diisi"),
+  operating_hours: z.string().trim().min(1, "Jam operasional wajib diisi").default("06.00–24.00 WITA"),
   maps_embed_url: z.string().trim().optional().nullable(),
   dp_percent: z.string().trim().regex(/^\d+$/, "Persentase DP harus berupa angka"),
 });
@@ -19,6 +20,7 @@ export async function updateSiteSettingsAction(
   const raw = {
     whatsapp_number: formData.get("whatsapp_number"),
     address: formData.get("address"),
+    operating_hours: formData.get("operating_hours") || "06.00–24.00 WITA",
     maps_embed_url: formData.get("maps_embed_url") || "",
     dp_percent: formData.get("dp_percent") || "50",
   };
@@ -39,6 +41,7 @@ export async function updateSiteSettingsAction(
 
   await updateSiteSetting("whatsapp_number", normalisedWhatsApp);
   await updateSiteSetting("address", parsed.data.address);
+  await updateSiteSetting("operating_hours", parsed.data.operating_hours);
   await updateSiteSetting("maps_embed_url", parsed.data.maps_embed_url ?? "");
   await updateSiteSetting("dp_percent", parsed.data.dp_percent);
 
