@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { formatBookingDate } from "@/modules/bookings/booking-formatters";
-import { blockSlotAction, unblockSlotAction } from "@/modules/blocks/blocks.actions";
+import { Pagination } from "@/components/pagination";
+import { blockSlotAction } from "@/modules/blocks/blocks.actions";
+import { parseBlocksFilter } from "@/modules/blocks/blocks.schema";
+import { BlocksFilters } from "@/modules/blocks/blocks-filters";
+import { BlocksTable } from "@/modules/blocks/blocks-table";
 import { todayAtField } from "@/domain/dates";
 import { TIME_SLOTS } from "@/domain/slots";
 import { listSlotBlocks } from "@/server/queries";
@@ -17,13 +20,15 @@ export const metadata: Metadata = {
 };
 
 type Props = {
-  searchParams?: Promise<{ error?: string; success?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function BlocksPage({ searchParams }: Props) {
   const resolvedParams = searchParams ? await searchParams : undefined;
-  const errorMessage = resolvedParams?.error ? decodeURIComponent(resolvedParams.error) : null;
-  const successMessage = resolvedParams?.success ? resolvedParams.success : null;
+  const errorMessage =
+    typeof resolvedParams?.error === "string" ? decodeURIComponent(resolvedParams.error) : null;
+  const successMessage =
+    typeof resolvedParams?.success === "string" ? resolvedParams.success : null;
 
   const hasSlotBlocksTable = await tableExists("slot_blocks");
   const today = todayAtField();
@@ -56,7 +61,18 @@ export default async function BlocksPage({ searchParams }: Props) {
     );
   }
 
-  const blocks = await listSlotBlocks({ fromDate: today });
+  const filter = parseBlocksFilter(resolvedParams);
+  const offset = (filter.page - 1) * filter.per_page;
+
+  const { rows: blocks, totalCount } = await listSlotBlocks({
+    from: filter.from,
+    to: filter.to,
+    q: filter.q,
+    sort: filter.sort,
+    dir: filter.dir,
+    limit: filter.per_page,
+    offset,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -180,7 +196,10 @@ export default async function BlocksPage({ searchParams }: Props) {
 
         {/* Right Column: Active Slot Blocks List */}
         <div className="flex flex-col gap-4 lg:col-span-2">
-          <div className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6">
+          {/* Filters Bar */}
+          <BlocksFilters currentFilter={filter} actionPath="/blocks" />
+
+          <div className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6 shadow-xs">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
                 <h1 className="text-base font-bold text-ink">Daftar Slot Diblokir</h1>
@@ -189,42 +208,36 @@ export default async function BlocksPage({ searchParams }: Props) {
                 </p>
               </div>
               <span className="rounded-full border border-border bg-ground px-2.5 py-0.5 text-xs font-semibold text-ink">
-                {blocks.length} slot
+                Total {totalCount} slot
               </span>
             </div>
 
             {blocks.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-control border border-dashed border-border p-8 text-center text-xs text-ink-muted">
                 <p className="font-semibold text-ink">Tidak ada slot yang diblokir</p>
-                <p className="mt-1">Semua slot lapangan tersedia sesuai jadwal normal.</p>
+                <p className="mt-1">
+                  {filter.q || filter.from || filter.to
+                    ? "Tidak ada data yang cocok dengan kriteria filter."
+                    : "Semua slot lapangan tersedia sesuai jadwal normal."}
+                </p>
               </div>
             ) : (
-              <div className="divide-y divide-border overflow-hidden rounded-control border border-border">
-                {blocks.map((block) => (
-                  <div
-                    key={block.id}
-                    className="flex flex-wrap items-center justify-between gap-3 bg-surface p-4 transition-colors hover:bg-ground/50"
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-bold text-ink">
-                        {formatBookingDate(block.block_date)} · {block.time_slot}
-                      </span>
-                      <span className="text-xs text-ink-muted">
-                        {block.reason ? block.reason : "Tanpa catatan alasan"}
-                      </span>
-                    </div>
+              <div className="flex flex-col gap-4">
+                <BlocksTable
+                  blocks={blocks}
+                  sort={filter.sort}
+                  dir={filter.dir}
+                  baseUrl="/blocks"
+                  searchParams={resolvedParams}
+                />
 
-                    <form action={unblockSlotAction}>
-                      <input type="hidden" name="id" value={block.id} />
-                      <button
-                        type="submit"
-                        className="inline-flex min-h-[44px] items-center rounded-control border border-red-border bg-red-bg px-3 py-1.5 text-xs font-medium text-red-ink transition-colors duration-150 hover:bg-red-border/20"
-                      >
-                        Buka Blokir
-                      </button>
-                    </form>
-                  </div>
-                ))}
+                <Pagination
+                  page={filter.page}
+                  perPage={filter.per_page}
+                  totalCount={totalCount}
+                  baseUrl="/blocks"
+                  searchParams={resolvedParams}
+                />
               </div>
             )}
           </div>

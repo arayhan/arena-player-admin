@@ -57,6 +57,14 @@ export const bookingsFilterSchema = z.object({
       const parsed = Number(val);
       return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
     }),
+  per_page: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val): number => {
+      if (!val) return 25;
+      const parsed = Number(val);
+      return Number.isInteger(parsed) && parsed > 0 ? parsed : 25;
+    }),
 });
 
 export type BookingsFilter = z.infer<typeof bookingsFilterSchema>;
@@ -73,6 +81,7 @@ export function parseBookingsFilter(
       sort: "when",
       dir: "asc",
       page: 1,
+      per_page: 25,
     };
   }
 
@@ -86,6 +95,7 @@ export function parseBookingsFilter(
       sort: "when",
       dir: "asc",
       page: 1,
+      per_page: 25,
     };
   }
 

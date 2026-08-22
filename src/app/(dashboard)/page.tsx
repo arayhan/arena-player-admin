@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Pagination } from "@/components/pagination";
 import { BOOKING_STATUSES } from "@/domain/status";
 import { formatRelativeAge, isOlderThan24Hours } from "@/modules/bookings/booking-formatters";
 import { BookingCard } from "@/modules/bookings/booking-card";
@@ -19,8 +20,6 @@ export const metadata: Metadata = {
   title: "Beranda | Arena Player Admin",
   description: "Dashboard antrean booking dan status operasional lapangan.",
 };
-
-const PAGE_SIZE = 50;
 
 type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -56,7 +55,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   }
 
   const filter = parseBookingsFilter(resolvedParams);
-  const offset = (filter.page - 1) * PAGE_SIZE;
+  const offset = (filter.page - 1) * filter.per_page;
 
   // Fetch all bookings according to the filter (default: all statuses)
   const { rows: bookings, totalCount } = await listBookings({
@@ -66,11 +65,9 @@ export default async function DashboardPage({ searchParams }: Props) {
     q: filter.q,
     sort: filter.sort,
     dir: filter.dir,
-    limit: PAGE_SIZE,
+    limit: filter.per_page,
     offset,
   });
-
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const isFiltered =
     filter.status.length < BOOKING_STATUSES.length ||
     filter.from !== null ||
@@ -340,38 +337,24 @@ export default async function DashboardPage({ searchParams }: Props) {
 
             {/* Desktop table view (≥720px / md) */}
             <div className="hidden md:block">
-              <BookingsTable bookings={bookings} returnUrl={returnUrl} />
+              <BookingsTable
+                bookings={bookings}
+                returnUrl={returnUrl}
+                sort={filter.sort}
+                dir={filter.dir}
+                baseUrl="/"
+                searchParams={resolvedParams}
+              />
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <nav
-                aria-label="Navigasi halaman"
-                className="flex items-center justify-between border-t border-border pt-4 text-xs text-ink-muted"
-              >
-                <span>
-                  Halaman {filter.page} dari {totalPages}
-                </span>
-                <div className="flex items-center gap-2">
-                  {filter.page > 1 && (
-                    <Link
-                      href={`/?page=${filter.page - 1}`}
-                      className="inline-flex min-h-[44px] items-center rounded-control border border-border px-3 py-1.5 font-medium text-ink hover:bg-ground"
-                    >
-                      Sebelumnya
-                    </Link>
-                  )}
-                  {filter.page < totalPages && (
-                    <Link
-                      href={`/?page=${filter.page + 1}`}
-                      className="inline-flex min-h-[44px] items-center rounded-control border border-border px-3 py-1.5 font-medium text-ink hover:bg-ground"
-                    >
-                      Selanjutnya
-                    </Link>
-                  )}
-                </div>
-              </nav>
-            )}
+            <Pagination
+              page={filter.page}
+              perPage={filter.per_page}
+              totalCount={totalCount}
+              baseUrl="/"
+              searchParams={resolvedParams}
+            />
           </div>
         )}
       </section>

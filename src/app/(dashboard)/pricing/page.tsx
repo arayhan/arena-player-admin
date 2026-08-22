@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { formatBookingDate } from "@/modules/bookings/booking-formatters";
+import { Pagination } from "@/components/pagination";
 import {
   addPublicHolidayAction,
   applyStandardPricelistAction,
-  deletePublicHolidayAction,
-  updateRatePriceAction,
 } from "@/modules/pricing/pricing.actions";
+import { parseHolidaysFilter, parseRateCardFilter } from "@/modules/pricing/pricing.schema";
+import { RateCardTable } from "@/modules/pricing/rate-card-table";
+import { HolidaysFilters } from "@/modules/pricing/holidays-filters";
+import { HolidaysTable } from "@/modules/pricing/holidays-table";
 import { todayAtField } from "@/domain/dates";
-import { TIME_SLOTS } from "@/domain/slots";
-import { getPublicHolidays, getRateCard, type RateCardRow } from "@/server/queries";
+import { getPublicHolidays, getRateCard } from "@/server/queries";
 import { tableExists } from "@/server/schema-guard";
 
 export const dynamic = "force-dynamic";
@@ -22,13 +23,15 @@ export const metadata: Metadata = {
 };
 
 type Props = {
-  searchParams?: Promise<{ error?: string; success?: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function PricingPage({ searchParams }: Props) {
   const resolvedParams = searchParams ? await searchParams : undefined;
-  const errorMessage = resolvedParams?.error ? decodeURIComponent(resolvedParams.error) : null;
-  const successMessage = resolvedParams?.success ? resolvedParams.success : null;
+  const errorMessage =
+    typeof resolvedParams?.error === "string" ? decodeURIComponent(resolvedParams.error) : null;
+  const successMessage =
+    typeof resolvedParams?.success === "string" ? resolvedParams.success : null;
 
   const hasRateCardTable = await tableExists("rate_card");
 
@@ -60,13 +63,38 @@ export default async function PricingPage({ searchParams }: Props) {
     );
   }
 
-  const [rateCard, holidays] = await Promise.all([getRateCard(), getPublicHolidays()]);
-  const today = todayAtField();
+  // Parse filters
+  const rateFilter = parseRateCardFilter(resolvedParams);
 
-  const priceFor = (slot: string, dayType: "weekday" | "weekend"): number | null => {
-    const row = rateCard.find((r: RateCardRow) => r.time_slot === slot && r.day_type === dayType);
-    return row ? row.price_rupiah : null;
-  };
+  const holidayRawParams = resolvedParams
+    ? {
+        q: resolvedParams.holiday_q,
+        from: resolvedParams.holiday_from,
+        to: resolvedParams.holiday_to,
+        sort: resolvedParams.holiday_sort === "holiday_label" ? "label" : "date",
+        dir: resolvedParams.holiday_dir,
+        page: resolvedParams.holiday_page,
+        per_page: resolvedParams.holiday_per_page,
+      }
+    : undefined;
+
+  const holidayFilter = parseHolidaysFilter(holidayRawParams);
+  const holidayOffset = (holidayFilter.page - 1) * holidayFilter.per_page;
+
+  const [rateCard, { rows: holidays, totalCount: totalHolidays }] = await Promise.all([
+    getRateCard(),
+    getPublicHolidays({
+      from: holidayFilter.from,
+      to: holidayFilter.to,
+      q: holidayFilter.q,
+      sort: holidayFilter.sort,
+      dir: holidayFilter.dir,
+      limit: holidayFilter.per_page,
+      offset: holidayOffset,
+    }),
+  ]);
+
+  const today = todayAtField();
 
   return (
     <div className="flex flex-col gap-6">
@@ -220,110 +248,19 @@ export default async function PricingPage({ searchParams }: Props) {
       </div>
 
       {/* Edit Tarif per Slot (18 Jam) */}
-      <div className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-3">
-          <div>
-            <h2 className="text-base font-bold text-ink">Daftar Slot Jam Operasional (18 Slot)</h2>
-            <p className="mt-1 text-xs text-ink-muted">
-              Ubah tarif per jam secara spesifik bila terdapat penyesuaian khusus pada slot
-              tertentu.
-            </p>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs font-semibold uppercase text-ink-muted">
-                <th className="py-2.5 pr-4">Slot Jam</th>
-                <th className="py-2.5 pr-4">Kategori & Promo</th>
-                <th className="py-2.5 pr-4">Weekday (Senin–Jumat)</th>
-                <th className="py-2.5 pr-4">Weekend / Libur</th>
-                <th className="py-2.5 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {TIME_SLOTS.map((slot) => {
-                const hour = parseInt(slot.split(":")[0] ?? "0", 10);
-                const isPhotoSlot = hour >= 16;
-                const tierLabel =
-                  hour < 16 ? "Pagi / Siang" : hour < 18 ? "Sore" : "Malam (Prime Time)";
-
-                const weekdayPrice = priceFor(slot, "weekday") ?? 200000;
-                const weekendPrice = priceFor(slot, "weekend") ?? 200000;
-
-                return (
-                  <tr key={slot} className="transition-colors hover:bg-ground/40">
-                    <td className="py-3 pr-4 font-mono text-xs font-bold text-ink">{slot}</td>
-                    <td className="py-3 pr-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="rounded bg-ground px-2 py-0.5 text-[11px] font-medium text-ink-muted border border-border">
-                          {tierLabel}
-                        </span>
-                        {isPhotoSlot && (
-                          <span className="rounded bg-amber-bg px-1.5 py-0.5 text-[10px] font-semibold text-amber-ink">
-                            📸 Fotografer
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td colSpan={3} className="py-3">
-                      <form
-                        action={updateRatePriceAction}
-                        className="flex items-center justify-between gap-3"
-                      >
-                        <input type="hidden" name="time_slot" value={slot} />
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-ink-muted">Rp</span>
-                          <input
-                            type="number"
-                            name="price_weekday"
-                            min={1}
-                            step={1000}
-                            defaultValue={weekdayPrice}
-                            required
-                            aria-label={`Harga weekday untuk slot ${slot}`}
-                            className="h-9 w-28 rounded-control border border-border bg-ground px-2.5 font-mono text-xs font-semibold text-ink focus:border-accent focus:outline-none"
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-ink-muted">Rp</span>
-                          <input
-                            type="number"
-                            name="price_weekend"
-                            min={1}
-                            step={1000}
-                            defaultValue={weekendPrice}
-                            required
-                            aria-label={`Harga weekend atau libur untuk slot ${slot}`}
-                            className="h-9 w-28 rounded-control border border-border bg-ground px-2.5 font-mono text-xs font-semibold text-ink focus:border-accent focus:outline-none"
-                          />
-                        </div>
-
-                        <button
-                          type="submit"
-                          className="inline-flex min-h-[36px] items-center rounded-control bg-accent px-3.5 py-1.5 text-xs font-semibold text-accent-ink transition-colors hover:bg-accent-hover"
-                        >
-                          Simpan
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <RateCardTable
+        rateCard={rateCard}
+        filter={rateFilter}
+        searchParams={resolvedParams}
+        baseUrl="/pricing"
+      />
 
       {/* Hari libur */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-1">
           <form
             action={addPublicHolidayAction}
-            className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6"
+            className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6 shadow-xs"
           >
             <div>
               <h2 className="text-base font-bold text-ink">Tambah Hari Libur Nasional</h2>
@@ -367,7 +304,7 @@ export default async function PricingPage({ searchParams }: Props) {
 
             <button
               type="submit"
-              className="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-control bg-accent px-4 py-2.5 text-xs font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover"
+              className="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-control bg-accent px-4 py-2.5 text-xs font-medium text-accent-ink transition-colors duration-150 hover:bg-accent-hover active:scale-95"
             >
               + Tambah Hari Libur
             </button>
@@ -375,7 +312,10 @@ export default async function PricingPage({ searchParams }: Props) {
         </div>
 
         <div className="flex flex-col gap-4 lg:col-span-2">
-          <div className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6">
+          {/* Holidays Filter Bar */}
+          <HolidaysFilters currentFilter={holidayFilter} actionPath="/pricing" />
+
+          <div className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-6 shadow-xs">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
                 <h2 className="text-base font-bold text-ink">Daftar Hari Libur Terdaftar</h2>
@@ -384,7 +324,7 @@ export default async function PricingPage({ searchParams }: Props) {
                 </p>
               </div>
               <span className="rounded-full border border-border bg-ground px-2.5 py-0.5 text-xs font-semibold text-ink">
-                {holidays.length} tanggal
+                Total {totalHolidays} tanggal
               </span>
             </div>
 
@@ -392,34 +332,29 @@ export default async function PricingPage({ searchParams }: Props) {
               <div className="flex flex-col items-center justify-center rounded-control border border-dashed border-border p-8 text-center text-xs text-ink-muted">
                 <p className="font-semibold text-ink">Belum ada hari libur khusus terdaftar</p>
                 <p className="mt-1">
-                  Hari Sabtu dan Minggu otomatis memakai tarif weekend tanpa perlu didaftarkan.
+                  {holidayFilter.q || holidayFilter.from || holidayFilter.to
+                    ? "Tidak ada hari libur yang cocok dengan filter."
+                    : "Hari Sabtu dan Minggu otomatis memakai tarif weekend tanpa perlu didaftarkan."}
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-border overflow-hidden rounded-control border border-border">
-                {holidays.map((holiday) => (
-                  <div
-                    key={holiday.id}
-                    className="flex flex-wrap items-center justify-between gap-3 bg-surface p-4 transition-colors hover:bg-ground/50"
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-bold text-ink">
-                        {formatBookingDate(holiday.holiday_date)}
-                      </span>
-                      <span className="text-xs text-ink-muted">{holiday.label}</span>
-                    </div>
+              <div className="flex flex-col gap-4">
+                <HolidaysTable
+                  holidays={holidays}
+                  sort={holidayFilter.sort}
+                  dir={holidayFilter.dir}
+                  baseUrl="/pricing"
+                  searchParams={resolvedParams}
+                />
 
-                    <form action={deletePublicHolidayAction}>
-                      <input type="hidden" name="id" value={holiday.id} />
-                      <button
-                        type="submit"
-                        className="inline-flex min-h-[44px] items-center rounded-control border border-red-border bg-red-bg px-3 py-1.5 text-xs font-medium text-red-ink transition-colors duration-150 hover:bg-red-border/20"
-                      >
-                        Hapus
-                      </button>
-                    </form>
-                  </div>
-                ))}
+                <Pagination
+                  page={holidayFilter.page}
+                  perPage={holidayFilter.per_page}
+                  totalCount={totalHolidays}
+                  baseUrl="/pricing"
+                  searchParams={resolvedParams}
+                  perPageOptions={[5, 10, 25, 50]}
+                />
               </div>
             )}
           </div>

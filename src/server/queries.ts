@@ -580,12 +580,31 @@ export type SlotBlockRow = {
   time_slot: TimeSlot;
   reason: string | null;
   created_at: string;
+  total_count?: number;
 };
 
-export async function listSlotBlocks(params?: {
+export type ListSlotBlocksParams = {
+  from?: string | null;
+  to?: string | null;
+  q?: string | null;
+  sort?: "date" | "reason" | "created";
+  dir?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
   fromDate?: string | null;
-}): Promise<SlotBlockRow[]> {
-  const fromDate = params?.fromDate ?? todayAtField();
+};
+
+export async function listSlotBlocks(
+  params?: ListSlotBlocksParams,
+): Promise<{ rows: SlotBlockRow[]; totalCount: number }> {
+  const from = params?.from ?? params?.fromDate ?? null;
+  const to = params?.to ?? null;
+  const q = params?.q?.trim() || null;
+  const sort = params?.sort ?? "date";
+  const dir = params?.dir ?? "asc";
+  const limit = params?.limit ?? 25;
+  const offset = params?.offset ?? 0;
+
   try {
     const rows = await sql<SlotBlockRow[]>`
       select
@@ -593,15 +612,34 @@ export async function listSlotBlocks(params?: {
         block_date::text as block_date,
         time_slot,
         reason,
-        created_at::text as created_at
+        created_at::text as created_at,
+        count(*) over ()::int as total_count
       from slot_blocks
-      where block_date >= ${fromDate}
-      order by block_date asc, time_slot asc
+      where (${from}::date is null or block_date >= ${from}::date)
+        and (${to}::date is null or block_date <= ${to}::date)
+        and (
+          ${q}::text is null
+          or reason ilike '%' || ${q} || '%'
+          or time_slot ilike '%' || ${q} || '%'
+        )
+      order by
+        case when ${sort} = 'date' and ${dir} = 'asc' then block_date end asc,
+        case when ${sort} = 'date' and ${dir} = 'asc' then time_slot end asc,
+        case when ${sort} = 'date' and ${dir} = 'desc' then block_date end desc,
+        case when ${sort} = 'date' and ${dir} = 'desc' then time_slot end desc,
+        case when ${sort} = 'reason' and ${dir} = 'asc' then reason end asc,
+        case when ${sort} = 'reason' and ${dir} = 'desc' then reason end desc,
+        case when ${sort} = 'created' and ${dir} = 'asc' then created_at end asc,
+        case when ${sort} = 'created' and ${dir} = 'desc' then created_at end desc
+      limit ${limit}
+      offset ${offset}
     `;
-    return rows;
+
+    const totalCount = rows.length > 0 && rows[0].total_count ? Number(rows[0].total_count) : 0;
+    return { rows, totalCount };
   } catch (error) {
     console.error("[queries] listSlotBlocks failed:", error);
-    return [];
+    return { rows: [], totalCount: 0 };
   }
 }
 
@@ -821,19 +859,70 @@ export type BankAccountRow = {
   account_holder: string;
   sort_order: number;
   is_active: boolean;
+  total_count?: number;
 };
 
-export async function getBankAccounts(): Promise<BankAccountRow[]> {
+export type ListBankAccountsParams = {
+  q?: string | null;
+  status?: "all" | "active" | "inactive";
+  sort?: "bank" | "holder" | "number" | "status" | "order";
+  dir?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+};
+
+export async function getBankAccounts(
+  params?: ListBankAccountsParams,
+): Promise<{ rows: BankAccountRow[]; totalCount: number }> {
+  const q = params?.q?.trim() || null;
+  const status = params?.status ?? "all";
+  const sort = params?.sort ?? "order";
+  const dir = params?.dir ?? "asc";
+  const limit = params?.limit ?? 25;
+  const offset = params?.offset ?? 0;
+
   try {
     const rows = await sql<BankAccountRow[]>`
-      select id, bank, account_number, account_holder, sort_order, coalesce(is_active, true) as is_active
+      select 
+        id, 
+        bank, 
+        account_number, 
+        account_holder, 
+        sort_order, 
+        coalesce(is_active, true) as is_active,
+        count(*) over ()::int as total_count
       from bank_accounts
-      order by sort_order asc, created_at asc
+      where (
+        ${status} = 'all'
+        or (${status} = 'active' and coalesce(is_active, true) = true)
+        or (${status} = 'inactive' and coalesce(is_active, true) = false)
+      )
+      and (
+        ${q}::text is null
+        or bank ilike '%' || ${q} || '%'
+        or account_number ilike '%' || ${q} || '%'
+        or account_holder ilike '%' || ${q} || '%'
+      )
+      order by
+        case when ${sort} = 'bank' and ${dir} = 'asc' then bank end asc,
+        case when ${sort} = 'bank' and ${dir} = 'desc' then bank end desc,
+        case when ${sort} = 'holder' and ${dir} = 'asc' then account_holder end asc,
+        case when ${sort} = 'holder' and ${dir} = 'desc' then account_holder end desc,
+        case when ${sort} = 'number' and ${dir} = 'asc' then account_number end asc,
+        case when ${sort} = 'number' and ${dir} = 'desc' then account_number end desc,
+        case when ${sort} = 'status' and ${dir} = 'asc' then is_active end asc,
+        case when ${sort} = 'status' and ${dir} = 'desc' then is_active end desc,
+        case when ${sort} = 'order' and ${dir} = 'asc' then sort_order end asc,
+        case when ${sort} = 'order' and ${dir} = 'desc' then sort_order end desc,
+        created_at asc
+      limit ${limit}
+      offset ${offset}
     `;
-    return rows;
+    const totalCount = rows.length > 0 && rows[0].total_count ? Number(rows[0].total_count) : 0;
+    return { rows, totalCount };
   } catch (error) {
     console.error("[queries] getBankAccounts failed:", error);
-    return [];
+    return { rows: [], totalCount: 0 };
   }
 }
 
@@ -958,19 +1047,58 @@ export type PublicHolidayRow = {
   id: string;
   holiday_date: string;
   label: string;
+  total_count?: number;
 };
 
-export async function getPublicHolidays(): Promise<PublicHolidayRow[]> {
+export type ListPublicHolidaysParams = {
+  from?: string | null;
+  to?: string | null;
+  q?: string | null;
+  sort?: "date" | "label";
+  dir?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+};
+
+export async function getPublicHolidays(
+  params?: ListPublicHolidaysParams,
+): Promise<{ rows: PublicHolidayRow[]; totalCount: number }> {
+  const from = params?.from ?? null;
+  const to = params?.to ?? null;
+  const q = params?.q?.trim() || null;
+  const sort = params?.sort ?? "date";
+  const dir = params?.dir ?? "asc";
+  const limit = params?.limit ?? 25;
+  const offset = params?.offset ?? 0;
+
   try {
     const rows = await sql<PublicHolidayRow[]>`
-      select id, holiday_date::text as holiday_date, label
+      select 
+        id, 
+        holiday_date::text as holiday_date, 
+        label,
+        count(*) over ()::int as total_count
       from public_holidays
-      order by holiday_date asc
+      where (${from}::date is null or holiday_date >= ${from}::date)
+        and (${to}::date is null or holiday_date <= ${to}::date)
+        and (
+          ${q}::text is null
+          or label ilike '%' || ${q} || '%'
+          or holiday_date::text ilike '%' || ${q} || '%'
+        )
+      order by
+        case when ${sort} = 'date' and ${dir} = 'asc' then holiday_date end asc,
+        case when ${sort} = 'date' and ${dir} = 'desc' then holiday_date end desc,
+        case when ${sort} = 'label' and ${dir} = 'asc' then label end asc,
+        case when ${sort} = 'label' and ${dir} = 'desc' then label end desc
+      limit ${limit}
+      offset ${offset}
     `;
-    return rows;
+    const totalCount = rows.length > 0 && rows[0].total_count ? Number(rows[0].total_count) : 0;
+    return { rows, totalCount };
   } catch (error) {
     console.error("[queries] getPublicHolidays failed:", error);
-    return [];
+    return { rows: [], totalCount: 0 };
   }
 }
 

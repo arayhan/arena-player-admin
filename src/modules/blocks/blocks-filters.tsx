@@ -1,26 +1,22 @@
 import Link from "next/link";
 
-import type { BookingsFilter } from "./bookings.schema";
+import type { BlocksFilter } from "./blocks.schema";
 import { todayAtField } from "@/domain/dates";
-import { BOOKING_STATUSES } from "@/domain/status";
 
-export function BookingsFilters({
+export function BlocksFilters({
   currentFilter,
-  actionPath = "/bookings",
+  actionPath = "/blocks",
 }: {
-  currentFilter: BookingsFilter;
+  currentFilter: BlocksFilter;
   actionPath?: string;
 }) {
   const isToday = currentFilter.from === todayAtField() && !currentFilter.to;
   const isAllDates = currentFilter.from === null && currentFilter.to === null;
-  const isAllStatuses =
-    currentFilter.status.length === BOOKING_STATUSES.length || currentFilter.status.length === 0;
 
   const isFiltered =
-    !isAllStatuses ||
     !isAllDates ||
     Boolean(currentFilter.q) ||
-    currentFilter.sort !== "when" ||
+    currentFilter.sort !== "date" ||
     currentFilter.dir !== "asc" ||
     currentFilter.per_page !== 25;
 
@@ -30,32 +26,35 @@ export function BookingsFilters({
       action={actionPath}
       className="flex flex-col gap-4 rounded-panel border border-border bg-surface p-4 text-sm text-ink shadow-xs"
     >
-      {/* Row 1: Search, Date Range, & Submit */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
-        {/* Search text input */}
+        {/* Search */}
         <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-4">
-          <label htmlFor="filter-q" className="text-xs font-semibold uppercase text-ink-muted">
-            Cari Pemesan / No HP
+          <label
+            htmlFor="block-filter-q"
+            className="text-xs font-semibold uppercase text-ink-muted"
+          >
+            Cari Alasan / Jam
           </label>
-          <div className="relative flex items-center">
-            <input
-              id="filter-q"
-              type="text"
-              name="q"
-              defaultValue={currentFilter.q ?? ""}
-              placeholder="Ketik nama tim atau no WhatsApp..."
-              className="h-10 w-full rounded-control border border-input-border bg-ground px-3 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
-            />
-          </div>
+          <input
+            id="block-filter-q"
+            type="text"
+            name="q"
+            defaultValue={currentFilter.q ?? ""}
+            placeholder="Cari alasan atau jam slot..."
+            className="h-10 w-full rounded-control border border-input-border bg-ground px-3 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+          />
         </div>
 
         {/* Date From */}
         <div className="flex flex-col gap-1.5 lg:col-span-2">
-          <label htmlFor="filter-from" className="text-xs font-semibold uppercase text-ink-muted">
+          <label
+            htmlFor="block-filter-from"
+            className="text-xs font-semibold uppercase text-ink-muted"
+          >
             Mulai Tanggal
           </label>
           <input
-            id="filter-from"
+            id="block-filter-from"
             type="date"
             name="from"
             defaultValue={currentFilter.from ?? ""}
@@ -65,11 +64,14 @@ export function BookingsFilters({
 
         {/* Date To */}
         <div className="flex flex-col gap-1.5 lg:col-span-2">
-          <label htmlFor="filter-to" className="text-xs font-semibold uppercase text-ink-muted">
+          <label
+            htmlFor="block-filter-to"
+            className="text-xs font-semibold uppercase text-ink-muted"
+          >
             Sampai Tanggal
           </label>
           <input
-            id="filter-to"
+            id="block-filter-to"
             type="date"
             name="to"
             defaultValue={currentFilter.to ?? ""}
@@ -77,31 +79,36 @@ export function BookingsFilters({
           />
         </div>
 
-        {/* Sort Field & Direction */}
+        {/* Sort */}
         <div className="flex flex-col gap-1.5 lg:col-span-2">
-          <label htmlFor="filter-sort" className="text-xs font-semibold uppercase text-ink-muted">
+          <label
+            htmlFor="block-filter-sort"
+            className="text-xs font-semibold uppercase text-ink-muted"
+          >
             Urutkan
           </label>
           <select
-            id="filter-sort"
+            id="block-filter-sort"
             name="sort"
             defaultValue={currentFilter.sort}
             className="h-10 w-full rounded-control border border-input-border bg-ground px-2.5 text-xs text-ink focus:border-accent focus:outline-none"
           >
-            <option value="when">Jadwal Main</option>
+            <option value="date">Tanggal & Jam</option>
+            <option value="reason">Alasan</option>
             <option value="created">Waktu Dibuat</option>
-            <option value="team">Nama Tim</option>
-            <option value="status">Status</option>
           </select>
         </div>
 
-        {/* Sort Dir */}
+        {/* Dir */}
         <div className="flex flex-col gap-1.5 lg:col-span-1">
-          <label htmlFor="filter-dir" className="text-xs font-semibold uppercase text-ink-muted">
+          <label
+            htmlFor="block-filter-dir"
+            className="text-xs font-semibold uppercase text-ink-muted"
+          >
             Arah
           </label>
           <select
-            id="filter-dir"
+            id="block-filter-dir"
             name="dir"
             defaultValue={currentFilter.dir}
             className="h-10 w-full rounded-control border border-input-border bg-ground px-2 text-xs text-ink focus:border-accent focus:outline-none"
@@ -114,13 +121,13 @@ export function BookingsFilters({
         {/* Per Page */}
         <div className="flex flex-col gap-1.5 lg:col-span-1">
           <label
-            htmlFor="filter-per-page"
+            htmlFor="block-filter-per-page"
             className="text-xs font-semibold uppercase text-ink-muted"
           >
             Baris
           </label>
           <select
-            id="filter-per-page"
+            id="block-filter-per-page"
             name="per_page"
             defaultValue={currentFilter.per_page}
             className="h-10 w-full rounded-control border border-input-border bg-ground px-2 text-xs text-ink focus:border-accent focus:outline-none"
@@ -133,52 +140,9 @@ export function BookingsFilters({
         </div>
       </div>
 
-      {/* Row 2: Date Presets, Status Filter Chips, and Actions */}
+      {/* Row 2: Presets & Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-        {/* Status Filter Chips */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-semibold uppercase text-ink-muted mr-1">Status:</span>
-          <button
-            type="submit"
-            name="status"
-            value="all"
-            className={`rounded-control border px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
-              isAllStatuses
-                ? "border-accent bg-accent text-accent-ink font-bold shadow-xs"
-                : "border-border bg-ground text-ink hover:bg-surface"
-            }`}
-          >
-            Semua Status
-          </button>
-          {(
-            [
-              { label: "Menunggu", value: "pending" },
-              { label: "Dikonfirmasi", value: "confirmed" },
-              { label: "Ditolak", value: "rejected" },
-              { label: "Kedaluwarsa", value: "expired" },
-            ] as const
-          ).map((item) => {
-            const isSelected = !isAllStatuses && currentFilter.status.includes(item.value);
-            return (
-              <button
-                key={item.value}
-                type="submit"
-                name="status"
-                value={item.value}
-                className={`rounded-control border px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
-                  isSelected
-                    ? "border-accent bg-accent text-accent-ink font-bold shadow-xs"
-                    : "border-border bg-ground text-ink hover:bg-surface"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Quick Date Presets and Submit / Reset */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="submit"
             name="from"
@@ -189,7 +153,7 @@ export function BookingsFilters({
                 : "border-border bg-ground text-ink hover:bg-surface"
             }`}
           >
-            Semua Tgl
+            Semua Tanggal
           </button>
           <button
             type="submit"
@@ -201,9 +165,11 @@ export function BookingsFilters({
                 : "border-border bg-ground text-ink hover:bg-surface"
             }`}
           >
-            Hari Ini
+            Hari Ini & Mendatang
           </button>
+        </div>
 
+        <div className="flex items-center gap-2">
           <button
             type="submit"
             className="inline-flex min-h-[36px] items-center rounded-control bg-accent px-4 py-1.5 text-xs font-semibold text-accent-ink transition-colors duration-150 hover:bg-accent-hover active:scale-95"

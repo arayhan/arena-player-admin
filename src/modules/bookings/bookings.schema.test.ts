@@ -12,11 +12,13 @@ describe("parseBookingsFilter", () => {
     expect(filter.sort).toBe("when");
     expect(filter.dir).toBe("asc");
     expect(filter.page).toBe(1);
+    expect(filter.per_page).toBe(25);
   });
 
   it("handles valid status arrays and strings", () => {
-    const filter1 = parseBookingsFilter({ status: "confirmed" });
+    const filter1 = parseBookingsFilter({ status: "confirmed", per_page: "50" });
     expect(filter1.status).toEqual(["confirmed"]);
+    expect(filter1.per_page).toBe(50);
 
     const filter2 = parseBookingsFilter({ status: ["pending", "confirmed"] });
     expect(filter2.status).toEqual(["pending", "confirmed"]);
@@ -41,11 +43,13 @@ describe("parseBookingsFilter", () => {
     const filter = parseBookingsFilter({
       from: "2026-02-31", // invalid date
       page: "-5",
+      per_page: "invalid",
       sort: "malicious_column; drop table users;",
       dir: "invalid_dir",
     });
     expect(filter.from).toBeNull();
     expect(filter.page).toBe(1);
+    expect(filter.per_page).toBe(25);
     expect(filter.sort).toBe("when");
     expect(filter.dir).toBe("asc");
   });

@@ -1,6 +1,7 @@
 import postgres from "postgres";
 
-const dbUrl = "postgresql://postgres.lrelwuikjiuqvlduxzdy:4DcebvWK4LjC0FlJ@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres";
+const dbUrl =
+  "postgresql://postgres.lrelwuikjiuqvlduxzdy:4DcebvWK4LjC0FlJ@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres";
 const sql = postgres(dbUrl, { ssl: "require", prepare: false });
 
 async function main() {

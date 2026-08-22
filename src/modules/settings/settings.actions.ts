@@ -9,7 +9,11 @@ import { createBankAccount, deleteBankAccount, updateSiteSetting } from "@/serve
 const generalSettingsSchema = z.object({
   whatsapp_number: z.string().trim().min(1, "Nomor WhatsApp wajib diisi"),
   address: z.string().trim().min(1, "Alamat lapangan wajib diisi"),
-  operating_hours: z.string().trim().min(1, "Jam operasional wajib diisi").default("06.00–24.00 WITA"),
+  operating_hours: z
+    .string()
+    .trim()
+    .min(1, "Jam operasional wajib diisi")
+    .default("06.00–24.00 WITA"),
   maps_embed_url: z.string().trim().optional().nullable(),
   dp_percent: z.string().trim().regex(/^\d+$/, "Persentase DP harus berupa angka"),
 });

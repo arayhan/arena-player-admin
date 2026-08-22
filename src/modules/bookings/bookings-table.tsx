@@ -1,16 +1,25 @@
 import Link from "next/link";
 
 import { StatusPill } from "@/components/status-pill";
-import type { BookingRow } from "@/server/queries";
+import { SortableHeader } from "@/components/sortable-header";
+import type { BookingRow, SortDir, SortKey } from "@/server/queries";
 import { formatBookingDate, formatRelativeAge } from "./booking-formatters";
 import { confirmBookingAction, rejectBookingAction } from "./bookings.actions";
 
 export function BookingsTable({
   bookings,
   returnUrl,
+  sort = "when",
+  dir = "asc",
+  baseUrl = "/bookings",
+  searchParams,
 }: {
   bookings: BookingRow[];
   returnUrl?: string;
+  sort?: SortKey;
+  dir?: SortDir;
+  baseUrl?: string;
+  searchParams?: Record<string, string | string[] | undefined>;
 }) {
   return (
     <div className="w-full overflow-x-auto rounded-panel border border-border bg-surface shadow-xs">
@@ -18,16 +27,45 @@ export function BookingsTable({
         <thead className="border-b border-border bg-sidebar text-xs font-semibold uppercase tracking-wider text-ink-muted">
           <tr>
             <th scope="col" className="px-4 py-3">
-              Jadwal
+              <SortableHeader
+                label="Jadwal"
+                sortKey="when"
+                currentSort={sort}
+                currentDir={dir}
+                baseUrl={baseUrl}
+                searchParams={searchParams}
+              />
             </th>
             <th scope="col" className="px-4 py-3">
-              Pemesan
+              <SortableHeader
+                label="Pemesan"
+                sortKey="team"
+                currentSort={sort}
+                currentDir={dir}
+                baseUrl={baseUrl}
+                searchParams={searchParams}
+              />
             </th>
             <th scope="col" className="px-4 py-3">
-              Status
+              <SortableHeader
+                label="Status"
+                sortKey="status"
+                currentSort={sort}
+                currentDir={dir}
+                baseUrl={baseUrl}
+                searchParams={searchParams}
+              />
             </th>
             <th scope="col" className="px-4 py-3">
-              Umur
+              <SortableHeader
+                label="Umur"
+                sortKey="created"
+                currentSort={sort}
+                currentDir={dir}
+                baseUrl={baseUrl}
+                searchParams={searchParams}
+                defaultDir="desc"
+              />
             </th>
             <th scope="col" className="px-4 py-3 text-right">
               Tindakan
