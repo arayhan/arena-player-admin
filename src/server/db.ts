@@ -37,6 +37,36 @@ export const customTypes = {
 };
 
 /**
+ * Detects transient connection drop errors from Supabase transaction pooler
+ * (Supavisor/PgBouncer at port 6543) or network socket resets.
+ */
+export function isTransientConnectionError(error: unknown): boolean {
+  if (!error) return false;
+  const message = error instanceof Error ? error.message : String(error);
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code: unknown }).code)
+      : "";
+
+  return (
+    message.includes("CONNECTION_CLOSED") ||
+    message.includes("Connection closed") ||
+    message.includes("ECONNRESET") ||
+    message.includes("socket hang up") ||
+    message.includes("write EPIPE") ||
+    message.includes("broken pipe") ||
+    message.includes("Connection terminated unexpectedly") ||
+    code === "CONNECTION_CLOSED" ||
+    code === "ECONNRESET" ||
+    code === "EPIPE" ||
+    code === "57P01" ||
+    code === "08006" ||
+    code === "08003" ||
+    code === "08001"
+  );
+}
+
+/**
  * `DATABASE_URL` must be Supabase's TRANSACTION POOLER string — port 6543,
  * host `…pooler.supabase.com`. The direct connection exhausts connections fast
  * under concurrent serverless invocations, and the expiry cron and a page load
@@ -59,6 +89,17 @@ function requireDatabaseUrl(): string {
 
 let client: postgres.Sql | undefined;
 
+export function resetClient(): void {
+  if (client) {
+    try {
+      client.end({ timeout: 0 }).catch(() => {});
+    } catch {
+      // ignore
+    }
+    client = undefined;
+  }
+}
+
 /**
  * Lazily constructs the client on first real use. Deliberately NOT built
  * eagerly at module scope: this file (and `customTypes` specifically) must
@@ -72,9 +113,32 @@ function getClient(): postgres.Sql {
     client = postgres(requireDatabaseUrl(), {
       prepare: false,
       types: customTypes,
+      max: 10,
+      idle_timeout: 20, // Closes idle connections in 20s before Supabase pooler drops them (30s)
+      connect_timeout: 10,
+      max_lifetime: 60 * 30, // Recycles connections after 30 minutes
+      ssl: "require",
+      fetch_types: false, // Prevents unsupported type queries on transaction pooler
     });
   }
   return client;
+}
+
+async function executeWithRetry<T>(fn: (c: postgres.Sql) => unknown): Promise<T> {
+  try {
+    const c = getClient();
+    return (await fn(c)) as T;
+  } catch (error: unknown) {
+    if (isTransientConnectionError(error)) {
+      console.warn(
+        `[db] Transient connection error (${error instanceof Error ? error.message : String(error)}). Resetting pooler client and retrying query...`,
+      );
+      resetClient();
+      const freshClient = getClient();
+      return (await fn(freshClient)) as T;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -85,9 +149,19 @@ function getClient(): postgres.Sql {
  */
 export const sql = new Proxy(function sql() {} as unknown as postgres.Sql, {
   apply(_target, _thisArg, args) {
-    return Reflect.apply(getClient() as unknown as (...a: unknown[]) => unknown, undefined, args);
+    return executeWithRetry((c) =>
+      Reflect.apply(c as unknown as (...a: unknown[]) => unknown, undefined, args),
+    );
   },
   get(_target, prop, receiver) {
+    if (prop === "unsafe") {
+      return (...args: unknown[]) =>
+        executeWithRetry((c) =>
+          Reflect.apply(c.unsafe as unknown as (...a: unknown[]) => unknown, undefined, args),
+        );
+    }
     return Reflect.get(getClient() as object, prop, receiver);
   },
 }) as postgres.Sql;
+
+export default sql;

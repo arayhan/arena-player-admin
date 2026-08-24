@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { customTypes } from "./db";
+import { customTypes, isTransientConnectionError, resetClient } from "./db";
 
 /**
  * Credential-free. Asserts the one thing about the database client that has
@@ -37,5 +37,38 @@ describe("db — the DATE/TIMESTAMPTZ override", () => {
   it("does not claim any other oid", () => {
     expect(customTypes.date.from).not.toContain(23);
     expect(Object.keys(customTypes)).toEqual(["date"]);
+  });
+});
+
+describe("db — isTransientConnectionError", () => {
+  it("identifies CONNECTION_CLOSED errors from pooler", () => {
+    const error = new Error(
+      "write CONNECTION_CLOSED aws-0-ap-northeast-2.pooler.supabase.com:6543",
+    );
+    expect(isTransientConnectionError(error)).toBe(true);
+  });
+
+  it("identifies ECONNRESET and socket hang up errors", () => {
+    expect(isTransientConnectionError(new Error("read ECONNRESET"))).toBe(true);
+    expect(isTransientConnectionError(new Error("socket hang up"))).toBe(true);
+    expect(
+      isTransientConnectionError({
+        code: "57P01",
+        message: "terminating connection due to administrator command",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not classify domain or syntax errors as transient connection errors", () => {
+    expect(isTransientConnectionError(new Error("syntax error at or near 'SELEC'"))).toBe(false);
+    expect(isTransientConnectionError(new Error("relation 'non_existent' does not exist"))).toBe(
+      false,
+    );
+    expect(isTransientConnectionError(null)).toBe(false);
+    expect(isTransientConnectionError(undefined)).toBe(false);
+  });
+
+  it("allows safe invocation of resetClient without errors", () => {
+    expect(() => resetClient()).not.toThrow();
   });
 });
