@@ -32,13 +32,18 @@ const knownPresent = new Set<string>();
 export async function tableExists(tableName: string): Promise<boolean> {
   if (knownPresent.has(tableName)) return true;
 
-  const rows = (await sql`select to_regclass('public.' || ${tableName}) as reg`) as Array<{
-    reg: string | null;
-  }>;
-  const present = rows[0]?.reg != null;
+  try {
+    const rows = (await sql`select to_regclass('public.' || ${tableName}) as reg`) as Array<{
+      reg: string | null;
+    }>;
+    const present = rows[0]?.reg != null;
 
-  if (present) knownPresent.add(tableName);
-  return present;
+    if (present) knownPresent.add(tableName);
+    return present;
+  } catch (error) {
+    console.error(`[schema-guard] tableExists("${tableName}") check failed:`, error);
+    return false;
+  }
 }
 
 export class MigrationMissingError extends Error {
