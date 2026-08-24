@@ -17,6 +17,7 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [embedUrl, setEmbedUrl] = useState(initialSettings.maps_embed_url);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -163,9 +164,30 @@ export function GeneralSettingsForm({ initialSettings }: GeneralSettingsFormProp
           name="maps_embed_url"
           type="url"
           defaultValue={initialSettings.maps_embed_url}
+          onChange={(e) => setEmbedUrl(e.target.value)}
           placeholder="https://www.google.com/maps/embed?pb=..."
           className="h-11 rounded-control border border-border bg-ground px-3 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
         />
+        <span className="text-[11px] text-ink-muted">
+          Salin nilai atribut <code className="font-mono text-xs">src=&quot;...&quot;</code> dari menu Bagikan &gt; Sematkan peta (Embed a map) di Google Maps.
+        </span>
+
+        {embedUrl ? (
+          <div className="mt-2 overflow-hidden rounded-control border border-border">
+            <div className="bg-ground/60 px-3 py-1.5 text-[11px] font-medium text-ink-muted">
+              Preview Peta Google Maps:
+            </div>
+            <div className="h-48 w-full bg-ground">
+              <iframe
+                src={embedUrl}
+                title="Preview Google Maps"
+                className="h-full w-full border-0"
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="border-t border-border pt-4">

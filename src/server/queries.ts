@@ -809,28 +809,31 @@ export type SiteSettingsMap = {
   dp_percent: string;
 };
 
+export const DEFAULT_SITE_SETTINGS: SiteSettingsMap = {
+  whatsapp_number: "6289682620666",
+  address: "Selebung Ketangga, Kec. Keruak, Kab. Lombok Timur, Nusa Tenggara Barat",
+  operating_hours: "06.00–24.00 WITA",
+  maps_embed_url:
+    "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3943.324280937278!2d116.4750677!3d-8.755528299999998!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dcc53005adc6011%3A0x48fd9a87865f0a08!2sArena%20Player%20Soccer!5e0!3m2!1sen!2sid!4v1786803816454!5m2!1sen!2sid",
+  dp_percent: "50",
+};
+
 export async function getSiteSettings(): Promise<SiteSettingsMap> {
-  const defaults: SiteSettingsMap = {
-    whatsapp_number: "6289682620666",
-    address: "",
-    operating_hours: "06.00–24.00 WITA",
-    maps_embed_url: "",
-    dp_percent: "50",
-  };
+  const settings: SiteSettingsMap = { ...DEFAULT_SITE_SETTINGS };
 
   try {
     const rows = await sql<Array<{ key: string; value: string }>>`
       select key, value from site_settings
     `;
     for (const r of rows) {
-      if (r.key in defaults) {
-        defaults[r.key as keyof SiteSettingsMap] = r.value;
+      if (r.key in settings) {
+        settings[r.key as keyof SiteSettingsMap] = r.value;
       }
     }
-    return defaults;
+    return settings;
   } catch (error) {
     console.error("[queries] getSiteSettings fallback to defaults:", error);
-    return defaults;
+    return settings;
   }
 }
 
