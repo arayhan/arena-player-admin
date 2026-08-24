@@ -51,12 +51,14 @@ export function isTransientConnectionError(error: unknown): boolean {
   return (
     message.includes("CONNECTION_CLOSED") ||
     message.includes("Connection closed") ||
+    message.includes("CONNECT_TIMEOUT") ||
     message.includes("ECONNRESET") ||
     message.includes("socket hang up") ||
     message.includes("write EPIPE") ||
     message.includes("broken pipe") ||
     message.includes("Connection terminated unexpectedly") ||
     code === "CONNECTION_CLOSED" ||
+    code === "CONNECT_TIMEOUT" ||
     code === "ECONNRESET" ||
     code === "EPIPE" ||
     code === "57P01" ||
@@ -115,7 +117,7 @@ function getClient(): postgres.Sql {
       types: customTypes,
       max: 10,
       idle_timeout: 20, // Closes idle connections in 20s before Supabase pooler drops them (30s)
-      connect_timeout: 10,
+      connect_timeout: 30, // 30s connect timeout
       max_lifetime: 60 * 30, // Recycles connections after 30 minutes
       ssl: "require",
       fetch_types: false, // Prevents unsupported type queries on transaction pooler

@@ -51,6 +51,9 @@ describe("db — isTransientConnectionError", () => {
   it("identifies ECONNRESET and socket hang up errors", () => {
     expect(isTransientConnectionError(new Error("read ECONNRESET"))).toBe(true);
     expect(isTransientConnectionError(new Error("socket hang up"))).toBe(true);
+    expect(isTransientConnectionError(new Error("write CONNECT_TIMEOUT undefined:undefined"))).toBe(
+      true,
+    );
     expect(
       isTransientConnectionError({
         code: "57P01",
