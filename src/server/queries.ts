@@ -3,7 +3,7 @@ import "server-only";
 import { isPastSlot, todayAtField } from "@/domain/dates";
 import { normalisePhone } from "@/domain/phone";
 import { TIME_SLOTS, type TimeSlot } from "@/domain/slots";
-import type { BookingStatus } from "@/domain/status";
+import { BOOKING_STATUSES, type BookingStatus } from "@/domain/status";
 import { resolveDayType } from "@/server/pricing";
 import { sql } from "@/server/db";
 
@@ -60,17 +60,40 @@ export async function listBookings({
     const qPhone = qText ? normalisePhone(qText) : null;
     const selectedSort = SORTABLE[sort] ? sort : "when";
     const selectedDir = SORT_DIR[dir] ? dir : "asc";
-    const statusFilter = status && status.length > 0 ? status : null;
 
-    // SQL statement from docs/architecture.md, "The query".
-    // Bound parameters:
-    // $1 status[]  text[] (nullable: when null, matches all statuses)
-    // $2 from      date nullable
-    // $3 to        date nullable
-    // $4 q_text    text nullable
-    // $5 q_phone   text nullable
-    // $6 limit     int
-    // $7 offset    int
+    const conditions = [];
+
+    // Filter status only if a subset is selected
+    if (status && status.length > 0 && status.length < BOOKING_STATUSES.length) {
+      const lowerStatuses = status.map((s) => s.toLowerCase());
+      conditions.push(sql`lower(b.status) in ${sql(lowerStatuses)}`);
+    }
+
+    if (from) {
+      conditions.push(sql`b.booking_date >= ${from}::date`);
+    }
+
+    if (to) {
+      conditions.push(sql`b.booking_date <= ${to}::date`);
+    }
+
+    if (qText) {
+      if (qPhone) {
+        conditions.push(
+          sql`(b.team_name ilike ${"%" + qText + "%"} or b.phone = ${qPhone} or b.phone ilike ${"%" + qText + "%"})`,
+        );
+      } else {
+        conditions.push(
+          sql`(b.team_name ilike ${"%" + qText + "%"} or b.phone ilike ${"%" + qText + "%"})`,
+        );
+      }
+    }
+
+    const whereClause =
+      conditions.length > 0
+        ? sql`where ${conditions.reduce((acc, cond) => sql`${acc} and ${cond}`)}`
+        : sql``;
+
     const rows = await sql<BookingRow[]>`
       select
         b.id,
@@ -83,14 +106,7 @@ export async function listBookings({
         b.created_at::text   as created_at,
         count(*) over ()::int as total_count
       from bookings b
-      where (${statusFilter}::text[] is null or b.status = any(${statusFilter}::text[]))
-        and (${from}::date is null or b.booking_date >= ${from}::date)
-        and (${to}::date is null or b.booking_date <= ${to}::date)
-        and (
-          ${qText}::text is null
-          or b.team_name ilike '%' || ${qText} || '%'
-          or (${qPhone}::text is not null and b.phone = ${qPhone})
-        )
+      ${whereClause}
       order by
         case when ${selectedSort} = 'when' and ${selectedDir} = 'asc' then b.booking_date end asc,
         case when ${selectedSort} = 'when' and ${selectedDir} = 'asc' then b.time_slot end asc,
@@ -536,7 +552,7 @@ export async function getDashboardMetrics(): Promise<{
         count(*)::text as count,
         min(created_at)::text as oldest
       from bookings
-      where status = 'pending'
+      where lower(status) = 'pending'
     `;
 
     // 2. Today's active bookings count
@@ -544,8 +560,8 @@ export async function getDashboardMetrics(): Promise<{
       select
         count(*)::text as count
       from bookings
-      where booking_date = ${today}
-        and status in ('pending', 'confirmed')
+      where booking_date = ${today}::date
+        and lower(status) in ('pending', 'confirmed')
     `;
 
     // 3. Month total active bookings count
@@ -553,8 +569,8 @@ export async function getDashboardMetrics(): Promise<{
       select
         count(*)::text as count
       from bookings
-      where booking_date >= ${firstDayOfMonth}
-        and status in ('pending', 'confirmed')
+      where booking_date >= ${firstDayOfMonth}::date
+        and lower(status) in ('pending', 'confirmed')
     `;
 
     return {
@@ -708,12 +724,12 @@ export async function getStatsData(): Promise<StatsSummary> {
 
   try {
     // 1. Status breakdown
-    const statusRows = await sql<Array<{ status: BookingStatus; count: string }>>`
+    const statusRows = await sql<Array<{ status: string; count: string }>>`
       select
-        status,
+        lower(status) as status,
         count(*)::text as count
       from bookings
-      group by status
+      group by lower(status)
     `;
 
     const statusBreakdown: Record<BookingStatus, number> = {
@@ -726,7 +742,10 @@ export async function getStatsData(): Promise<StatsSummary> {
     let totalAllTime = 0;
     for (const r of statusRows) {
       const c = Number(r.count || 0);
-      statusBreakdown[r.status] = c;
+      const s = r.status as BookingStatus;
+      if (s in statusBreakdown) {
+        statusBreakdown[s] = c;
+      }
       totalAllTime += c;
     }
 
@@ -736,7 +755,7 @@ export async function getStatsData(): Promise<StatsSummary> {
         time_slot,
         count(*)::text as count
       from bookings
-      where status in ('confirmed', 'pending')
+      where lower(status) in ('confirmed', 'pending')
       group by time_slot
       order by count(*) desc
       limit 6
