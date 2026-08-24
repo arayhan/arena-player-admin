@@ -94,6 +94,23 @@ export async function listBookings({
         ? sql`where ${conditions.reduce((acc, cond) => sql`${acc} and ${cond}`)}`
         : sql``;
 
+    const orderClause =
+      selectedSort === "created"
+        ? selectedDir === "desc"
+          ? sql`order by b.created_at desc`
+          : sql`order by b.created_at asc`
+        : selectedSort === "team"
+          ? selectedDir === "desc"
+            ? sql`order by b.team_name desc`
+            : sql`order by b.team_name asc`
+          : selectedSort === "status"
+            ? selectedDir === "desc"
+              ? sql`order by b.status desc`
+              : sql`order by b.status asc`
+            : selectedDir === "desc"
+              ? sql`order by b.booking_date desc, b.time_slot desc`
+              : sql`order by b.booking_date asc, b.time_slot asc`;
+
     const rows = await sql<BookingRow[]>`
       select
         b.id,
@@ -107,17 +124,7 @@ export async function listBookings({
         count(*) over ()::int as total_count
       from bookings b
       ${whereClause}
-      order by
-        case when ${selectedSort} = 'when' and ${selectedDir} = 'asc' then b.booking_date end asc,
-        case when ${selectedSort} = 'when' and ${selectedDir} = 'asc' then b.time_slot end asc,
-        case when ${selectedSort} = 'when' and ${selectedDir} = 'desc' then b.booking_date end desc,
-        case when ${selectedSort} = 'when' and ${selectedDir} = 'desc' then b.time_slot end desc,
-        case when ${selectedSort} = 'created' and ${selectedDir} = 'asc' then b.created_at end asc,
-        case when ${selectedSort} = 'created' and ${selectedDir} = 'desc' then b.created_at end desc,
-        case when ${selectedSort} = 'team' and ${selectedDir} = 'asc' then b.team_name end asc,
-        case when ${selectedSort} = 'team' and ${selectedDir} = 'desc' then b.team_name end desc,
-        case when ${selectedSort} = 'status' and ${selectedDir} = 'asc' then b.status end asc,
-        case when ${selectedSort} = 'status' and ${selectedDir} = 'desc' then b.status end desc
+      ${orderClause}
       limit ${limit}
       offset ${offset}
     `;
@@ -622,6 +629,40 @@ export async function listSlotBlocks(
   const offset = params?.offset ?? 0;
 
   try {
+    const conditions = [];
+
+    if (from) {
+      conditions.push(sql`block_date >= ${from}::date`);
+    }
+
+    if (to) {
+      conditions.push(sql`block_date <= ${to}::date`);
+    }
+
+    if (q) {
+      conditions.push(
+        sql`(reason ilike ${"%" + q + "%"} or time_slot ilike ${"%" + q + "%"} or block_date::text ilike ${"%" + q + "%"})`,
+      );
+    }
+
+    const whereClause =
+      conditions.length > 0
+        ? sql`where ${conditions.reduce((acc, cond) => sql`${acc} and ${cond}`)}`
+        : sql``;
+
+    const orderClause =
+      sort === "reason"
+        ? dir === "desc"
+          ? sql`order by reason desc`
+          : sql`order by reason asc`
+        : sort === "created"
+          ? dir === "desc"
+            ? sql`order by created_at desc`
+            : sql`order by created_at asc`
+          : dir === "desc"
+            ? sql`order by block_date desc, time_slot desc`
+            : sql`order by block_date asc, time_slot asc`;
+
     const rows = await sql<SlotBlockRow[]>`
       select
         id,
@@ -631,22 +672,8 @@ export async function listSlotBlocks(
         created_at::text as created_at,
         count(*) over ()::int as total_count
       from slot_blocks
-      where (${from}::date is null or block_date >= ${from}::date)
-        and (${to}::date is null or block_date <= ${to}::date)
-        and (
-          ${q}::text is null
-          or reason ilike '%' || ${q} || '%'
-          or time_slot ilike '%' || ${q} || '%'
-        )
-      order by
-        case when ${sort} = 'date' and ${dir} = 'asc' then block_date end asc,
-        case when ${sort} = 'date' and ${dir} = 'asc' then time_slot end asc,
-        case when ${sort} = 'date' and ${dir} = 'desc' then block_date end desc,
-        case when ${sort} = 'date' and ${dir} = 'desc' then time_slot end desc,
-        case when ${sort} = 'reason' and ${dir} = 'asc' then reason end asc,
-        case when ${sort} = 'reason' and ${dir} = 'desc' then reason end desc,
-        case when ${sort} = 'created' and ${dir} = 'asc' then created_at end asc,
-        case when ${sort} = 'created' and ${dir} = 'desc' then created_at end desc
+      ${whereClause}
+      ${orderClause}
       limit ${limit}
       offset ${offset}
     `;
@@ -1094,6 +1121,36 @@ export async function getPublicHolidays(
   const offset = params?.offset ?? 0;
 
   try {
+    const conditions = [];
+
+    if (from) {
+      conditions.push(sql`holiday_date >= ${from}::date`);
+    }
+
+    if (to) {
+      conditions.push(sql`holiday_date <= ${to}::date`);
+    }
+
+    if (q) {
+      conditions.push(
+        sql`(label ilike ${"%" + q + "%"} or holiday_date::text ilike ${"%" + q + "%"})`,
+      );
+    }
+
+    const whereClause =
+      conditions.length > 0
+        ? sql`where ${conditions.reduce((acc, cond) => sql`${acc} and ${cond}`)}`
+        : sql``;
+
+    const orderClause =
+      sort === "label"
+        ? dir === "desc"
+          ? sql`order by label desc`
+          : sql`order by label asc`
+        : dir === "desc"
+          ? sql`order by holiday_date desc`
+          : sql`order by holiday_date asc`;
+
     const rows = await sql<PublicHolidayRow[]>`
       select 
         id, 
@@ -1101,18 +1158,8 @@ export async function getPublicHolidays(
         label,
         count(*) over ()::int as total_count
       from public_holidays
-      where (${from}::date is null or holiday_date >= ${from}::date)
-        and (${to}::date is null or holiday_date <= ${to}::date)
-        and (
-          ${q}::text is null
-          or label ilike '%' || ${q} || '%'
-          or holiday_date::text ilike '%' || ${q} || '%'
-        )
-      order by
-        case when ${sort} = 'date' and ${dir} = 'asc' then holiday_date end asc,
-        case when ${sort} = 'date' and ${dir} = 'desc' then holiday_date end desc,
-        case when ${sort} = 'label' and ${dir} = 'asc' then label end asc,
-        case when ${sort} = 'label' and ${dir} = 'desc' then label end desc
+      ${whereClause}
+      ${orderClause}
       limit ${limit}
       offset ${offset}
     `;
