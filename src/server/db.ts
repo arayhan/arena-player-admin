@@ -151,17 +151,25 @@ async function executeWithRetry<T>(fn: (c: postgres.Sql) => unknown): Promise<T>
  */
 export const sql = new Proxy(function sql() {} as unknown as postgres.Sql, {
   apply(_target, _thisArg, args) {
-    return executeWithRetry((c) =>
-      Reflect.apply(c as unknown as (...a: unknown[]) => unknown, undefined, args),
-    );
+    const c = getClient();
+    const res = Reflect.apply(c as unknown as Function, undefined, args);
+    // If it is an executing query promise (has .catch), attach auto-retry for transient drops
+    if (res && typeof res.then === "function" && Array.isArray(args[0]) && "raw" in args[0]) {
+      return res.catch(async (err: unknown) => {
+        if (isTransientConnectionError(err)) {
+          console.warn(
+            `[db] Transient connection error caught (${err instanceof Error ? err.message : String(err)}). Resetting pooler client and retrying query...`,
+          );
+          resetClient();
+          const freshClient = getClient();
+          return Reflect.apply(freshClient as unknown as Function, undefined, args);
+        }
+        throw err;
+      });
+    }
+    return res;
   },
   get(_target, prop, receiver) {
-    if (prop === "unsafe") {
-      return (...args: unknown[]) =>
-        executeWithRetry((c) =>
-          Reflect.apply(c.unsafe as unknown as (...a: unknown[]) => unknown, undefined, args),
-        );
-    }
     return Reflect.get(getClient() as object, prop, receiver);
   },
 }) as postgres.Sql;

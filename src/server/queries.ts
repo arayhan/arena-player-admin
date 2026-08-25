@@ -61,55 +61,24 @@ export async function listBookings({
     const selectedSort = SORTABLE[sort] ? sort : "when";
     const selectedDir = SORT_DIR[dir] ? dir : "asc";
 
-    const conditions = [];
-
-    // Filter status only if a subset is selected
-    if (status && status.length > 0 && status.length < BOOKING_STATUSES.length) {
-      const lowerStatuses = status.map((s) => s.toLowerCase());
-      conditions.push(sql`lower(b.status) in ${sql(lowerStatuses)}`);
+    let orderBySql = "b.booking_date asc, b.time_slot asc";
+    if (selectedSort === "created") {
+      orderBySql = selectedDir === "desc" ? "b.created_at desc" : "b.created_at asc";
+    } else if (selectedSort === "team") {
+      orderBySql = selectedDir === "desc" ? "b.team_name desc" : "b.team_name asc";
+    } else if (selectedSort === "status") {
+      orderBySql = selectedDir === "desc" ? "b.status desc" : "b.status asc";
+    } else if (selectedSort === "when") {
+      orderBySql =
+        selectedDir === "desc"
+          ? "b.booking_date desc, b.time_slot desc"
+          : "b.booking_date asc, b.time_slot asc";
     }
 
-    if (from) {
-      conditions.push(sql`b.booking_date >= ${from}::date`);
-    }
-
-    if (to) {
-      conditions.push(sql`b.booking_date <= ${to}::date`);
-    }
-
-    if (qText) {
-      if (qPhone) {
-        conditions.push(
-          sql`(b.team_name ilike ${"%" + qText + "%"} or b.phone = ${qPhone} or b.phone ilike ${"%" + qText + "%"})`,
-        );
-      } else {
-        conditions.push(
-          sql`(b.team_name ilike ${"%" + qText + "%"} or b.phone ilike ${"%" + qText + "%"})`,
-        );
-      }
-    }
-
-    const whereClause =
-      conditions.length > 0
-        ? sql`where ${conditions.reduce((acc, cond) => sql`${acc} and ${cond}`)}`
-        : sql``;
-
-    const orderClause =
-      selectedSort === "created"
-        ? selectedDir === "desc"
-          ? sql`order by b.created_at desc`
-          : sql`order by b.created_at asc`
-        : selectedSort === "team"
-          ? selectedDir === "desc"
-            ? sql`order by b.team_name desc`
-            : sql`order by b.team_name asc`
-          : selectedSort === "status"
-            ? selectedDir === "desc"
-              ? sql`order by b.status desc`
-              : sql`order by b.status asc`
-            : selectedDir === "desc"
-              ? sql`order by b.booking_date desc, b.time_slot desc`
-              : sql`order by b.booking_date asc, b.time_slot asc`;
+    const hasStatusFilter = Boolean(
+      status && status.length > 0 && status.length < BOOKING_STATUSES.length,
+    );
+    const lowerStatuses = hasStatusFilter && status ? status.map((s) => s.toLowerCase()) : [];
 
     const rows = await sql<BookingRow[]>`
       select
@@ -123,8 +92,21 @@ export async function listBookings({
         b.created_at::text   as created_at,
         count(*) over ()::int as total_count
       from bookings b
-      ${whereClause}
-      ${orderClause}
+      where (${
+        hasStatusFilter
+          ? sql`lower(b.status) in ${sql(lowerStatuses)}`
+          : sql.unsafe("true")
+      })
+        and (${from ? sql`b.booking_date >= ${from}::date` : sql.unsafe("true")})
+        and (${to ? sql`b.booking_date <= ${to}::date` : sql.unsafe("true")})
+        and (${
+          qText
+            ? qPhone
+              ? sql`(b.team_name ilike ${"%" + qText + "%"} or b.phone = ${qPhone} or b.phone ilike ${"%" + qText + "%"})`
+              : sql`(b.team_name ilike ${"%" + qText + "%"} or b.phone ilike ${"%" + qText + "%"})`
+            : sql.unsafe("true")
+        })
+      ${sql.unsafe(`order by ${orderBySql}`)}
       limit ${limit}
       offset ${offset}
     `;
@@ -629,39 +611,17 @@ export async function listSlotBlocks(
   const offset = params?.offset ?? 0;
 
   try {
-    const conditions = [];
-
-    if (from) {
-      conditions.push(sql`block_date >= ${from}::date`);
+    let orderBySql = "block_date asc, time_slot asc";
+    if (sort === "reason") {
+      orderBySql = dir === "desc" ? "reason desc" : "reason asc";
+    } else if (sort === "created") {
+      orderBySql = dir === "desc" ? "created_at desc" : "created_at asc";
+    } else if (sort === "date") {
+      orderBySql =
+        dir === "desc"
+          ? "block_date desc, time_slot desc"
+          : "block_date asc, time_slot asc";
     }
-
-    if (to) {
-      conditions.push(sql`block_date <= ${to}::date`);
-    }
-
-    if (q) {
-      conditions.push(
-        sql`(reason ilike ${"%" + q + "%"} or time_slot ilike ${"%" + q + "%"} or block_date::text ilike ${"%" + q + "%"})`,
-      );
-    }
-
-    const whereClause =
-      conditions.length > 0
-        ? sql`where ${conditions.reduce((acc, cond) => sql`${acc} and ${cond}`)}`
-        : sql``;
-
-    const orderClause =
-      sort === "reason"
-        ? dir === "desc"
-          ? sql`order by reason desc`
-          : sql`order by reason asc`
-        : sort === "created"
-          ? dir === "desc"
-            ? sql`order by created_at desc`
-            : sql`order by created_at asc`
-          : dir === "desc"
-            ? sql`order by block_date desc, time_slot desc`
-            : sql`order by block_date asc, time_slot asc`;
 
     const rows = await sql<SlotBlockRow[]>`
       select
@@ -672,8 +632,14 @@ export async function listSlotBlocks(
         created_at::text as created_at,
         count(*) over ()::int as total_count
       from slot_blocks
-      ${whereClause}
-      ${orderClause}
+      where (${from ? sql`block_date >= ${from}::date` : sql.unsafe("true")})
+        and (${to ? sql`block_date <= ${to}::date` : sql.unsafe("true")})
+        and (${
+          q
+            ? sql`(reason ilike ${"%" + q + "%"} or time_slot ilike ${"%" + q + "%"} or block_date::text ilike ${"%" + q + "%"})`
+            : sql.unsafe("true")
+        })
+      ${sql.unsafe(`order by ${orderBySql}`)}
       limit ${limit}
       offset ${offset}
     `;
@@ -1121,35 +1087,10 @@ export async function getPublicHolidays(
   const offset = params?.offset ?? 0;
 
   try {
-    const conditions = [];
-
-    if (from) {
-      conditions.push(sql`holiday_date >= ${from}::date`);
+    let orderBySql = dir === "desc" ? "holiday_date desc" : "holiday_date asc";
+    if (sort === "label") {
+      orderBySql = dir === "desc" ? "label desc" : "label asc";
     }
-
-    if (to) {
-      conditions.push(sql`holiday_date <= ${to}::date`);
-    }
-
-    if (q) {
-      conditions.push(
-        sql`(label ilike ${"%" + q + "%"} or holiday_date::text ilike ${"%" + q + "%"})`,
-      );
-    }
-
-    const whereClause =
-      conditions.length > 0
-        ? sql`where ${conditions.reduce((acc, cond) => sql`${acc} and ${cond}`)}`
-        : sql``;
-
-    const orderClause =
-      sort === "label"
-        ? dir === "desc"
-          ? sql`order by label desc`
-          : sql`order by label asc`
-        : dir === "desc"
-          ? sql`order by holiday_date desc`
-          : sql`order by holiday_date asc`;
 
     const rows = await sql<PublicHolidayRow[]>`
       select 
@@ -1158,8 +1099,14 @@ export async function getPublicHolidays(
         label,
         count(*) over ()::int as total_count
       from public_holidays
-      ${whereClause}
-      ${orderClause}
+      where (${from ? sql`holiday_date >= ${from}::date` : sql.unsafe("true")})
+        and (${to ? sql`holiday_date <= ${to}::date` : sql.unsafe("true")})
+        and (${
+          q
+            ? sql`(label ilike ${"%" + q + "%"} or holiday_date::text ilike ${"%" + q + "%"})`
+            : sql.unsafe("true")
+        })
+      ${sql.unsafe(`order by ${orderBySql}`)}
       limit ${limit}
       offset ${offset}
     `;
